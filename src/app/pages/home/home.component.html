@@ -1,15 +1,54 @@
 <div class="home-screen">
-  <div class="overlay"></div>
+  <div class="mist mist-back"></div>
+  <div class="mist mist-front"></div>
+  <div class="embers"></div>
+
+  <div class="far-background">
+    <div class="moon-glow"></div>
+    <div class="mountains layer-1"></div>
+    <div class="mountains layer-2"></div>
+    <div class="ruins ruins-left">
+      <span class="tower"></span>
+      <span class="house"></span>
+      <span class="house small"></span>
+    </div>
+    <div class="ruins ruins-right">
+      <span class="tower broken"></span>
+      <span class="house"></span>
+    </div>
+    <div class="dead-tree tree-left"></div>
+    <div class="dead-tree tree-right"></div>
+  </div>
 
   <div class="content">
-    <h1 class="title">As Cinzas do Vale</h1>
-    <p class="subtitle">Quando a chama cai, só resta lutar pela memória.</p>
+    <div class="brand-block">
+      <p class="overline">A jornada começa entre cinzas e memória</p>
+      <h1 class="title">As Cinzas do Vale</h1>
+      <p class="subtitle">
+        O Coração caiu. O vale apodreceu. Ainda resta uma chama.
+      </p>
+    </div>
 
-    <div class="menu">
-      <button class="menu-btn" (click)="startGame()">Iniciar</button>
-      <a class="menu-btn" routerLink="/settings">Configurações</a>
-      <a class="menu-btn" routerLink="/credits">Créditos</a>
-      <button class="menu-btn danger" (click)="startGame()">Reiniciar</button>
+    <div class="menu-panel">
+      <button class="menu-btn primary" (click)="startGame()">
+        <span class="btn-glow"></span>
+        <span>Iniciar</span>
+      </button>
+
+      <a class="menu-btn" routerLink="/settings">
+        <span class="btn-glow"></span>
+        <span>Configurações</span>
+      </a>
+
+      <a class="menu-btn" routerLink="/credits">
+        <span class="btn-glow"></span>
+        <span>Créditos</span>
+      </a>
+
+      <button class="menu-btn danger" (click)="startGame()">
+        <span class="btn-glow"></span>
+        <span>Reiniciar</span>
+      </button>
     </div>
   </div>
 </div>

@@ -2,8 +2,9 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
+  padding: 24px;
   background:
-    radial-gradient(circle at top, rgba(227, 164, 60, 0.12), transparent 22%),
-    linear-gradient(180deg, #11131b 0%, #0d1017 100%);
-  padding: 20px;
+    radial-gradient(circle at top, rgba(111, 24, 34, 0.16), transparent 20%),
+    radial-gradient(circle at 50% 0%, rgba(255, 174, 88, 0.06), transparent 18%),
+    linear-gradient(180deg, #090b11 0%, #050608 100%);
 }

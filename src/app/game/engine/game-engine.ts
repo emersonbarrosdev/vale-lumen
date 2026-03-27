@@ -2,9 +2,8 @@ import { InputManager } from './input-manager';
 import {
   BossArenaData,
   CollectibleData,
-  EnemyData,
-  PhaseOneScene,
   PlatformData,
+  PhaseOneScene,
 } from '../scenes/phase-one.scene';
 import { GameStateService } from '../services/game-state.service';
 
@@ -31,6 +30,8 @@ interface Hero {
   shootCooldown: number;
   dashCooldown: number;
   invulnerabilityTimer: number;
+  jumpsRemaining: number;
+  maxJumps: number;
 }
 
 interface Bullet {
@@ -73,22 +74,33 @@ interface Boss {
   active: boolean;
   attackCooldown: number;
   secondaryCooldown: number;
+  jumpCooldown: number;
+  vy: number;
+  onGround: boolean;
   hitFlash: number;
-}
-
-interface Marker {
-  x: number;
-  y: number;
-  radius: number;
-  timeLeft: number;
+  airShotsRemaining: number;
+  airShotCooldown: number;
 }
 
 interface FallingProjectile {
   x: number;
   y: number;
   vy: number;
+  vx: number;
   radius: number;
   active: boolean;
+  horizontal: boolean;
+  dark: boolean;
+}
+
+interface SpecialWave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  lineWidth: number;
+  life: number;
+  maxLife: number;
 }
 
 export class GameEngine {
@@ -100,7 +112,10 @@ export class GameEngine {
 
   private animationFrameId = 0;
   private lastTime = 0;
-  private readonly gravity = 1800;
+
+  private readonly gravity = 2350;
+  private readonly fallBoost = 1350;
+
   private readonly worldWidth: number;
   private readonly platforms: Platform[];
   private readonly enemies: Enemy[];
@@ -114,8 +129,8 @@ export class GameEngine {
     height: 64,
     vx: 0,
     vy: 0,
-    speed: 260,
-    jumpForce: 720,
+    speed: 270,
+    jumpForce: 760,
     direction: 1,
     onGround: false,
     hp: 3,
@@ -123,34 +138,45 @@ export class GameEngine {
     shootCooldown: 0,
     dashCooldown: 0,
     invulnerabilityTimer: 0,
+    jumpsRemaining: 2,
+    maxJumps: 2,
   };
 
   private readonly boss: Boss = {
     x: 0,
-    y: 470,
-    width: 110,
-    height: 150,
-    hp: 30,
-    maxHp: 30,
+    y: 0,
+    width: 120,
+    height: 160,
+    hp: 34,
+    maxHp: 34,
     active: false,
-    attackCooldown: 2.6,
-    secondaryCooldown: 4.2,
+    attackCooldown: 2.5,
+    secondaryCooldown: 3.8,
+    jumpCooldown: 3.2,
+    vy: 0,
+    onGround: true,
     hitFlash: 0,
+    airShotsRemaining: 0,
+    airShotCooldown: 0,
   };
 
   private cameraX = 0;
   private bullets: Bullet[] = [];
-  private markers: Marker[] = [];
   private fallingProjectiles: FallingProjectile[] = [];
+  private specialWaves: SpecialWave[] = [];
 
   private score = 0;
   private sparks = 0;
   private specialThreshold = 5;
   private paused = false;
+
   private specialFlashTimer = 0;
+  private specialSequenceActive = false;
+  private specialPulseTimer = 0;
+  private specialPulsesRemaining = 0;
+
   private ending: 'game-over' | 'victory' | null = null;
   private endingTimer = 0;
-  private bossMusicStarted = false;
 
   constructor(
     ctx: CanvasRenderingContext2D,
@@ -167,15 +193,17 @@ export class GameEngine {
     this.worldWidth = phase.worldWidth;
     this.platforms = phase.platforms;
     this.bossArena = phase.bossArena;
+
     this.boss.x = this.bossArena.bossX;
+    this.boss.y = this.bossArena.groundY - this.boss.height;
 
     this.enemies = phase.enemies.map((enemy) => ({
       type: enemy.type,
       x: enemy.x,
-      y: enemy.y,
-      width: enemy.type === 'vigia' ? 50 : 38,
+      y: enemy.type === 'vigia' ? 558 : 576,
+      width: enemy.type === 'vigia' ? 52 : 38,
       height: enemy.type === 'vigia' ? 62 : 44,
-      speed: enemy.type === 'vigia' ? 58 : 85,
+      speed: enemy.type === 'vigia' ? 60 : 88,
       direction: -1,
       patrolLeft: enemy.patrolLeft,
       patrolRight: enemy.patrolRight,
@@ -242,14 +270,15 @@ export class GameEngine {
     this.updateHero(deltaTime);
     this.updateBullets(deltaTime);
     this.updateEnemies(deltaTime);
-    this.updateCollectibles(deltaTime);
+    this.updateCollectibles();
     this.updateBoss(deltaTime);
-    this.updateMarkers(deltaTime);
     this.updateFallingProjectiles(deltaTime);
+    this.updateSpecialSequence(deltaTime);
+    this.updateSpecialWaves(deltaTime);
     this.updateCamera();
 
     if (this.specialFlashTimer > 0) {
-      this.specialFlashTimer -= deltaTime;
+      this.specialFlashTimer = Math.max(0, this.specialFlashTimer - deltaTime);
     }
 
     if (this.hero.hp <= 0) {
@@ -286,28 +315,38 @@ export class GameEngine {
     }
 
     if (
-      (this.input.isJustPressed(' ') || this.input.isJustPressed('w')) &&
-      this.hero.onGround
+      (this.input.isJustPressed(' ') ||
+        this.input.isJustPressed('w') ||
+        this.input.isJustPressed('arrowup')) &&
+      this.hero.jumpsRemaining > 0
     ) {
       this.hero.vy = -this.hero.jumpForce;
+      this.hero.jumpsRemaining -= 1;
       this.hero.onGround = false;
     }
 
     if (this.input.isJustPressed('k') && this.hero.dashCooldown <= 0) {
-      this.hero.vx = this.hero.direction * 560;
-      this.hero.dashCooldown = 0.75;
+      this.hero.vx = this.hero.direction * 610;
+      this.hero.dashCooldown = 0.7;
     }
 
     if (this.input.isJustPressed('j') && this.hero.shootCooldown <= 0) {
       this.fireBullet();
-      this.hero.shootCooldown = 0.22;
+      this.hero.shootCooldown = 0.2;
     }
 
-    if (this.input.isJustPressed('l') && this.sparks >= this.specialThreshold) {
+    if (
+      this.input.isJustPressed('l') &&
+      this.sparks >= this.specialThreshold &&
+      !this.specialSequenceActive
+    ) {
       this.activateSpecial();
     }
 
-    this.hero.vy += this.gravity * deltaTime;
+    const gravityThisFrame =
+      this.hero.vy > 0 ? this.gravity + this.fallBoost : this.gravity;
+
+    this.hero.vy += gravityThisFrame * deltaTime;
 
     this.moveHeroHorizontally(deltaTime);
     this.moveHeroVertically(deltaTime);
@@ -350,6 +389,7 @@ export class GameEngine {
         this.hero.y = platform.y - this.hero.height;
         this.hero.vy = 0;
         this.hero.onGround = true;
+        this.hero.jumpsRemaining = this.hero.maxJumps;
       } else if (this.hero.vy < 0) {
         this.hero.y = platform.y + platform.height;
         this.hero.vy = 0;
@@ -366,17 +406,66 @@ export class GameEngine {
       y: this.hero.y + 24,
       width: 14,
       height: 10,
-      vx: this.hero.direction * 560,
+      vx: this.hero.direction * 580,
       active: true,
     });
   }
 
   private activateSpecial(): void {
     this.sparks = 0;
-    this.specialFlashTimer = 0.2;
+    this.specialSequenceActive = true;
+    this.specialPulsesRemaining = 3;
+    this.specialPulseTimer = 0;
+    this.specialFlashTimer = 0.95;
+  }
+
+  private updateSpecialSequence(deltaTime: number): void {
+    if (!this.specialSequenceActive) {
+      return;
+    }
+
+    this.specialPulseTimer -= deltaTime;
+
+    if (this.specialPulseTimer > 0) {
+      return;
+    }
+
+    this.releaseSpecialPulse();
+    this.specialPulsesRemaining -= 1;
+
+    if (this.specialPulsesRemaining <= 0) {
+      this.specialSequenceActive = false;
+      this.specialPulseTimer = 0;
+      return;
+    }
+
+    this.specialPulseTimer = 0.22;
+  }
+
+  private releaseSpecialPulse(): void {
+    const waveX = this.hero.x + this.hero.width / 2;
+    const waveY = this.hero.y + this.hero.height / 2;
+
+    this.specialWaves.push({
+      x: waveX,
+      y: waveY,
+      radius: 0,
+      maxRadius: this.canvas.width * 1.55,
+      lineWidth: 34,
+      life: 0.56,
+      maxLife: 0.56,
+    });
 
     for (const enemy of this.enemies) {
-      if (enemy.active) {
+      if (!enemy.active) {
+        continue;
+      }
+
+      const enemyCenterX = enemy.x + enemy.width / 2;
+      const enemyCenterY = enemy.y + enemy.height / 2;
+      const distance = Math.hypot(enemyCenterX - waveX, enemyCenterY - waveY);
+
+      if (distance <= this.canvas.width * 1.7) {
         enemy.hp = 0;
         enemy.active = false;
         this.score += enemy.type === 'vigia' ? 100 : 50;
@@ -384,12 +473,21 @@ export class GameEngine {
     }
 
     if (this.boss.active && this.boss.hp > 0) {
-      this.boss.hp = Math.max(0, this.boss.hp - 10);
+      this.boss.hp = Math.max(0, this.boss.hp - 7);
       this.boss.hitFlash = 0.2;
     }
 
     this.fallingProjectiles = [];
-    this.markers = [];
+  }
+
+  private updateSpecialWaves(deltaTime: number): void {
+    for (const wave of this.specialWaves) {
+      wave.life -= deltaTime;
+      const progress = 1 - wave.life / wave.maxLife;
+      wave.radius = wave.maxRadius * progress;
+    }
+
+    this.specialWaves = this.specialWaves.filter((wave) => wave.life > 0);
   }
 
   private updateBullets(deltaTime: number): void {
@@ -467,9 +565,7 @@ export class GameEngine {
     }
   }
 
-  private updateCollectibles(deltaTime: number): void {
-    void deltaTime;
-
+  private updateCollectibles(): void {
     for (const item of this.collectibles) {
       if (item.collected) {
         continue;
@@ -506,6 +602,8 @@ export class GameEngine {
     this.boss.hitFlash = Math.max(0, this.boss.hitFlash - deltaTime);
     this.boss.attackCooldown -= deltaTime;
     this.boss.secondaryCooldown -= deltaTime;
+    this.boss.jumpCooldown -= deltaTime;
+    this.boss.airShotCooldown -= deltaTime;
 
     if (this.hero.x > this.bossArena.endX - 80) {
       this.hero.x = this.bossArena.endX - 80;
@@ -515,60 +613,123 @@ export class GameEngine {
       this.hero.x = this.bossArena.startX - 120;
     }
 
-    if (this.boss.attackCooldown <= 0) {
-      this.launchBossPattern();
-      this.boss.attackCooldown = this.boss.hp <= 12 ? 1.8 : 2.5;
+    if (this.boss.jumpCooldown <= 0 && this.boss.onGround) {
+      this.startBossJump();
+    }
+
+    this.updateBossPhysics(deltaTime);
+
+    if (this.boss.attackCooldown <= 0 && this.boss.onGround) {
+      this.launchBossSkyBurst();
+      this.boss.attackCooldown = this.boss.hp <= 12 ? 1.5 : 2.2;
     }
 
     if (this.boss.secondaryCooldown <= 0) {
       this.fireBossHorizontalShot();
-      this.boss.secondaryCooldown = this.boss.hp <= 12 ? 2.3 : 3.8;
+      this.boss.secondaryCooldown = this.boss.hp <= 12 ? 1.9 : 3.2;
+    }
+
+    if (!this.boss.onGround && this.boss.airShotsRemaining > 0 && this.boss.airShotCooldown <= 0) {
+      this.releaseBossAirMagic();
+      this.boss.airShotsRemaining -= 1;
+      this.boss.airShotCooldown = 0.18;
+    }
+
+    if (
+      this.hero.invulnerabilityTimer <= 0 &&
+      this.rectsOverlap(this.hero, this.boss)
+    ) {
+      this.applyHeroDamage(1);
     }
   }
 
-  private launchBossPattern(): void {
-    const points = [...this.bossArena.markerXs];
-    this.shuffle(points);
+  private startBossJump(): void {
+    this.boss.vy = -860;
+    this.boss.onGround = false;
+    this.boss.jumpCooldown = this.randomRange(
+      this.boss.hp <= 12 ? 1.4 : 2.2,
+      this.boss.hp <= 12 ? 2.2 : 3.4,
+    );
+    this.boss.airShotsRemaining = this.boss.hp <= 12 ? 4 : 3;
+    this.boss.airShotCooldown = 0.1;
+  }
 
-    const count = this.boss.hp <= 12 ? 3 : 2;
+  private updateBossPhysics(deltaTime: number): void {
+    if (this.boss.onGround) {
+      return;
+    }
 
-    for (let index = 0; index < count; index += 1) {
-      this.markers.push({
-        x: points[index],
-        y: this.bossArena.groundY - 8,
-        radius: 28,
-        timeLeft: 0.9 + index * 0.18,
+    this.boss.vy += (this.gravity + 950) * deltaTime;
+    this.boss.y += this.boss.vy * deltaTime;
+
+    const bossGround = this.bossArena.groundY - this.boss.height;
+
+    if (this.boss.y >= bossGround) {
+      this.boss.y = bossGround;
+      this.boss.vy = 0;
+      this.boss.onGround = true;
+      this.launchBossLandingBurst();
+    }
+  }
+
+  private launchBossSkyBurst(): void {
+    const burstCount = this.boss.hp <= 12 ? 4 : 3;
+
+    for (let index = 0; index < burstCount; index += 1) {
+      this.fallingProjectiles.push({
+        x: this.randomArenaX(),
+        y: -40 - index * 20,
+        vy: this.randomRange(650, 830),
+        vx: 0,
+        radius: this.randomRange(16, 22),
+        active: true,
+        horizontal: false,
+        dark: true,
       });
     }
   }
 
-  private fireBossHorizontalShot(): void {
-    const startX = this.boss.x - 24;
+  private launchBossLandingBurst(): void {
+    const burstCount = this.boss.hp <= 12 ? 3 : 2;
+
+    for (let index = 0; index < burstCount; index += 1) {
+      this.fallingProjectiles.push({
+        x: this.randomArenaX(),
+        y: -30 - index * 12,
+        vy: this.randomRange(720, 860),
+        vx: 0,
+        radius: this.randomRange(14, 20),
+        active: true,
+        horizontal: false,
+        dark: true,
+      });
+    }
+  }
+
+  private releaseBossAirMagic(): void {
     this.fallingProjectiles.push({
-      x: startX,
-      y: this.boss.y + 50,
-      vy: 0,
-      radius: 14,
+      x: this.randomArenaX(),
+      y: this.boss.y + 30,
+      vy: this.randomRange(760, 920),
+      vx: 0,
+      radius: this.randomRange(14, 18),
       active: true,
+      horizontal: false,
+      dark: true,
     });
   }
 
-  private updateMarkers(deltaTime: number): void {
-    for (const marker of this.markers) {
-      marker.timeLeft -= deltaTime;
-
-      if (marker.timeLeft <= 0) {
-        this.fallingProjectiles.push({
-          x: marker.x,
-          y: -20,
-          vy: 620,
-          radius: 16,
-          active: true,
-        });
-      }
-    }
-
-    this.markers = this.markers.filter((marker) => marker.timeLeft > 0);
+  private fireBossHorizontalShot(): void {
+    this.fallingProjectiles.push({
+      x: this.boss.x - 20,
+      y: this.boss.y + 66,
+      vy: 0,
+      vx: -330,
+      radius: 15,
+      active: true,
+      horizontal: true,
+      dark: true,
+    });
   }
 
   private updateFallingProjectiles(deltaTime: number): void {
@@ -577,28 +738,29 @@ export class GameEngine {
         continue;
       }
 
-      if (projectile.vy === 0) {
-        projectile.x -= 260 * deltaTime;
+      if (projectile.horizontal) {
+        projectile.x += projectile.vx * deltaTime;
       } else {
         projectile.y += projectile.vy * deltaTime;
       }
 
-      const horizontalMode = projectile.vy === 0;
       const hitGround =
-        !horizontalMode &&
+        !projectile.horizontal &&
         projectile.y + projectile.radius >= this.bossArena.groundY;
 
-      const leftArena = horizontalMode && projectile.x + projectile.radius < this.bossArena.startX - 40;
+      const leftArena =
+        projectile.horizontal &&
+        projectile.x + projectile.radius < this.bossArena.startX - 60;
 
       if (hitGround || leftArena) {
-        if (!horizontalMode) {
+        if (!projectile.horizontal) {
           const heroCenterX = this.hero.x + this.hero.width / 2;
           const impactDistance = Math.abs(heroCenterX - projectile.x);
 
           if (
             this.hero.invulnerabilityTimer <= 0 &&
-            impactDistance <= 42 &&
-            this.hero.y + this.hero.height >= this.bossArena.groundY - 90
+            impactDistance <= 50 &&
+            this.hero.y + this.hero.height >= this.bossArena.groundY - 100
           ) {
             this.applyHeroDamage(1);
           }
@@ -609,9 +771,14 @@ export class GameEngine {
       }
 
       if (
-        horizontalMode &&
+        projectile.horizontal &&
         this.hero.invulnerabilityTimer <= 0 &&
-        this.circleRectOverlap(projectile.x, projectile.y, projectile.radius, this.hero)
+        this.circleRectOverlap(
+          projectile.x,
+          projectile.y,
+          projectile.radius,
+          this.hero,
+        )
       ) {
         projectile.active = false;
         this.applyHeroDamage(1);
@@ -630,8 +797,8 @@ export class GameEngine {
 
     this.hero.hp = Math.max(0, this.hero.hp - amount);
     this.hero.invulnerabilityTimer = 1;
-    this.hero.vx = -this.hero.direction * 180;
-    this.hero.vy = -220;
+    this.hero.vx = -this.hero.direction * 190;
+    this.hero.vy = -260;
   }
 
   private updateCamera(): void {
@@ -678,11 +845,15 @@ export class GameEngine {
     return dx * dx + dy * dy <= radius * radius;
   }
 
-  private shuffle(values: number[]): void {
-    for (let index = values.length - 1; index > 0; index -= 1) {
-      const randomIndex = Math.floor(Math.random() * (index + 1));
-      [values[index], values[randomIndex]] = [values[randomIndex], values[index]];
-    }
+  private randomArenaX(): number {
+    return this.randomRange(
+      this.bossArena.startX + 40,
+      this.bossArena.endX - 40,
+    );
+  }
+
+  private randomRange(min: number, max: number): number {
+    return min + Math.random() * (max - min);
   }
 
   private render(): void {
@@ -696,10 +867,10 @@ export class GameEngine {
 
     this.drawPlatforms();
     this.drawCollectibles();
+    this.drawSpecialWaves();
     this.drawEnemies();
     this.drawBullets();
     this.drawBoss();
-    this.drawBossMarkers();
     this.drawFallingProjectiles();
     this.drawHero();
 
@@ -708,15 +879,15 @@ export class GameEngine {
     this.drawHud();
 
     if (this.specialFlashTimer > 0) {
-      ctx.fillStyle = `rgba(255, 236, 179, ${Math.min(
-        this.specialFlashTimer * 2.5,
-        0.35,
+      ctx.fillStyle = `rgba(255, 239, 186, ${Math.min(
+        this.specialFlashTimer * 0.3,
+        0.3,
       )})`;
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     if (this.paused) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
       ctx.fillStyle = '#f4e7c7';
@@ -726,7 +897,11 @@ export class GameEngine {
 
       ctx.font = '20px Arial';
       ctx.fillStyle = '#d5d8de';
-      ctx.fillText('Pressione ESC para continuar', this.canvas.width / 2, this.canvas.height / 2 + 20);
+      ctx.fillText(
+        'Pressione ESC para continuar',
+        this.canvas.width / 2,
+        this.canvas.height / 2 + 20,
+      );
     }
   }
 
@@ -734,56 +909,97 @@ export class GameEngine {
     const ctx = this.ctx;
 
     const gradient = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-    gradient.addColorStop(0, '#1a1c27');
-    gradient.addColorStop(0.55, '#10131b');
-    gradient.addColorStop(1, '#0b0d12');
+    gradient.addColorStop(0, '#0f1017');
+    gradient.addColorStop(0.32, '#090b12');
+    gradient.addColorStop(0.72, '#07080d');
+    gradient.addColorStop(1, '#040507');
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    ctx.fillStyle = 'rgba(255, 183, 77, 0.06)';
+    ctx.fillStyle = 'rgba(82, 20, 30, 0.18)';
     ctx.beginPath();
-    ctx.arc(190, 130, 120, 0, Math.PI * 2);
+    ctx.arc(200, 120, 150, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(45, 49, 64, 0.9)';
+    ctx.fillStyle = 'rgba(22, 24, 33, 0.95)';
     ctx.beginPath();
-    ctx.moveTo(0, 400);
-    ctx.lineTo(160, 290);
-    ctx.lineTo(300, 360);
-    ctx.lineTo(470, 250);
-    ctx.lineTo(680, 390);
-    ctx.lineTo(860, 260);
-    ctx.lineTo(1080, 380);
-    ctx.lineTo(1280, 270);
+    ctx.moveTo(0, 420);
+    ctx.lineTo(140, 300);
+    ctx.lineTo(280, 350);
+    ctx.lineTo(470, 240);
+    ctx.lineTo(650, 380);
+    ctx.lineTo(820, 250);
+    ctx.lineTo(1040, 360);
+    ctx.lineTo(1280, 230);
     ctx.lineTo(1280, 720);
     ctx.lineTo(0, 720);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(80, 86, 110, 0.18)';
-    for (let index = 0; index < 12; index += 1) {
-      const x = (index * 140 - (this.cameraX * 0.15)) % 1400;
-      ctx.fillRect(x, 500, 70, 120);
-      ctx.fillRect(x + 18, 460, 16, 40);
+    ctx.fillStyle = 'rgba(34, 37, 48, 0.9)';
+    ctx.beginPath();
+    ctx.moveTo(0, 520);
+    ctx.lineTo(170, 460);
+    ctx.lineTo(330, 490);
+    ctx.lineTo(520, 430);
+    ctx.lineTo(760, 500);
+    ctx.lineTo(980, 435);
+    ctx.lineTo(1280, 520);
+    ctx.lineTo(1280, 720);
+    ctx.lineTo(0, 720);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(100, 16, 26, 0.12)';
+    for (let index = 0; index < 10; index += 1) {
+      const x = (index * 180 - (this.cameraX * 0.18)) % 1500;
+      ctx.fillRect(x + 30, 470, 18, 90);
+      ctx.fillRect(x, 560, 72, 40);
+      ctx.fillRect(x + 52, 520, 14, 40);
     }
 
-    ctx.fillStyle = 'rgba(255,255,255,0.03)';
-    ctx.fillRect(0, 560, this.canvas.width, 160);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
+    ctx.fillRect(0, 555, this.canvas.width, 165);
+
+    for (let index = 0; index < 34; index += 1) {
+      const px = ((index * 97) + performance.now() * 0.01) % (this.canvas.width + 120);
+      const py = 120 + ((index * 41) % 480);
+      ctx.fillStyle = 'rgba(180, 190, 220, 0.04)';
+      ctx.fillRect(px - 60, py, 2, 2);
+    }
   }
 
   private drawPlatforms(): void {
     const ctx = this.ctx;
 
     for (const platform of this.platforms) {
-      ctx.fillStyle = '#343846';
+      const topGradient = ctx.createLinearGradient(
+        platform.x,
+        platform.y,
+        platform.x,
+        platform.y + platform.height,
+      );
+      topGradient.addColorStop(0, '#3b2641');
+      topGradient.addColorStop(0.35, '#2b2032');
+      topGradient.addColorStop(1, '#17141d');
+
+      ctx.fillStyle = topGradient;
       ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-      ctx.fillStyle = '#4b5161';
-      ctx.fillRect(platform.x, platform.y, platform.width, 8);
+      ctx.fillStyle = '#70527a';
+      ctx.fillRect(platform.x, platform.y, platform.width, 6);
 
-      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillStyle = '#130f17';
       ctx.fillRect(platform.x, platform.y + platform.height - 8, platform.width, 8);
+
+      ctx.fillStyle = 'rgba(147, 103, 174, 0.18)';
+      for (let index = 12; index < platform.width; index += 34) {
+        ctx.fillRect(platform.x + index, platform.y + 8, 3, platform.height - 16);
+      }
+
+      ctx.strokeStyle = 'rgba(10, 8, 14, 0.6)';
+      ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
     }
   }
 
@@ -802,25 +1018,35 @@ export class GameEngine {
     ctx.save();
     ctx.translate(hero.x, hero.y);
 
-    ctx.fillStyle = '#7d2230';
-    ctx.fillRect(hero.direction === 1 ? 8 : 28, 16, 10, 34);
+    ctx.fillStyle = '#5e1622';
+    ctx.fillRect(hero.direction === 1 ? 9 : 27, 15, 10, 34);
 
-    ctx.fillStyle = '#30475a';
+    ctx.fillStyle = '#24384d';
     ctx.fillRect(12, 16, 20, 28);
 
-    ctx.fillStyle = '#2b3546';
+    ctx.fillStyle = '#1f2938';
     ctx.fillRect(10, 36, 24, 24);
 
-    ctx.fillStyle = '#d8c2a1';
+    ctx.fillStyle = '#d7b899';
     ctx.fillRect(14, 2, 16, 16);
 
-    ctx.fillStyle = '#2a2326';
+    ctx.fillStyle = '#151318';
     ctx.fillRect(12, 0, 20, 7);
 
-    ctx.fillStyle = '#f5c16c';
-    const handX = hero.direction === 1 ? 34 : 4;
+    const handX = hero.direction === 1 ? 35 : 3;
+    const handGlow = ctx.createRadialGradient(handX, 26, 1, handX, 26, 12);
+    handGlow.addColorStop(0, 'rgba(255, 211, 132, 0.95)');
+    handGlow.addColorStop(0.45, 'rgba(255, 153, 51, 0.45)');
+    handGlow.addColorStop(1, 'rgba(255, 153, 51, 0)');
+
+    ctx.fillStyle = handGlow;
     ctx.beginPath();
-    ctx.arc(handX, 26, 5, 0, Math.PI * 2);
+    ctx.arc(handX, 26, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffce78';
+    ctx.beginPath();
+    ctx.arc(handX, 26, 4.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
@@ -830,16 +1056,32 @@ export class GameEngine {
     const ctx = this.ctx;
 
     for (const bullet of this.bullets) {
+      const glow = ctx.createRadialGradient(
+        bullet.x + bullet.width / 2,
+        bullet.y + bullet.height / 2,
+        1,
+        bullet.x + bullet.width / 2,
+        bullet.y + bullet.height / 2,
+        16,
+      );
+
+      glow.addColorStop(0, 'rgba(255, 220, 150, 1)');
+      glow.addColorStop(0.45, 'rgba(255, 170, 70, 0.85)');
+      glow.addColorStop(1, 'rgba(255, 170, 70, 0)');
+
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(
+        bullet.x + bullet.width / 2,
+        bullet.y + bullet.height / 2,
+        12,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+
       ctx.fillStyle = '#ffd083';
       ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-
-      ctx.fillStyle = 'rgba(255, 208, 131, 0.4)';
-      ctx.fillRect(
-        bullet.vx > 0 ? bullet.x - 8 : bullet.x + bullet.width,
-        bullet.y + 2,
-        8,
-        6,
-      );
     }
   }
 
@@ -854,20 +1096,43 @@ export class GameEngine {
       ctx.save();
       ctx.translate(enemy.x, enemy.y);
 
-      ctx.fillStyle = enemy.hitFlash > 0 ? '#e8d7c1' : '#272b37';
+      const coreColor = enemy.type === 'vigia' ? '#64e5ff' : '#7aff97';
+      const aura = ctx.createRadialGradient(
+        enemy.width / 2,
+        enemy.height / 2,
+        1,
+        enemy.width / 2,
+        enemy.height / 2,
+        enemy.type === 'vigia' ? 38 : 28,
+      );
+      aura.addColorStop(0, enemy.type === 'vigia' ? 'rgba(100, 229, 255, 0.9)' : 'rgba(122, 255, 151, 0.85)');
+      aura.addColorStop(0.45, enemy.type === 'vigia' ? 'rgba(50, 160, 255, 0.28)' : 'rgba(50, 255, 130, 0.22)');
+      aura.addColorStop(1, 'rgba(0,0,0,0)');
+
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(enemy.width / 2, enemy.height / 2, enemy.type === 'vigia' ? 36 : 26, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = enemy.hitFlash > 0 ? '#efe3d7' : '#13161c';
       ctx.fillRect(0, 8, enemy.width, enemy.height - 8);
 
-      ctx.fillStyle = '#191c24';
+      ctx.fillStyle = '#090b10';
       ctx.fillRect(6, 0, enemy.width - 12, 12);
 
-      ctx.fillStyle = '#7be0ff';
-      ctx.fillRect(enemy.width / 2 - 5, 22, 10, 10);
+      ctx.fillStyle = coreColor;
+      ctx.fillRect(enemy.width / 2 - 5, 21, 10, 10);
 
-      if (enemy.type === 'vigia') {
-        ctx.fillStyle = '#3d4253';
-        ctx.fillRect(-6, 18, 8, 24);
-        ctx.fillRect(enemy.width - 2, 18, 8, 24);
-      }
+      ctx.fillStyle = enemy.type === 'vigia' ? '#24313f' : '#1a2220';
+      ctx.fillRect(5, 18, 4, enemy.height - 18);
+      ctx.fillRect(enemy.width - 9, 18, 4, enemy.height - 18);
+
+      ctx.strokeStyle = enemy.type === 'vigia' ? 'rgba(100, 229, 255, 0.45)' : 'rgba(122, 255, 151, 0.4)';
+      ctx.beginPath();
+      ctx.moveTo(8, 18);
+      ctx.lineTo(enemy.width / 2, enemy.height / 2);
+      ctx.lineTo(enemy.width - 8, 18);
+      ctx.stroke();
 
       ctx.restore();
     }
@@ -889,6 +1154,11 @@ export class GameEngine {
         ctx.beginPath();
         ctx.arc(item.x, y, 9, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 238, 185, 0.45)';
+        ctx.beginPath();
+        ctx.arc(item.x - 2, y - 2, 3, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       if (item.type === 'heart') {
@@ -902,6 +1172,15 @@ export class GameEngine {
       }
 
       if (item.type === 'spark') {
+        const sparkGlow = ctx.createRadialGradient(item.x, y, 1, item.x, y, 18);
+        sparkGlow.addColorStop(0, 'rgba(125, 232, 255, 1)');
+        sparkGlow.addColorStop(0.5, 'rgba(125, 232, 255, 0.35)');
+        sparkGlow.addColorStop(1, 'rgba(125, 232, 255, 0)');
+        ctx.fillStyle = sparkGlow;
+        ctx.beginPath();
+        ctx.arc(item.x, y, 16, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = '#7de8ff';
         ctx.beginPath();
         ctx.moveTo(item.x, y - 10);
@@ -927,37 +1206,59 @@ export class GameEngine {
     ctx.save();
     ctx.translate(boss.x, boss.y);
 
-    ctx.fillStyle = boss.hitFlash > 0 ? '#f7eddc' : '#2b2f3b';
-    ctx.fillRect(10, 20, 90, 130);
+    const aura = ctx.createRadialGradient(60, 72, 10, 60, 72, 90);
+    aura.addColorStop(0, 'rgba(80, 10, 20, 0.65)');
+    aura.addColorStop(0.45, 'rgba(100, 0, 40, 0.25)');
+    aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
-    ctx.fillStyle = '#1b1f28';
-    ctx.fillRect(24, 0, 62, 36);
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(60, 72, 90, 0, Math.PI * 2);
+    ctx.fill();
 
-    ctx.fillStyle = '#6de2ff';
-    ctx.fillRect(48, 56, 16, 16);
+    ctx.fillStyle = boss.hitFlash > 0 ? '#f5ece5' : '#0a0b10';
+    ctx.fillRect(16, 26, 88, 128);
 
-    ctx.fillStyle = '#404758';
-    ctx.fillRect(-6, 32, 18, 72);
-    ctx.fillRect(98, 32, 18, 72);
+    ctx.fillStyle = '#040507';
+    ctx.fillRect(28, 0, 64, 38);
+
+    ctx.fillStyle = '#12131a';
+    ctx.fillRect(-6, 34, 20, 80);
+    ctx.fillRect(106, 34, 20, 80);
+
+    ctx.fillStyle = '#191b23';
+    ctx.fillRect(28, 132, 18, 28);
+    ctx.fillRect(74, 132, 18, 28);
+
+    const coreGlow = ctx.createRadialGradient(60, 70, 2, 60, 70, 28);
+    coreGlow.addColorStop(0, 'rgba(135, 240, 255, 1)');
+    coreGlow.addColorStop(0.4, 'rgba(100, 210, 255, 0.8)');
+    coreGlow.addColorStop(1, 'rgba(100, 210, 255, 0)');
+
+    ctx.fillStyle = coreGlow;
+    ctx.beginPath();
+    ctx.arc(60, 70, 28, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#7af2ff';
+    ctx.fillRect(50, 60, 20, 20);
+
+    ctx.strokeStyle = 'rgba(110, 225, 255, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(28, 44);
+    ctx.lineTo(60, 70);
+    ctx.lineTo(92, 42);
+    ctx.moveTo(34, 102);
+    ctx.lineTo(60, 70);
+    ctx.lineTo(88, 100);
+    ctx.stroke();
+
+    ctx.fillStyle = '#2a0611';
+    ctx.fillRect(18, 12, 10, 18);
+    ctx.fillRect(92, 12, 10, 18);
 
     ctx.restore();
-  }
-
-  private drawBossMarkers(): void {
-    const ctx = this.ctx;
-
-    for (const marker of this.markers) {
-      ctx.strokeStyle = 'rgba(255, 130, 130, 0.9)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(marker.x, marker.y, marker.radius, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.fillStyle = 'rgba(255, 130, 130, 0.18)';
-      ctx.beginPath();
-      ctx.arc(marker.x, marker.y, marker.radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
   }
 
   private drawFallingProjectiles(): void {
@@ -968,10 +1269,73 @@ export class GameEngine {
         continue;
       }
 
-      ctx.fillStyle = projectile.vy === 0 ? '#bc8cff' : '#ff9e7d';
+      const glow = ctx.createRadialGradient(
+        projectile.x,
+        projectile.y,
+        1,
+        projectile.x,
+        projectile.y,
+        projectile.radius * 2.2,
+      );
+
+      if (projectile.dark) {
+        glow.addColorStop(0, 'rgba(138, 225, 255, 0.95)');
+        glow.addColorStop(0.28, 'rgba(134, 80, 255, 0.75)');
+        glow.addColorStop(0.7, 'rgba(73, 16, 38, 0.4)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+      } else {
+        glow.addColorStop(0, 'rgba(255, 180, 120, 0.95)');
+        glow.addColorStop(0.5, 'rgba(255, 120, 90, 0.4)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+      }
+
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(projectile.x, projectile.y, projectile.radius * 2.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = projectile.dark ? '#7be8ff' : '#ff9e7d';
       ctx.beginPath();
       ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
       ctx.fill();
+    }
+  }
+
+  private drawSpecialWaves(): void {
+    const ctx = this.ctx;
+
+    for (const wave of this.specialWaves) {
+      const alpha = wave.life / wave.maxLife;
+
+      const gradient = ctx.createRadialGradient(
+        wave.x,
+        wave.y,
+        Math.max(wave.radius * 0.2, 1),
+        wave.x,
+        wave.y,
+        wave.radius,
+      );
+
+      gradient.addColorStop(0, `rgba(255, 238, 180, ${alpha * 0.22})`);
+      gradient.addColorStop(0.3, `rgba(255, 180, 90, ${alpha * 0.18})`);
+      gradient.addColorStop(1, 'rgba(255, 180, 90, 0)');
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = `rgba(255, 219, 143, ${alpha * 0.9})`;
+      ctx.lineWidth = wave.lineWidth;
+      ctx.beginPath();
+      ctx.arc(wave.x, wave.y, wave.radius * 0.82, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(255, 153, 61, ${alpha * 0.65})`;
+      ctx.lineWidth = wave.lineWidth * 0.45;
+      ctx.beginPath();
+      ctx.arc(wave.x, wave.y, wave.radius * 0.6, 0, Math.PI * 2);
+      ctx.stroke();
     }
   }
 
@@ -979,7 +1343,7 @@ export class GameEngine {
     const ctx = this.ctx;
 
     ctx.save();
-    ctx.fillStyle = 'rgba(10, 12, 18, 0.55)';
+    ctx.fillStyle = 'rgba(6, 8, 12, 0.62)';
     ctx.fillRect(20, 18, 250, 92);
     ctx.fillRect(this.canvas.width - 240, 18, 220, 92);
 
@@ -1019,7 +1383,7 @@ export class GameEngine {
       const x = this.canvas.width / 2 - barWidth / 2;
       const y = 70;
 
-      ctx.fillStyle = 'rgba(10, 12, 18, 0.72)';
+      ctx.fillStyle = 'rgba(8, 10, 14, 0.78)';
       ctx.fillRect(x - 12, y - 30, barWidth + 24, 54);
 
       ctx.textAlign = 'center';
@@ -1027,11 +1391,21 @@ export class GameEngine {
       ctx.font = 'bold 18px Arial';
       ctx.fillText('Arauto das Cinzas', this.canvas.width / 2, y - 10);
 
-      ctx.fillStyle = '#242835';
+      ctx.fillStyle = '#181b24';
       ctx.fillRect(x, y, barWidth, barHeight);
 
-      ctx.fillStyle = '#dd7558';
-      ctx.fillRect(x, y, (this.boss.hp / this.boss.maxHp) * barWidth, barHeight);
+      const bossBarGradient = ctx.createLinearGradient(x, y, x + barWidth, y);
+      bossBarGradient.addColorStop(0, '#7a2030');
+      bossBarGradient.addColorStop(0.5, '#c23f55');
+      bossBarGradient.addColorStop(1, '#ff9c73');
+
+      ctx.fillStyle = bossBarGradient;
+      ctx.fillRect(
+        x,
+        y,
+        (this.boss.hp / this.boss.maxHp) * barWidth,
+        barHeight,
+      );
 
       ctx.strokeStyle = 'rgba(244, 231, 199, 0.2)';
       ctx.strokeRect(x, y, barWidth, barHeight);

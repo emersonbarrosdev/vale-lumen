@@ -1,14 +1,47 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
 .canvas-shell {
+  position: relative;
   width: min(1280px, 100%);
   aspect-ratio: 16 / 9;
-  border-radius: 18px;
+  border-radius: 22px;
   overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(244, 231, 199, 0.1);
-  background: #090b10;
+  background:
+    linear-gradient(180deg, #07090e 0%, #030406 100%);
+  border: 1px solid rgba(244, 231, 199, 0.08);
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.52),
+    0 0 0 1px rgba(255, 255, 255, 0.01) inset;
+}
+
+.canvas-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top, rgba(255, 168, 88, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 20%, transparent 80%, rgba(0, 0, 0, 0.18));
+  z-index: 1;
+}
+
+.canvas-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow:
+    inset 0 0 90px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .game-canvas {
+  position: relative;
+  z-index: 0;
   display: block;
   width: 100%;
   height: 100%;
