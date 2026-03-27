@@ -1,0 +1,77 @@
+.home-screen {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top, rgba(227, 164, 60, 0.16), transparent 30%),
+    linear-gradient(180deg, #161824 0%, #0f1117 55%, #0b0d12 100%);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(transparent 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.5) 100%);
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2.6rem, 7vw, 5rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f4e7c7;
+  text-shadow: 0 0 20px rgba(227, 164, 60, 0.18);
+}
+
+.subtitle {
+  margin: 14px 0 36px;
+  color: #c7cad1;
+  font-size: 1.05rem;
+}
+
+.menu {
+  display: grid;
+  gap: 14px;
+  width: min(320px, 100%);
+  margin: 0 auto;
+}
+
+.menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  border: 1px solid rgba(244, 231, 199, 0.18);
+  border-radius: 14px;
+  background: rgba(27, 31, 43, 0.85);
+  color: #f7f7f8;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.menu-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(227, 164, 60, 0.55);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.26);
+  background: rgba(36, 40, 56, 0.95);
+}
+
+.menu-btn.danger {
+  color: #ffd7d7;
+}

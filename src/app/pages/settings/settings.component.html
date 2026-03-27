@@ -1,0 +1,26 @@
+<div class="page-shell">
+  <div class="card">
+    <h1>Configurações</h1>
+
+    <form [formGroup]="form" class="form">
+      <label class="field">
+        <span>Música: {{ form.controls.musicVolume.value }}</span>
+        <input type="range" min="0" max="100" formControlName="musicVolume" />
+      </label>
+
+      <label class="field">
+        <span>Efeitos: {{ form.controls.effectsVolume.value }}</span>
+        <input type="range" min="0" max="100" formControlName="effectsVolume" />
+      </label>
+    </form>
+
+    <div class="actions">
+      <button (click)="save()">Salvar</button>
+      <a routerLink="/">Voltar</a>
+    </div>
+
+    @if (saved) {
+      <p class="saved">Configurações salvas.</p>
+    }
+  </div>
+</div>

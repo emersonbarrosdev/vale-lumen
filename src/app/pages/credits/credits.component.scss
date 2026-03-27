@@ -1,0 +1,29 @@
+.page-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(180deg, #141722 0%, #0d1017 100%);
+}
+
+.card {
+  width: min(520px, 100%);
+  padding: 28px;
+  border-radius: 18px;
+  background: rgba(25, 29, 40, 0.95);
+  border: 1px solid rgba(244, 231, 199, 0.12);
+}
+
+a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  min-height: 44px;
+  margin-top: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(244, 231, 199, 0.16);
+  background: #252a37;
+  color: #fff;
+  text-decoration: none;
+}
