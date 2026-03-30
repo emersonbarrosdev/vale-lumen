@@ -1099,8 +1099,8 @@ export class GameEngine {
     }
 
     const t = hero.animationTime;
-    const runCycle = Math.sin(t * 13);
-    const runCycleOpposite = Math.sin(t * 13 + Math.PI);
+    const runCycle = Math.sin(t * 11);
+    const runCycleOpposite = Math.sin(t * 11 + Math.PI);
     const idleSway = Math.sin(t * 1.8) * 0.02;
     const landingCompression =
       hero.landingTimer > 0 ? hero.landingTimer / 0.16 : 0;
@@ -1128,8 +1128,8 @@ export class GameEngine {
         backLegAngle = -0.02;
         frontKnee = 0.01;
         backKnee = 0.01;
-        frontArmAngle = hero.direction === 1 ? 0.16 : -0.16;
-        backArmAngle = hero.direction === 1 ? -0.08 : 0.08;
+        frontArmAngle = hero.direction === 1 ? 0.12 : -0.12;
+        backArmAngle = hero.direction === 1 ? -0.06 : 0.06;
         frontArmY = 0;
         backArmY = 0;
         trailSwing = Math.sin(t * 1.6) * 1.2;
@@ -1137,18 +1137,18 @@ export class GameEngine {
         break;
 
       case 'run':
-        bodyBob = Math.abs(runCycle) * 0.8;
-        torsoTilt = hero.direction * 0.08;
-        headTilt = hero.direction * 0.02;
-        frontLegAngle = runCycle * 0.88;
-        backLegAngle = runCycleOpposite * 0.7;
-        frontKnee = runCycle > 0 ? -0.34 : 0.14;
-        backKnee = runCycleOpposite > 0 ? -0.22 : 0.1;
-        frontArmAngle = runCycleOpposite * 0.55;
-        backArmAngle = runCycle * 0.34;
-        frontArmY = Math.abs(runCycleOpposite) * 0.7;
-        backArmY = Math.abs(runCycle) * 0.4;
-        trailSwing = runCycleOpposite * 3;
+        bodyBob = Math.abs(runCycle) * 0.65;
+        torsoTilt = hero.direction * 0.06;
+        headTilt = hero.direction * 0.015;
+        frontLegAngle = runCycle * 0.82;
+        backLegAngle = runCycleOpposite * 0.64;
+        frontKnee = runCycle > 0 ? -0.3 : 0.12;
+        backKnee = runCycleOpposite > 0 ? -0.2 : 0.1;
+        frontArmAngle = runCycleOpposite * 0.24;
+        backArmAngle = runCycle * 0.16;
+        frontArmY = Math.abs(runCycleOpposite) * 0.2;
+        backArmY = Math.abs(runCycle) * 0.12;
+        trailSwing = runCycleOpposite * 2.2;
         handSparkScale = 0;
         break;
 
@@ -1160,10 +1160,10 @@ export class GameEngine {
         backLegAngle = hero.direction === 1 ? -0.12 : 0.12;
         frontKnee = -0.68;
         backKnee = -0.4;
-        frontArmAngle = hero.direction === 1 ? -0.22 : 0.22;
-        backArmAngle = hero.direction === 1 ? -0.48 : 0.48;
-        frontArmY = -1;
-        backArmY = -1;
+        frontArmAngle = hero.direction === 1 ? -0.18 : 0.18;
+        backArmAngle = hero.direction === 1 ? -0.32 : 0.32;
+        frontArmY = -0.4;
+        backArmY = -0.2;
         trailSwing = -3;
         handSparkScale = 0;
         break;
@@ -1176,10 +1176,10 @@ export class GameEngine {
         backLegAngle = hero.direction === 1 ? 0.26 : -0.26;
         frontKnee = -0.1;
         backKnee = 0.16;
-        frontArmAngle = hero.direction === 1 ? 0.36 : -0.36;
-        backArmAngle = hero.direction === 1 ? -0.1 : 0.1;
-        frontArmY = 1.2;
-        backArmY = 0.3;
+        frontArmAngle = hero.direction === 1 ? 0.24 : -0.24;
+        backArmAngle = hero.direction === 1 ? -0.08 : 0.08;
+        frontArmY = 0.3;
+        backArmY = 0.1;
         trailSwing = 3;
         handSparkScale = 0;
         break;
@@ -1193,8 +1193,8 @@ export class GameEngine {
         frontKnee = 0.04;
         backKnee = 0.02;
         frontArmAngle = hero.direction === 1 ? -0.94 : 0.94;
-        backArmAngle = hero.direction === 1 ? 0.12 : -0.12;
-        frontArmY = -1;
+        backArmAngle = hero.direction === 1 ? 0.08 : -0.08;
+        frontArmY = -0.4;
         backArmY = 0;
         trailSwing = -1;
         handSparkScale = 1;
@@ -1208,10 +1208,10 @@ export class GameEngine {
         backLegAngle = 0.25;
         frontKnee = -0.1;
         backKnee = 0.14;
-        frontArmAngle = hero.direction === 1 ? 0.7 : -0.7;
-        backArmAngle = hero.direction === 1 ? -0.16 : 0.16;
-        frontArmY = 0.8;
-        backArmY = 0.2;
+        frontArmAngle = hero.direction === 1 ? 0.42 : -0.42;
+        backArmAngle = hero.direction === 1 ? -0.12 : 0.12;
+        frontArmY = 0.2;
+        backArmY = 0.1;
         trailSwing = 4;
         handSparkScale = 0;
         break;
@@ -1498,12 +1498,32 @@ export class GameEngine {
     const ctx = this.ctx;
 
     for (const bullet of this.bullets) {
-      ctx.fillStyle = '#ffca78';
+      const centerX = bullet.x + bullet.width / 2;
+      const centerY = bullet.y + bullet.height / 2;
+
+      ctx.fillStyle = '#ffc86f';
       ctx.beginPath();
-      ctx.moveTo(bullet.x, bullet.y + bullet.height / 2);
-      ctx.lineTo(bullet.x + bullet.width - 3, bullet.y);
-      ctx.lineTo(bullet.x + bullet.width, bullet.y + bullet.height / 2);
-      ctx.lineTo(bullet.x + bullet.width - 3, bullet.y + bullet.height);
+
+      if (bullet.vx >= 0) {
+        ctx.moveTo(bullet.x, centerY - 4);
+        ctx.lineTo(centerX - 1, centerY - 4);
+        ctx.lineTo(centerX - 4, bullet.y);
+        ctx.lineTo(bullet.x + bullet.width, centerY - 1);
+        ctx.lineTo(centerX + 1, centerY + 1);
+        ctx.lineTo(centerX + 4, bullet.y + bullet.height);
+        ctx.lineTo(bullet.x + 2, centerY + 4);
+        ctx.lineTo(centerX - 2, centerY + 2);
+      } else {
+        ctx.moveTo(bullet.x + bullet.width, centerY - 4);
+        ctx.lineTo(centerX + 1, centerY - 4);
+        ctx.lineTo(centerX + 4, bullet.y);
+        ctx.lineTo(bullet.x, centerY - 1);
+        ctx.lineTo(centerX - 1, centerY + 1);
+        ctx.lineTo(centerX - 4, bullet.y + bullet.height);
+        ctx.lineTo(bullet.x + bullet.width - 2, centerY + 4);
+        ctx.lineTo(centerX + 2, centerY + 2);
+      }
+
       ctx.closePath();
       ctx.fill();
     }
