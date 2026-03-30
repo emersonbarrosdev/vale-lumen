@@ -1,10 +1,16 @@
 .game-page {
+  width: 100%;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px;
+  overflow: hidden;
   background:
     radial-gradient(circle at top, rgba(111, 24, 34, 0.16), transparent 20%),
-    radial-gradient(circle at 50% 0%, rgba(255, 174, 88, 0.06), transparent 18%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 174, 88, 0.06),
+      transparent 18%
+    ),
     linear-gradient(180deg, #090b11 0%, #050608 100%);
 }

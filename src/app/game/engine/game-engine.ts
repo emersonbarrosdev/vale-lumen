@@ -1,6 +1,7 @@
 import { InputManager } from './input-manager';
 import {
   BossArenaData,
+  ChestData,
   CollectibleData,
   PlatformData,
   PhaseOneScene,
@@ -64,12 +65,19 @@ interface Enemy {
   hp: number;
   active: boolean;
   hitFlash: number;
+  hoverOffset: number;
 }
 
 interface Collectible extends CollectibleData {
   width: number;
   height: number;
   collected: boolean;
+}
+
+interface Chest extends ChestData {
+  active: boolean;
+  breakTimer: number;
+  rewardGranted: boolean;
 }
 
 interface Boss {
@@ -80,35 +88,54 @@ interface Boss {
   hp: number;
   maxHp: number;
   active: boolean;
-  attackCooldown: number;
-  secondaryCooldown: number;
   jumpCooldown: number;
+  secondaryCooldown: number;
   vy: number;
   onGround: boolean;
   hitFlash: number;
-  airShotsRemaining: number;
-  airShotCooldown: number;
+  introPulse: number;
+  castTimer: number;
+  armSwing: number;
+  squashTimer: number;
+  special50Used: boolean;
+  special15Used: boolean;
 }
 
-interface FallingProjectile {
+interface BossProjectile {
   x: number;
   y: number;
-  vy: number;
   vx: number;
   radius: number;
   active: boolean;
-  horizontal: boolean;
-  dark: boolean;
+  waveOffset: number;
+  amplitude: number;
+  frequency: number;
+  elapsed: number;
+  damage: number;
+  kind: 'normal' | 'ultimate';
 }
 
-interface SpecialWave {
+interface LightningPoint {
   x: number;
   y: number;
-  radius: number;
-  maxRadius: number;
-  lineWidth: number;
+}
+
+interface SpecialStrike {
+  points: LightningPoint[];
   life: number;
   maxLife: number;
+  width: number;
+}
+
+interface BurstParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  color: string;
 }
 
 export class GameEngine {
@@ -128,21 +155,22 @@ export class GameEngine {
   private readonly platforms: Platform[];
   private readonly enemies: Enemy[];
   private readonly collectibles: Collectible[];
+  private readonly chests: Chest[];
   private readonly bossArena: BossArenaData;
 
   private readonly hero: Hero = {
     x: 120,
     y: 500,
-    width: 44,
-    height: 64,
+    width: 46,
+    height: 70,
     vx: 0,
     vy: 0,
-    speed: 270,
-    jumpForce: 760,
+    speed: 275,
+    jumpForce: 770,
     direction: 1,
     onGround: false,
-    hp: 3,
-    maxHp: 3,
+    hp: 100,
+    maxHp: 100,
     shootCooldown: 0,
     dashCooldown: 0,
     invulnerabilityTimer: 0,
@@ -159,29 +187,32 @@ export class GameEngine {
   private readonly boss: Boss = {
     x: 0,
     y: 0,
-    width: 120,
-    height: 160,
-    hp: 34,
-    maxHp: 34,
+    width: 146,
+    height: 186,
+    hp: 36,
+    maxHp: 36,
     active: false,
-    attackCooldown: 2.5,
-    secondaryCooldown: 3.8,
     jumpCooldown: 3.2,
+    secondaryCooldown: 2.2,
     vy: 0,
     onGround: true,
     hitFlash: 0,
-    airShotsRemaining: 0,
-    airShotCooldown: 0,
+    introPulse: 0,
+    castTimer: 0,
+    armSwing: 0,
+    squashTimer: 0,
+    special50Used: false,
+    special15Used: false,
   };
 
   private cameraX = 0;
   private bullets: Bullet[] = [];
-  private fallingProjectiles: FallingProjectile[] = [];
-  private specialWaves: SpecialWave[] = [];
+  private bossProjectiles: BossProjectile[] = [];
+  private specialStrikes: SpecialStrike[] = [];
+  private burstParticles: BurstParticle[] = [];
 
   private score = 0;
-  private sparks = 0;
-  private specialThreshold = 5;
+  private specialCharge = 0;
   private paused = false;
   private furthestScoreStep = 0;
 
@@ -215,23 +246,31 @@ export class GameEngine {
     this.enemies = phase.enemies.map((enemy) => ({
       type: enemy.type,
       x: enemy.x,
-      y: enemy.type === 'vigia' ? 558 : 576,
-      width: enemy.type === 'vigia' ? 52 : 38,
-      height: enemy.type === 'vigia' ? 62 : 44,
-      speed: enemy.type === 'vigia' ? 60 : 88,
+      y: enemy.y,
+      width: enemy.type === 'vigia' ? 58 : 44,
+      height: enemy.type === 'vigia' ? 72 : 50,
+      speed: enemy.type === 'vigia' ? 48 : 84,
       direction: -1,
       patrolLeft: enemy.patrolLeft,
       patrolRight: enemy.patrolRight,
       hp: enemy.type === 'vigia' ? 4 : 2,
       active: true,
       hitFlash: 0,
+      hoverOffset: Math.random() * Math.PI * 2,
     }));
 
     this.collectibles = phase.collectibles.map((item) => ({
       ...item,
-      width: item.type === 'coin' ? 18 : 20,
-      height: item.type === 'coin' ? 18 : 20,
+      width: item.type === 'coin' ? 18 : 22,
+      height: item.type === 'coin' ? 18 : 22,
       collected: false,
+    }));
+
+    this.chests = phase.chests.map((chest) => ({
+      ...chest,
+      active: true,
+      breakTimer: 0,
+      rewardGranted: false,
     }));
   }
 
@@ -287,10 +326,12 @@ export class GameEngine {
     this.updateBullets(deltaTime);
     this.updateEnemies(deltaTime);
     this.updateCollectibles();
+    this.updateChests(deltaTime);
     this.updateBoss(deltaTime);
-    this.updateFallingProjectiles(deltaTime);
+    this.updateBossProjectiles(deltaTime);
     this.updateSpecialSequence(deltaTime);
-    this.updateSpecialWaves(deltaTime);
+    this.updateSpecialStrikes(deltaTime);
+    this.updateBurstParticles(deltaTime);
     this.updateCamera();
 
     if (this.specialFlashTimer > 0) {
@@ -302,7 +343,7 @@ export class GameEngine {
     }
 
     if (this.boss.active && this.boss.hp <= 0) {
-      this.score += 1000;
+      this.score += 1200;
       this.startEnding('victory');
     }
   }
@@ -322,10 +363,7 @@ export class GameEngine {
     this.hero.animationTime += deltaTime;
     this.hero.shootCooldown = Math.max(0, this.hero.shootCooldown - deltaTime);
     this.hero.dashCooldown = Math.max(0, this.hero.dashCooldown - deltaTime);
-    this.hero.invulnerabilityTimer = Math.max(
-      0,
-      this.hero.invulnerabilityTimer - deltaTime,
-    );
+    this.hero.invulnerabilityTimer = Math.max(0, this.hero.invulnerabilityTimer - deltaTime);
     this.hero.castTimer = Math.max(0, this.hero.castTimer - deltaTime);
     this.hero.hurtTimer = Math.max(0, this.hero.hurtTimer - deltaTime);
     this.hero.landingTimer = Math.max(0, this.hero.landingTimer - deltaTime);
@@ -363,22 +401,21 @@ export class GameEngine {
 
     if (this.input.isJustPressed('j') && this.hero.shootCooldown <= 0) {
       this.fireBullet();
-      this.hero.shootCooldown = 0.2;
-      this.hero.castTimer = 0.14;
+      this.hero.shootCooldown = 0.22;
+      this.hero.castTimer = 0.16;
     }
 
     if (
       this.input.isJustPressed('l') &&
-      this.sparks >= this.specialThreshold &&
+      this.specialCharge >= 100 &&
       !this.specialSequenceActive
     ) {
       this.activateSpecial();
-      this.hero.castTimer = 0.28;
+      this.hero.castTimer = 0.42;
     }
 
     const gravityThisFrame =
       this.hero.vy > 0 ? this.gravity + this.fallBoost : this.gravity;
-
     this.hero.vy += gravityThisFrame * deltaTime;
 
     this.moveHeroHorizontally(deltaTime);
@@ -465,19 +502,19 @@ export class GameEngine {
       x:
         this.hero.direction === 1
           ? this.hero.x + this.hero.width - 2
-          : this.hero.x - 14,
-      y: this.hero.y + 24,
-      width: 14,
+          : this.hero.x - 18,
+      y: this.hero.y + 26,
+      width: 18,
       height: 10,
-      vx: this.hero.direction * 580,
+      vx: this.hero.direction * 610,
       active: true,
     });
   }
 
   private activateSpecial(): void {
-    this.sparks = 0;
+    this.specialCharge = 0;
     this.specialSequenceActive = true;
-    this.specialPulsesRemaining = 3;
+    this.specialPulsesRemaining = 4;
     this.specialPulseTimer = 0;
     this.specialFlashTimer = 0.95;
   }
@@ -502,22 +539,28 @@ export class GameEngine {
       return;
     }
 
-    this.specialPulseTimer = 0.22;
+    this.specialPulseTimer = 0.11;
   }
 
   private releaseSpecialPulse(): void {
-    const waveX = this.hero.x + this.hero.width / 2;
-    const waveY = this.hero.y + this.hero.height / 2;
+    const originX = this.hero.x + this.hero.width / 2;
+    const originY = this.hero.y + this.hero.height / 2;
+    const direction = this.hero.direction;
 
-    this.specialWaves.push({
-      x: waveX,
-      y: waveY,
-      radius: 0,
-      maxRadius: this.canvas.width * 1.55,
-      lineWidth: 34,
-      life: 0.56,
-      maxLife: 0.56,
-    });
+    const offsets = [-110, -40, 35, 105];
+
+    for (const offset of offsets) {
+      this.specialStrikes.push({
+        points: this.buildLightningPath(
+          originX,
+          originY + offset * 0.18,
+          direction,
+        ),
+        life: 0.26,
+        maxLife: 0.26,
+        width: offset === -40 || offset === 35 ? 15 : 9,
+      });
+    }
 
     for (const enemy of this.enemies) {
       if (!enemy.active) {
@@ -526,31 +569,81 @@ export class GameEngine {
 
       const enemyCenterX = enemy.x + enemy.width / 2;
       const enemyCenterY = enemy.y + enemy.height / 2;
-      const distance = Math.hypot(enemyCenterX - waveX, enemyCenterY - waveY);
+      const inFront =
+        direction === 1
+          ? enemyCenterX >= originX - 20
+          : enemyCenterX <= originX + 20;
+      const closeEnoughX = Math.abs(enemyCenterX - originX) <= 980;
+      const closeEnoughY = Math.abs(enemyCenterY - originY) <= 240;
 
-      if (distance <= this.canvas.width * 1.7) {
+      if (inFront && closeEnoughX && closeEnoughY) {
         enemy.hp = 0;
         enemy.active = false;
         this.score += enemy.type === 'vigia' ? 100 : 50;
+        this.spawnBurst(enemyCenterX, enemyCenterY, '#7de8ff', 14);
+      }
+    }
+
+    for (const chest of this.chests) {
+      if (!chest.active) {
+        continue;
+      }
+
+      const chestCenterX = chest.x + chest.width / 2;
+      const chestCenterY = chest.y + chest.height / 2;
+      const inFront =
+        direction === 1
+          ? chestCenterX >= originX - 20
+          : chestCenterX <= originX + 20;
+      const closeEnoughX = Math.abs(chestCenterX - originX) <= 980;
+      const closeEnoughY = Math.abs(chestCenterY - originY) <= 240;
+
+      if (inFront && closeEnoughX && closeEnoughY) {
+        this.breakChest(chest);
       }
     }
 
     if (this.boss.active && this.boss.hp > 0) {
       this.boss.hp = Math.max(0, this.boss.hp - 7);
       this.boss.hitFlash = 0.2;
+      this.spawnBurst(
+        this.boss.x + this.boss.width / 2,
+        this.boss.y + this.boss.height / 2,
+        '#7de8ff',
+        18,
+      );
     }
 
-    this.fallingProjectiles = [];
+    this.bossProjectiles = [];
   }
 
-  private updateSpecialWaves(deltaTime: number): void {
-    for (const wave of this.specialWaves) {
-      wave.life -= deltaTime;
-      const progress = 1 - wave.life / wave.maxLife;
-      wave.radius = wave.maxRadius * progress;
+  private buildLightningPath(
+    startX: number,
+    startY: number,
+    direction: 1 | -1,
+  ): LightningPoint[] {
+    const points: LightningPoint[] = [{ x: startX, y: startY }];
+    let x = startX;
+    let y = startY;
+    const segmentLength = 82;
+
+    for (let index = 0; index < 13; index += 1) {
+      x += segmentLength * direction;
+      y += this.randomRange(-34, 34);
+      points.push({ x, y });
     }
 
-    this.specialWaves = this.specialWaves.filter((wave) => wave.life > 0);
+    return points;
+  }
+
+  private updateSpecialStrikes(deltaTime: number): void {
+    for (const strike of this.specialStrikes) {
+      strike.life -= deltaTime;
+    }
+
+    this.specialStrikes = this.specialStrikes.filter(
+      (strike) => strike.life > 0,
+    );
   }
 
   private updateBullets(deltaTime: number): void {
@@ -579,8 +672,30 @@ export class GameEngine {
           if (enemy.hp <= 0) {
             enemy.active = false;
             this.score += enemy.type === 'vigia' ? 100 : 50;
+            this.spawnBurst(
+              enemy.x + enemy.width / 2,
+              enemy.y + enemy.height / 2,
+              '#ff8b5e',
+              10,
+            );
           }
 
+          break;
+        }
+      }
+
+      if (!bullet.active) {
+        continue;
+      }
+
+      for (const chest of this.chests) {
+        if (!chest.active) {
+          continue;
+        }
+
+        if (this.rectsOverlap(bullet, chest)) {
+          bullet.active = false;
+          this.breakChest(chest);
           break;
         }
       }
@@ -594,6 +709,12 @@ export class GameEngine {
         bullet.active = false;
         this.boss.hp -= 1;
         this.boss.hitFlash = 0.1;
+        this.spawnBurst(
+          this.boss.x + this.boss.width / 2,
+          this.boss.y + 74,
+          '#ff8b5e',
+          8,
+        );
       }
     }
 
@@ -607,6 +728,8 @@ export class GameEngine {
       }
 
       enemy.hitFlash = Math.max(0, enemy.hitFlash - deltaTime);
+      enemy.hoverOffset += deltaTime * (enemy.type === 'vigia' ? 1.1 : 0.9);
+
       enemy.x += enemy.direction * enemy.speed * deltaTime;
 
       if (enemy.x <= enemy.patrolLeft) {
@@ -623,7 +746,7 @@ export class GameEngine {
         this.hero.invulnerabilityTimer <= 0 &&
         this.rectsOverlap(this.hero, enemy)
       ) {
-        this.applyHeroDamage(1);
+        this.applyHeroDamage(enemy.type === 'vigia' ? 18 : 12);
       }
     }
   }
@@ -639,34 +762,91 @@ export class GameEngine {
 
         switch (item.type) {
           case 'coin':
-            this.score += 5;
+            this.score += 8;
             break;
           case 'heart':
-            this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 1);
+            this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 20);
+            this.spawnBurst(item.x, item.y, '#72ff95', 10);
             break;
-          case 'spark':
-            this.sparks = Math.min(this.specialThreshold, this.sparks + 1);
-            this.score += 10;
+          case 'ray':
+            this.specialCharge = Math.min(100, this.specialCharge + 10);
+            this.score += 15;
+            this.spawnBurst(item.x, item.y, '#7de8ff', 12);
             break;
         }
       }
     }
   }
 
+  private updateChests(deltaTime: number): void {
+    for (const chest of this.chests) {
+      if (chest.breakTimer > 0) {
+        chest.breakTimer = Math.max(0, chest.breakTimer - deltaTime);
+      }
+    }
+  }
+
+  private breakChest(chest: Chest): void {
+    if (!chest.active) {
+      return;
+    }
+
+    chest.active = false;
+    chest.breakTimer = 0.58;
+
+    if (!chest.rewardGranted) {
+      chest.rewardGranted = true;
+
+      if (chest.rare) {
+        this.specialCharge = Math.min(100, this.specialCharge + 100);
+        this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 25);
+        this.score += 150;
+      } else {
+        this.specialCharge = Math.min(100, this.specialCharge + 100);
+        this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 20);
+        this.score += 80;
+      }
+    }
+
+    this.spawnBurst(
+      chest.x + chest.width / 2,
+      chest.y + chest.height / 2,
+      '#ffda7d',
+      chest.rare ? 20 : 16,
+    );
+    this.spawnBurst(
+      chest.x + chest.width / 2,
+      chest.y + chest.height / 2,
+      '#7de8ff',
+      chest.rare ? 16 : 12,
+    );
+    this.spawnBurst(
+      chest.x + chest.width / 2,
+      chest.y + chest.height / 2,
+      '#72ff95',
+      chest.rare ? 12 : 8,
+    );
+  }
+
   private updateBoss(deltaTime: number): void {
     if (!this.boss.active && this.hero.x >= this.bossArena.startX - 240) {
       this.boss.active = true;
+      this.boss.introPulse = 1.5;
     }
 
     if (!this.boss.active || this.boss.hp <= 0) {
       return;
     }
 
+    const bossHpRatio = this.boss.hp / this.boss.maxHp;
+
     this.boss.hitFlash = Math.max(0, this.boss.hitFlash - deltaTime);
-    this.boss.attackCooldown -= deltaTime;
     this.boss.secondaryCooldown -= deltaTime;
     this.boss.jumpCooldown -= deltaTime;
-    this.boss.airShotCooldown -= deltaTime;
+    this.boss.introPulse = Math.max(0, this.boss.introPulse - deltaTime);
+    this.boss.castTimer = Math.max(0, this.boss.castTimer - deltaTime);
+    this.boss.squashTimer = Math.max(0, this.boss.squashTimer - deltaTime);
+    this.boss.armSwing += deltaTime * (this.boss.castTimer > 0 ? 8 : 2.8);
 
     if (this.hero.x > this.bossArena.endX - 80) {
       this.hero.x = this.bossArena.endX - 80;
@@ -682,43 +862,34 @@ export class GameEngine {
 
     this.updateBossPhysics(deltaTime);
 
-    if (this.boss.attackCooldown <= 0 && this.boss.onGround) {
-      this.launchBossSkyBurst();
-      this.boss.attackCooldown = this.boss.hp <= 12 ? 1.5 : 2.2;
-    }
-
-    if (this.boss.secondaryCooldown <= 0) {
-      this.fireBossHorizontalShot();
-      this.boss.secondaryCooldown = this.boss.hp <= 12 ? 1.9 : 3.2;
-    }
-
-    if (
-      !this.boss.onGround &&
-      this.boss.airShotsRemaining > 0 &&
-      this.boss.airShotCooldown <= 0
-    ) {
-      this.releaseBossAirMagic();
-      this.boss.airShotsRemaining -= 1;
-      this.boss.airShotCooldown = 0.18;
+    if (!this.boss.special50Used && bossHpRatio <= 0.5) {
+      this.fireBossUltimateShot();
+      this.boss.special50Used = true;
+      this.boss.castTimer = 0.9;
+      this.boss.secondaryCooldown = 1.2;
+    } else if (!this.boss.special15Used && bossHpRatio <= 0.15) {
+      this.fireBossUltimateShot();
+      this.boss.special15Used = true;
+      this.boss.castTimer = 0.9;
+      this.boss.secondaryCooldown = 1;
+    } else if (this.boss.secondaryCooldown <= 0) {
+      this.fireBossWaveShot();
+      this.boss.secondaryCooldown = bossHpRatio <= 0.3 ? 1.1 : 1.65;
+      this.boss.castTimer = 0.45;
     }
 
     if (
       this.hero.invulnerabilityTimer <= 0 &&
       this.rectsOverlap(this.hero, this.boss)
     ) {
-      this.applyHeroDamage(1);
+      this.applyHeroDamage(20);
     }
   }
 
   private startBossJump(): void {
-    this.boss.vy = -860;
+    this.boss.vy = -820;
     this.boss.onGround = false;
-    this.boss.jumpCooldown = this.randomRange(
-      this.boss.hp <= 12 ? 1.4 : 2.2,
-      this.boss.hp <= 12 ? 2.2 : 3.4,
-    );
-    this.boss.airShotsRemaining = this.boss.hp <= 12 ? 4 : 3;
-    this.boss.airShotCooldown = 0.1;
+    this.boss.jumpCooldown = this.randomRange(2.1, 3.4);
   }
 
   private updateBossPhysics(deltaTime: number): void {
@@ -726,7 +897,7 @@ export class GameEngine {
       return;
     }
 
-    this.boss.vy += (this.gravity + 950) * deltaTime;
+    this.boss.vy += (this.gravity + 900) * deltaTime;
     this.boss.y += this.boss.vy * deltaTime;
 
     const bossGround = this.bossArena.groundY - this.boss.height;
@@ -735,110 +906,77 @@ export class GameEngine {
       this.boss.y = bossGround;
       this.boss.vy = 0;
       this.boss.onGround = true;
-      this.launchBossLandingBurst();
+      this.boss.squashTimer = 0.16;
+      this.spawnBurst(
+        this.boss.x + this.boss.width / 2,
+        this.boss.y + this.boss.height - 4,
+        '#8b3d55',
+        10,
+      );
     }
   }
 
-  private launchBossSkyBurst(): void {
-    const burstCount = this.boss.hp <= 12 ? 4 : 3;
+  private fireBossWaveShot(): void {
+    const count = this.boss.hp / this.boss.maxHp <= 0.3 ? 3 : 2;
 
-    for (let index = 0; index < burstCount; index += 1) {
-      this.fallingProjectiles.push({
-        x: this.randomArenaX(),
-        y: -40 - index * 20,
-        vy: this.randomRange(650, 830),
-        vx: 0,
-        radius: this.randomRange(16, 22),
+    for (let index = 0; index < count; index += 1) {
+      this.bossProjectiles.push({
+        x: this.boss.x + 26,
+        y: this.boss.y + 126 + index * 8,
+        vx: -185 - index * 10,
+        radius: 13,
         active: true,
-        horizontal: false,
-        dark: true,
+        waveOffset: Math.random() * Math.PI * 2,
+        amplitude: 18 + index * 6,
+        frequency: 6.1 + index * 0.25,
+        elapsed: 0,
+        damage: 16,
+        kind: 'normal',
       });
     }
   }
 
-  private launchBossLandingBurst(): void {
-    const burstCount = this.boss.hp <= 12 ? 3 : 2;
-
-    for (let index = 0; index < burstCount; index += 1) {
-      this.fallingProjectiles.push({
-        x: this.randomArenaX(),
-        y: -30 - index * 12,
-        vy: this.randomRange(720, 860),
-        vx: 0,
-        radius: this.randomRange(14, 20),
-        active: true,
-        horizontal: false,
-        dark: true,
-      });
-    }
-  }
-
-  private releaseBossAirMagic(): void {
-    this.fallingProjectiles.push({
-      x: this.randomArenaX(),
-      y: this.boss.y + 30,
-      vy: this.randomRange(760, 920),
-      vx: 0,
-      radius: this.randomRange(14, 18),
+  private fireBossUltimateShot(): void {
+    this.bossProjectiles.push({
+      x: this.boss.x + 24,
+      y: this.boss.y + 120,
+      vx: -155,
+      radius: 28,
       active: true,
-      horizontal: false,
-      dark: true,
+      waveOffset: Math.random() * Math.PI * 2,
+      amplitude: 10,
+      frequency: 4.3,
+      elapsed: 0,
+      damage: 30,
+      kind: 'ultimate',
     });
   }
 
-  private fireBossHorizontalShot(): void {
-    this.fallingProjectiles.push({
-      x: this.boss.x - 20,
-      y: this.boss.y + 66,
-      vy: 0,
-      vx: -330,
-      radius: 15,
-      active: true,
-      horizontal: true,
-      dark: true,
-    });
-  }
-
-  private updateFallingProjectiles(deltaTime: number): void {
-    for (const projectile of this.fallingProjectiles) {
+  private updateBossProjectiles(deltaTime: number): void {
+    for (const projectile of this.bossProjectiles) {
       if (!projectile.active) {
         continue;
       }
 
-      if (projectile.horizontal) {
-        projectile.x += projectile.vx * deltaTime;
-      } else {
-        projectile.y += projectile.vy * deltaTime;
-      }
+      projectile.elapsed += deltaTime;
+      projectile.x += projectile.vx * deltaTime;
+      projectile.y +=
+        Math.sin(
+          projectile.elapsed * projectile.frequency + projectile.waveOffset,
+        ) *
+        projectile.amplitude *
+        deltaTime;
 
-      const hitGround =
-        !projectile.horizontal &&
-        projectile.y + projectile.radius >= this.bossArena.groundY;
-
-      const leftArena =
-        projectile.horizontal &&
-        projectile.x + projectile.radius < this.bossArena.startX - 60;
-
-      if (hitGround || leftArena) {
-        if (!projectile.horizontal) {
-          const heroCenterX = this.hero.x + this.hero.width / 2;
-          const impactDistance = Math.abs(heroCenterX - projectile.x);
-
-          if (
-            this.hero.invulnerabilityTimer <= 0 &&
-            impactDistance <= 50 &&
-            this.hero.y + this.hero.height >= this.bossArena.groundY - 100
-          ) {
-            this.applyHeroDamage(1);
-          }
-        }
-
+      if (
+        projectile.x + projectile.radius < this.bossArena.startX - 80 ||
+        projectile.y < 420 ||
+        projectile.y > this.bossArena.groundY - 38
+      ) {
         projectile.active = false;
         continue;
       }
 
       if (
-        projectile.horizontal &&
         this.hero.invulnerabilityTimer <= 0 &&
         this.circleRectOverlap(
           projectile.x,
@@ -848,13 +986,46 @@ export class GameEngine {
         )
       ) {
         projectile.active = false;
-        this.applyHeroDamage(1);
+        this.applyHeroDamage(projectile.damage);
       }
     }
 
-    this.fallingProjectiles = this.fallingProjectiles.filter(
+    this.bossProjectiles = this.bossProjectiles.filter(
       (projectile) => projectile.active,
     );
+  }
+
+  private updateBurstParticles(deltaTime: number): void {
+    for (const particle of this.burstParticles) {
+      particle.life -= deltaTime;
+      particle.x += particle.vx * deltaTime;
+      particle.y += particle.vy * deltaTime;
+      particle.vy += 420 * deltaTime;
+    }
+
+    this.burstParticles = this.burstParticles.filter(
+      (particle) => particle.life > 0,
+    );
+  }
+
+  private spawnBurst(
+    x: number,
+    y: number,
+    color: string,
+    amount: number,
+  ): void {
+    for (let index = 0; index < amount; index += 1) {
+      this.burstParticles.push({
+        x,
+        y,
+        vx: this.randomRange(-140, 140),
+        vy: this.randomRange(-220, -40),
+        size: this.randomRange(2, 6),
+        life: this.randomRange(0.16, 0.34),
+        maxLife: 0.34,
+        color,
+      });
+    }
   }
 
   private applyHeroDamage(amount: number): void {
@@ -864,7 +1035,7 @@ export class GameEngine {
 
     this.hero.hp = Math.max(0, this.hero.hp - amount);
     this.hero.invulnerabilityTimer = 1;
-    this.hero.hurtTimer = 0.22;
+    this.hero.hurtTimer = 0.24;
     this.hero.vx = -this.hero.direction * 190;
     this.hero.vy = -260;
   }
@@ -913,13 +1084,6 @@ export class GameEngine {
     return dx * dx + dy * dy <= radius * radius;
   }
 
-  private randomArenaX(): number {
-    return this.randomRange(
-      this.bossArena.startX + 40,
-      this.bossArena.endX - 40,
-    );
-  }
-
   private randomRange(min: number, max: number): number {
     return min + Math.random() * (max - min);
   }
@@ -935,11 +1099,13 @@ export class GameEngine {
 
     this.drawPlatforms();
     this.drawCollectibles();
-    this.drawSpecialWaves();
+    this.drawChests();
+    this.drawSpecialStrikes();
     this.drawEnemies();
     this.drawBullets();
     this.drawBoss();
-    this.drawFallingProjectiles();
+    this.drawBossProjectiles();
+    this.drawBurstParticles();
     this.drawHero();
 
     ctx.restore();
@@ -947,9 +1113,9 @@ export class GameEngine {
     this.drawHud();
 
     if (this.specialFlashTimer > 0) {
-      ctx.fillStyle = `rgba(255, 239, 186, ${Math.min(
-        this.specialFlashTimer * 0.3,
-        0.3,
+      ctx.fillStyle = `rgba(123, 232, 255, ${Math.min(
+        this.specialFlashTimer * 0.24,
+        0.24,
       )})`;
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
@@ -980,65 +1146,84 @@ export class GameEngine {
   private drawBackground(): void {
     const ctx = this.ctx;
 
-    const gradient = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-    gradient.addColorStop(0, '#0f1017');
-    gradient.addColorStop(0.32, '#090b12');
-    gradient.addColorStop(0.72, '#07080d');
-    gradient.addColorStop(1, '#040507');
+    const skyGradient = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+    skyGradient.addColorStop(0, '#131620');
+    skyGradient.addColorStop(0.25, '#0d1017');
+    skyGradient.addColorStop(0.55, '#090b10');
+    skyGradient.addColorStop(1, '#040507');
 
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    ctx.fillStyle = 'rgba(82, 20, 30, 0.18)';
+    const moonX = 980 - this.cameraX * 0.08;
+    const moonY = 128;
+    const moonGlow = ctx.createRadialGradient(moonX, moonY, 10, moonX, moonY, 200);
+    moonGlow.addColorStop(0, 'rgba(255, 196, 118, 0.15)');
+    moonGlow.addColorStop(0.36, 'rgba(255, 142, 82, 0.09)');
+    moonGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = moonGlow;
     ctx.beginPath();
-    ctx.arc(200, 120, 150, 0, Math.PI * 2);
+    ctx.arc(moonX, moonY, 190, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(22, 24, 33, 0.95)';
+    ctx.fillStyle = 'rgba(81, 18, 29, 0.16)';
     ctx.beginPath();
-    ctx.moveTo(0, 420);
-    ctx.lineTo(140, 300);
-    ctx.lineTo(280, 350);
-    ctx.lineTo(470, 240);
-    ctx.lineTo(650, 380);
-    ctx.lineTo(820, 250);
-    ctx.lineTo(1040, 360);
-    ctx.lineTo(1280, 230);
+    ctx.arc(240, 110, 170, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(18, 21, 29, 0.96)';
+    ctx.beginPath();
+    ctx.moveTo(0, 430);
+    ctx.lineTo(140, 305);
+    ctx.lineTo(280, 364);
+    ctx.lineTo(470, 246);
+    ctx.lineTo(650, 392);
+    ctx.lineTo(850, 264);
+    ctx.lineTo(1040, 362);
+    ctx.lineTo(1280, 228);
     ctx.lineTo(1280, 720);
     ctx.lineTo(0, 720);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(34, 37, 48, 0.9)';
+    ctx.fillStyle = 'rgba(32, 36, 47, 0.94)';
     ctx.beginPath();
-    ctx.moveTo(0, 520);
-    ctx.lineTo(170, 460);
-    ctx.lineTo(330, 490);
-    ctx.lineTo(520, 430);
-    ctx.lineTo(760, 500);
-    ctx.lineTo(980, 435);
-    ctx.lineTo(1280, 520);
+    ctx.moveTo(0, 525);
+    ctx.lineTo(170, 446);
+    ctx.lineTo(334, 500);
+    ctx.lineTo(520, 420);
+    ctx.lineTo(760, 505);
+    ctx.lineTo(980, 434);
+    ctx.lineTo(1280, 530);
     ctx.lineTo(1280, 720);
     ctx.lineTo(0, 720);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(100, 16, 26, 0.12)';
-    for (let index = 0; index < 10; index += 1) {
-      const x = (index * 180 - this.cameraX * 0.18) % 1500;
-      ctx.fillRect(x + 30, 470, 18, 90);
-      ctx.fillRect(x, 560, 72, 40);
-      ctx.fillRect(x + 52, 520, 14, 40);
+    ctx.fillStyle = 'rgba(68, 18, 30, 0.14)';
+    for (let index = 0; index < 9; index += 1) {
+      const x = (index * 210 - this.cameraX * 0.19) % 1500;
+      ctx.fillRect(x + 34, 478, 20, 96);
+      ctx.fillRect(x, 572, 84, 44);
+      ctx.fillRect(x + 58, 532, 14, 42);
     }
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
-    ctx.fillRect(0, 555, this.canvas.width, 165);
+    ctx.fillStyle = 'rgba(208, 217, 245, 0.028)';
+    ctx.beginPath();
+    ctx.ellipse(640, 564, 830, 84, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    for (let index = 0; index < 34; index += 1) {
+    ctx.fillStyle = 'rgba(180, 195, 225, 0.022)';
+    ctx.beginPath();
+    ctx.ellipse(700, 620, 980, 120, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (let index = 0; index < 28; index += 1) {
       const px =
-        (index * 97 + performance.now() * 0.01) % (this.canvas.width + 120);
-      const py = 120 + ((index * 41) % 480);
-      ctx.fillStyle = 'rgba(180, 190, 220, 0.04)';
+        (index * 111 + performance.now() * 0.008) %
+        (this.canvas.width + 140);
+      const py = 110 + ((index * 47) % 460);
+      ctx.fillStyle = 'rgba(180, 190, 220, 0.038)';
       ctx.fillRect(px - 60, py, 2, 2);
     }
   }
@@ -1047,23 +1232,28 @@ export class GameEngine {
     const ctx = this.ctx;
 
     for (const platform of this.platforms) {
-      const topGradient = ctx.createLinearGradient(
+      const gradient = ctx.createLinearGradient(
         platform.x,
         platform.y,
         platform.x,
         platform.y + platform.height,
       );
-      topGradient.addColorStop(0, '#3b2641');
-      topGradient.addColorStop(0.35, '#2b2032');
-      topGradient.addColorStop(1, '#17141d');
+      gradient.addColorStop(0, '#524151');
+      gradient.addColorStop(0.3, '#362b38');
+      gradient.addColorStop(1, '#17141c');
 
-      ctx.fillStyle = topGradient;
+      ctx.fillStyle = gradient;
       ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-      ctx.fillStyle = '#70527a';
-      ctx.fillRect(platform.x, platform.y, platform.width, 6);
+      ctx.fillStyle = '#8a7383';
+      ctx.fillRect(platform.x, platform.y, platform.width, 5);
 
-      ctx.fillStyle = '#130f17';
+      ctx.fillStyle = '#241c24';
+      for (let x = 0; x < platform.width; x += 34) {
+        ctx.fillRect(platform.x + x, platform.y + 6, 17, platform.height - 12);
+      }
+
+      ctx.fillStyle = '#130f16';
       ctx.fillRect(
         platform.x,
         platform.y + platform.height - 8,
@@ -1071,17 +1261,7 @@ export class GameEngine {
         8,
       );
 
-      ctx.fillStyle = 'rgba(147, 103, 174, 0.18)';
-      for (let index = 12; index < platform.width; index += 34) {
-        ctx.fillRect(
-          platform.x + index,
-          platform.y + 8,
-          3,
-          platform.height - 16,
-        );
-      }
-
-      ctx.strokeStyle = 'rgba(10, 8, 14, 0.6)';
+      ctx.strokeStyle = 'rgba(8, 8, 12, 0.65)';
       ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
     }
   }
@@ -1099,397 +1279,205 @@ export class GameEngine {
     }
 
     const t = hero.animationTime;
-    const runCycle = Math.sin(t * 11);
-    const runCycleOpposite = Math.sin(t * 11 + Math.PI);
-    const idleSway = Math.sin(t * 1.8) * 0.02;
+    const runCycle = Math.sin(t * 10);
+    const runOpposite = Math.sin(t * 10 + Math.PI);
+    const idleFloat = Math.sin(t * 2.4) * 1.5;
     const landingCompression =
       hero.landingTimer > 0 ? hero.landingTimer / 0.16 : 0;
 
     let bodyBob = 0;
-    let torsoTilt = 0;
-    let headTilt = 0;
     let frontLegAngle = 0;
     let backLegAngle = 0;
-    let frontKnee = 0;
-    let backKnee = 0;
     let frontArmAngle = 0;
     let backArmAngle = 0;
-    let frontArmY = 0;
-    let backArmY = 0;
-    let trailSwing = 0;
-    let handSparkScale = 0;
+    let handGlow = 0;
 
     switch (hero.state) {
       case 'idle':
-        bodyBob = 0;
-        torsoTilt = idleSway;
-        headTilt = idleSway * 0.7;
-        frontLegAngle = 0.02;
-        backLegAngle = -0.02;
-        frontKnee = 0.01;
-        backKnee = 0.01;
-        frontArmAngle = hero.direction === 1 ? 0.12 : -0.12;
-        backArmAngle = hero.direction === 1 ? -0.06 : 0.06;
-        frontArmY = 0;
-        backArmY = 0;
-        trailSwing = Math.sin(t * 1.6) * 1.2;
-        handSparkScale = 0;
+        bodyBob = idleFloat;
+        frontLegAngle = 0.04;
+        backLegAngle = -0.04;
+        frontArmAngle = -0.08;
+        backArmAngle = 0.08;
         break;
-
       case 'run':
-        bodyBob = Math.abs(runCycle) * 0.65;
-        torsoTilt = hero.direction * 0.06;
-        headTilt = hero.direction * 0.015;
-        frontLegAngle = runCycle * 0.82;
-        backLegAngle = runCycleOpposite * 0.64;
-        frontKnee = runCycle > 0 ? -0.3 : 0.12;
-        backKnee = runCycleOpposite > 0 ? -0.2 : 0.1;
-        frontArmAngle = runCycleOpposite * 0.24;
-        backArmAngle = runCycle * 0.16;
-        frontArmY = Math.abs(runCycleOpposite) * 0.2;
-        backArmY = Math.abs(runCycle) * 0.12;
-        trailSwing = runCycleOpposite * 2.2;
-        handSparkScale = 0;
+        bodyBob = Math.abs(runCycle) * 2.4;
+        frontLegAngle = runCycle * 0.85;
+        backLegAngle = runOpposite * 0.7;
+        frontArmAngle = runOpposite * 0.28;
+        backArmAngle = runCycle * 0.22;
         break;
-
       case 'jump':
-        bodyBob = -1.2;
-        torsoTilt = hero.direction * 0.06;
-        headTilt = hero.direction * 0.03;
-        frontLegAngle = hero.direction === 1 ? 0.4 : -0.4;
-        backLegAngle = hero.direction === 1 ? -0.12 : 0.12;
-        frontKnee = -0.68;
-        backKnee = -0.4;
-        frontArmAngle = hero.direction === 1 ? -0.18 : 0.18;
-        backArmAngle = hero.direction === 1 ? -0.32 : 0.32;
-        frontArmY = -0.4;
-        backArmY = -0.2;
-        trailSwing = -3;
-        handSparkScale = 0;
+        bodyBob = -2;
+        frontLegAngle = 0.42;
+        backLegAngle = -0.16;
+        frontArmAngle = -0.2;
+        backArmAngle = -0.36;
         break;
-
       case 'fall':
-        bodyBob = 1;
-        torsoTilt = -hero.direction * 0.04;
-        headTilt = -hero.direction * 0.02;
-        frontLegAngle = hero.direction === 1 ? -0.12 : 0.12;
-        backLegAngle = hero.direction === 1 ? 0.26 : -0.26;
-        frontKnee = -0.1;
-        backKnee = 0.16;
-        frontArmAngle = hero.direction === 1 ? 0.24 : -0.24;
-        backArmAngle = hero.direction === 1 ? -0.08 : 0.08;
-        frontArmY = 0.3;
-        backArmY = 0.1;
-        trailSwing = 3;
-        handSparkScale = 0;
+        bodyBob = 1.5;
+        frontLegAngle = -0.18;
+        backLegAngle = 0.28;
+        frontArmAngle = 0.22;
+        backArmAngle = -0.1;
         break;
-
       case 'cast':
         bodyBob = 0;
-        torsoTilt = hero.direction * 0.14;
-        headTilt = hero.direction * 0.05;
-        frontLegAngle = 0.12;
-        backLegAngle = -0.08;
-        frontKnee = 0.04;
-        backKnee = 0.02;
-        frontArmAngle = hero.direction === 1 ? -0.94 : 0.94;
-        backArmAngle = hero.direction === 1 ? 0.08 : -0.08;
-        frontArmY = -0.4;
-        backArmY = 0;
-        trailSwing = -1;
-        handSparkScale = 1;
+        frontLegAngle = 0.08;
+        backLegAngle = -0.04;
+        frontArmAngle = -1.05;
+        backArmAngle = 0.1;
+        handGlow = 1;
         break;
-
       case 'hurt':
-        bodyBob = 0.4;
-        torsoTilt = -hero.direction * 0.16;
-        headTilt = -hero.direction * 0.07;
-        frontLegAngle = -0.22;
-        backLegAngle = 0.25;
-        frontKnee = -0.1;
-        backKnee = 0.14;
-        frontArmAngle = hero.direction === 1 ? 0.42 : -0.42;
-        backArmAngle = hero.direction === 1 ? -0.12 : 0.12;
-        frontArmY = 0.2;
-        backArmY = 0.1;
-        trailSwing = 4;
-        handSparkScale = 0;
+        bodyBob = 1;
+        frontLegAngle = -0.26;
+        backLegAngle = 0.26;
+        frontArmAngle = 0.34;
+        backArmAngle = -0.14;
         break;
     }
 
-    bodyBob += landingCompression * 1.8;
+    bodyBob += landingCompression * 2.2;
 
-    const isFacingRight = hero.direction === 1;
     const centerX = hero.x + hero.width / 2;
-    const baseY = hero.y + hero.height - landingCompression * 1.2;
-
-    const rearLegX = centerX + (isFacingRight ? -4 : 4);
-    const frontLegX = centerX + (isFacingRight ? 5 : -5);
-    const hipY = baseY - 24 + bodyBob;
-
-    const torsoTopY = hero.y + 18 + bodyBob + landingCompression;
-    const torsoBottomY = hero.y + 42 + bodyBob + landingCompression;
-    const headCenterX = centerX + (isFacingRight ? 4 : -4);
-    const headCenterY = hero.y + 12 + bodyBob + landingCompression;
-
-    const shoulderY = hero.y + 24 + bodyBob + landingCompression;
-    const rearShoulderX = centerX + (isFacingRight ? -6 : 6);
-    const frontShoulderX = centerX + (isFacingRight ? 8 : -8);
+    const topY = hero.y + 8 + bodyBob;
 
     ctx.save();
+    ctx.translate(centerX, topY);
+    ctx.scale(hero.direction, 1);
 
-    const trailGradient = ctx.createLinearGradient(
-      centerX,
-      hero.y + 18,
-      centerX - hero.direction * 16,
-      baseY - 8,
-    );
-    trailGradient.addColorStop(0, 'rgba(120, 24, 36, 0.56)');
-    trailGradient.addColorStop(1, 'rgba(34, 8, 12, 0.1)');
-
-    ctx.fillStyle = trailGradient;
+    const cloakGradient = ctx.createLinearGradient(-12, 6, -20, 54);
+    cloakGradient.addColorStop(0, 'rgba(127, 22, 35, 0.72)');
+    cloakGradient.addColorStop(1, 'rgba(35, 9, 14, 0.08)');
+    ctx.fillStyle = cloakGradient;
     ctx.beginPath();
-    ctx.moveTo(centerX - hero.direction * 4, hero.y + 20 + bodyBob);
-    ctx.lineTo(centerX - hero.direction * 15, hero.y + 28 + bodyBob);
-    ctx.lineTo(
-      centerX - hero.direction * 16,
-      baseY - 14 + bodyBob + trailSwing,
-    );
-    ctx.lineTo(centerX - hero.direction * 8, baseY - 8 + bodyBob);
+    ctx.moveTo(-8, 8);
+    ctx.lineTo(-20, 18);
+    ctx.lineTo(-18, 55 + runOpposite * 1.5);
+    ctx.lineTo(-7, 46);
     ctx.closePath();
     ctx.fill();
 
-    this.drawHeroLeg(
-      ctx,
-      rearLegX,
-      hipY,
-      backLegAngle,
-      backKnee,
-      '#2c3147',
-      '#3f4a66',
-      0.88,
-    );
+    this.drawLimb(ctx, -5, 40, backLegAngle, 13, 12, '#2b3148', '#4d5a79', 0.88);
+    this.drawLimb(ctx, 6, 40, frontLegAngle, 13, 12, '#353d57', '#5b6b90', 1);
 
-    this.drawHeroArm(
-      ctx,
-      rearShoulderX,
-      shoulderY,
-      backArmAngle,
-      11,
-      4,
-      '#3a4561',
-      '#7488b0',
-      0.9,
-      backArmY,
-    );
+    this.drawLimb(ctx, -7, 18, backArmAngle, 11, 0, '#35435d', '#9bb1d7', 0.84);
+    this.drawLimb(ctx, 9, 18, frontArmAngle, 15, 0, '#435674', '#c2d6ff', 1);
 
-    ctx.save();
-    ctx.translate(centerX, (torsoTopY + torsoBottomY) / 2);
-    ctx.rotate(torsoTilt);
-
-    const torsoGradient = ctx.createLinearGradient(0, -16, 0, 16);
-    torsoGradient.addColorStop(0, '#314965');
-    torsoGradient.addColorStop(0.55, '#24384d');
+    const torsoGradient = ctx.createLinearGradient(0, 4, 0, 34);
+    torsoGradient.addColorStop(0, '#2d4664');
+    torsoGradient.addColorStop(0.55, '#23384d');
     torsoGradient.addColorStop(1, '#17212f');
 
     ctx.fillStyle = torsoGradient;
     ctx.beginPath();
-    ctx.moveTo(-8, -14);
-    ctx.lineTo(7, -13);
-    ctx.lineTo(9, 11);
-    ctx.lineTo(1, 18);
-    ctx.lineTo(-8, 16);
-    ctx.lineTo(-10, -1);
+    ctx.moveTo(-10, 8);
+    ctx.lineTo(9, 7);
+    ctx.lineTo(11, 32);
+    ctx.lineTo(2, 40);
+    ctx.lineTo(-9, 36);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#1b2331';
+    ctx.fillStyle = '#191f2d';
+    ctx.fillRect(-8, 28, 18, 10);
+
+    ctx.fillStyle = '#601926';
     ctx.beginPath();
-    ctx.moveTo(-9, 6);
-    ctx.lineTo(8, 6);
-    ctx.lineTo(10, 18);
-    ctx.lineTo(-6, 18);
+    ctx.moveTo(-8, 10);
+    ctx.lineTo(-2, 8);
+    ctx.lineTo(-4, 30);
+    ctx.lineTo(-9, 26);
     ctx.closePath();
     ctx.fill();
-
-    ctx.fillStyle = '#4c647f';
-    ctx.fillRect(-5, -10, 8, 3);
-
-    ctx.fillStyle = '#611826';
-    ctx.beginPath();
-    ctx.moveTo(-6, -10);
-    ctx.lineTo(-1, -11);
-    ctx.lineTo(-3, 10);
-    ctx.lineTo(-7, 8);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.restore();
-
-    this.drawHeroLeg(
-      ctx,
-      frontLegX,
-      hipY,
-      frontLegAngle,
-      frontKnee,
-      '#343b55',
-      '#52607d',
-      1,
-    );
-
-    this.drawHeroArm(
-      ctx,
-      frontShoulderX,
-      shoulderY,
-      frontArmAngle,
-      15,
-      5,
-      '#41506f',
-      '#93add7',
-      1,
-      frontArmY,
-    );
-
-    ctx.save();
-    ctx.translate(headCenterX, headCenterY);
-    ctx.rotate(headTilt);
 
     ctx.fillStyle = '#d8ba9a';
     ctx.beginPath();
-    ctx.ellipse(0, 0, 8.5, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(2, 1, 9, 10.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#151318';
+    ctx.fillStyle = '#14161d';
     ctx.beginPath();
-    ctx.moveTo(-7, -2);
-    ctx.lineTo(-4, -10);
-    ctx.lineTo(3, -11);
-    ctx.lineTo(7, -4);
-    ctx.lineTo(6, 1);
-    ctx.lineTo(0, 1.5);
-    ctx.lineTo(-5, 1.5);
+    ctx.moveTo(-6, -2);
+    ctx.lineTo(-3, -10);
+    ctx.lineTo(5, -11);
+    ctx.lineTo(10, -5);
+    ctx.lineTo(8, 2);
+    ctx.lineTo(1, 2);
+    ctx.lineTo(-6, 1);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#0e1016';
-    if (isFacingRight) {
-      ctx.fillRect(1, -1, 2, 2);
-      ctx.fillRect(4, 1, 2, 1);
-    } else {
-      ctx.fillRect(-3, -1, 2, 2);
-      ctx.fillRect(-6, 1, 2, 1);
-    }
+    ctx.fillStyle = '#0f1117';
+    ctx.fillRect(3, -1, 2, 2);
+    ctx.fillRect(6, 1, 2, 1);
 
-    ctx.restore();
+    if (handGlow > 0) {
+      const handX = 9 + Math.cos(frontArmAngle) * 15;
+      const handY = 18 + Math.sin(frontArmAngle) * 15;
 
-    if (handSparkScale > 0) {
-      const frontHandX = frontShoulderX + Math.cos(frontArmAngle) * 15;
-      const frontHandY = shoulderY + frontArmY + Math.sin(frontArmAngle) * 15;
-
-      const handGlow = ctx.createRadialGradient(
-        frontHandX,
-        frontHandY,
-        1,
-        frontHandX,
-        frontHandY,
-        14,
-      );
-      handGlow.addColorStop(0, 'rgba(255, 223, 162, 0.95)');
-      handGlow.addColorStop(0.45, 'rgba(255, 164, 70, 0.45)');
-      handGlow.addColorStop(1, 'rgba(255, 164, 70, 0)');
-
-      ctx.fillStyle = handGlow;
+      ctx.strokeStyle = 'rgba(255, 174, 102, 0.95)';
+      ctx.lineWidth = 2.2;
       ctx.beginPath();
-      ctx.arc(frontHandX, frontHandY, 12 * handSparkScale, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = 'rgba(255, 209, 120, 1)';
-      ctx.beginPath();
-      ctx.arc(frontHandX, frontHandY, 4, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(handX - 5, handY - 8);
+      ctx.lineTo(handX + 1, handY - 1);
+      ctx.lineTo(handX - 3, handY - 1);
+      ctx.lineTo(handX + 5, handY + 10);
+      ctx.stroke();
     }
 
     ctx.restore();
   }
 
-  private drawHeroLeg(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    thighAngle: number,
-    kneeAngle: number,
-    upperColor: string,
-    lowerColor: string,
-    alpha: number,
-  ): void {
-    const thighLength = 12;
-    const shinLength = 12;
-
-    const kneeX = x + Math.sin(thighAngle) * thighLength;
-    const kneeY = y + Math.cos(thighAngle) * thighLength;
-
-    const shinTotalAngle = thighAngle + kneeAngle;
-    const footX = kneeX + Math.sin(shinTotalAngle) * shinLength;
-    const footY = kneeY + Math.cos(shinTotalAngle) * shinLength;
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.lineCap = 'round';
-
-    ctx.strokeStyle = upperColor;
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(kneeX, kneeY);
-    ctx.stroke();
-
-    ctx.strokeStyle = lowerColor;
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(kneeX, kneeY);
-    ctx.lineTo(footX, footY);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#151922';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(footX - 4, footY);
-    ctx.lineTo(footX + 4, footY);
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  private drawHeroArm(
+  private drawLimb(
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
     angle: number,
-    length: number,
-    lineWidth: number,
-    color: string,
-    handColor: string,
+    firstLength: number,
+    secondLength: number,
+    primaryColor: string,
+    secondaryColor: string,
     alpha: number,
-    yOffset = 0,
   ): void {
-    const handX = x + Math.cos(angle) * length;
-    const handY = y + yOffset + Math.sin(angle) * length;
+    const jointX = x + Math.sin(angle) * firstLength;
+    const jointY = y + Math.cos(angle) * firstLength;
 
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.lineCap = 'round';
 
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = primaryColor;
+    ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineTo(handX, handY);
+    ctx.lineTo(jointX, jointY);
     ctx.stroke();
 
-    ctx.fillStyle = handColor;
-    ctx.beginPath();
-    ctx.arc(handX, handY, 3.5, 0, Math.PI * 2);
-    ctx.fill();
+    if (secondLength > 0) {
+      const footX = jointX + Math.sin(angle * 0.75) * secondLength;
+      const footY = jointY + Math.cos(angle * 0.75) * secondLength;
+
+      ctx.strokeStyle = secondaryColor;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(jointX, jointY);
+      ctx.lineTo(footX, footY);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#151922';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(footX - 4, footY);
+      ctx.lineTo(footX + 4, footY);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = secondaryColor;
+      ctx.beginPath();
+      ctx.arc(jointX, jointY, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
@@ -1501,30 +1489,23 @@ export class GameEngine {
       const centerX = bullet.x + bullet.width / 2;
       const centerY = bullet.y + bullet.height / 2;
 
-      ctx.fillStyle = '#ffc86f';
+      const glow = ctx.createRadialGradient(centerX, centerY, 1, centerX, centerY, 12);
+      glow.addColorStop(0, 'rgba(255, 192, 120, 0.85)');
+      glow.addColorStop(0.45, 'rgba(255, 124, 72, 0.45)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
       ctx.beginPath();
+      ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
+      ctx.fill();
 
-      if (bullet.vx >= 0) {
-        ctx.moveTo(bullet.x, centerY - 4);
-        ctx.lineTo(centerX - 1, centerY - 4);
-        ctx.lineTo(centerX - 4, bullet.y);
-        ctx.lineTo(bullet.x + bullet.width, centerY - 1);
-        ctx.lineTo(centerX + 1, centerY + 1);
-        ctx.lineTo(centerX + 4, bullet.y + bullet.height);
-        ctx.lineTo(bullet.x + 2, centerY + 4);
-        ctx.lineTo(centerX - 2, centerY + 2);
-      } else {
-        ctx.moveTo(bullet.x + bullet.width, centerY - 4);
-        ctx.lineTo(centerX + 1, centerY - 4);
-        ctx.lineTo(centerX + 4, bullet.y);
-        ctx.lineTo(bullet.x, centerY - 1);
-        ctx.lineTo(centerX - 1, centerY + 1);
-        ctx.lineTo(centerX - 4, bullet.y + bullet.height);
-        ctx.lineTo(bullet.x + bullet.width - 2, centerY + 4);
-        ctx.lineTo(centerX + 2, centerY + 2);
-      }
+      ctx.fillStyle = '#ff9b61';
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY, 6, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-      ctx.closePath();
+      ctx.fillStyle = 'rgba(48, 14, 20, 0.65)';
+      ctx.beginPath();
+      ctx.ellipse(centerX - Math.sign(bullet.vx) * 5, centerY, 4, 2, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -1537,65 +1518,124 @@ export class GameEngine {
         continue;
       }
 
+      const pulse = Math.sin(performance.now() / 260 + enemy.hoverOffset) * 0.5 + 0.5;
+      const bob = Math.sin(performance.now() / 300 + enemy.hoverOffset) * (enemy.type === 'vigia' ? 2 : 1);
+
       ctx.save();
-      ctx.translate(enemy.x, enemy.y);
+      ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2 + bob);
+      ctx.scale(enemy.direction, 1);
 
-      const coreColor = enemy.type === 'vigia' ? '#64e5ff' : '#7aff97';
-      const aura = ctx.createRadialGradient(
-        enemy.width / 2,
-        enemy.height / 2,
-        1,
-        enemy.width / 2,
-        enemy.height / 2,
-        enemy.type === 'vigia' ? 38 : 28,
-      );
-      aura.addColorStop(
-        0,
-        enemy.type === 'vigia'
-          ? 'rgba(100, 229, 255, 0.9)'
-          : 'rgba(122, 255, 151, 0.85)',
-      );
-      aura.addColorStop(
-        0.45,
-        enemy.type === 'vigia'
-          ? 'rgba(50, 160, 255, 0.28)'
-          : 'rgba(50, 255, 130, 0.22)',
-      );
-      aura.addColorStop(1, 'rgba(0,0,0,0)');
+      if (enemy.type === 'vigia') {
+        const aura = ctx.createRadialGradient(0, -4, 2, 0, -4, 40);
+        aura.addColorStop(0, 'rgba(114, 220, 255, 0.42)');
+        aura.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = aura;
+        ctx.beginPath();
+        ctx.arc(0, -4, 40, 0, Math.PI * 2);
+        ctx.fill();
 
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(
-        enemy.width / 2,
-        enemy.height / 2,
-        enemy.type === 'vigia' ? 36 : 26,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
+        ctx.fillStyle = enemy.hitFlash > 0 ? '#efe3d7' : '#0b0f15';
+        ctx.beginPath();
+        ctx.moveTo(-22, -8);
+        ctx.lineTo(-10, -24);
+        ctx.lineTo(14, -24);
+        ctx.lineTo(24, -8);
+        ctx.lineTo(18, 28);
+        ctx.lineTo(-16, 28);
+        ctx.closePath();
+        ctx.fill();
 
-      ctx.fillStyle = enemy.hitFlash > 0 ? '#efe3d7' : '#13161c';
-      ctx.fillRect(0, 8, enemy.width, enemy.height - 8);
+        ctx.fillStyle = '#182131';
+        ctx.beginPath();
+        ctx.moveTo(-10, -4);
+        ctx.lineTo(2, -8);
+        ctx.lineTo(14, -2);
+        ctx.lineTo(12, 14);
+        ctx.lineTo(-8, 14);
+        ctx.closePath();
+        ctx.fill();
 
-      ctx.fillStyle = '#090b10';
-      ctx.fillRect(6, 0, enemy.width - 12, 12);
+        ctx.fillStyle = '#7be8ff';
+        ctx.beginPath();
+        ctx.arc(4, -4, 7 + pulse * 1.1, 0, Math.PI * 2);
+        ctx.fill();
 
-      ctx.fillStyle = coreColor;
-      ctx.fillRect(enemy.width / 2 - 5, 21, 10, 10);
+        ctx.strokeStyle = 'rgba(114, 220, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-10, -10);
+        ctx.lineTo(4, -4);
+        ctx.lineTo(14, -12);
+        ctx.moveTo(-6, 10);
+        ctx.lineTo(4, -4);
+        ctx.lineTo(12, 8);
+        ctx.stroke();
 
-      ctx.fillStyle = enemy.type === 'vigia' ? '#24313f' : '#1a2220';
-      ctx.fillRect(5, 18, 4, enemy.height - 18);
-      ctx.fillRect(enemy.width - 9, 18, 4, enemy.height - 18);
+        ctx.fillStyle = '#24121b';
+        ctx.fillRect(-18, -6, 8, 22);
+        ctx.fillRect(18, -6, 8, 22);
 
-      ctx.strokeStyle =
-        enemy.type === 'vigia'
-          ? 'rgba(100, 229, 255, 0.45)'
-          : 'rgba(122, 255, 151, 0.4)';
-      ctx.beginPath();
-      ctx.moveTo(8, 18);
-      ctx.lineTo(enemy.width / 2, enemy.height / 2);
-      ctx.lineTo(enemy.width - 8, 18);
-      ctx.stroke();
+        ctx.fillStyle = '#2a0c15';
+        ctx.beginPath();
+        ctx.moveTo(-14, -22);
+        ctx.lineTo(-8, -30);
+        ctx.lineTo(-6, -20);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(8, -20);
+        ctx.lineTo(12, -30);
+        ctx.lineTo(16, -22);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        const aura = ctx.createRadialGradient(0, -2, 1, 0, -2, 28);
+        aura.addColorStop(0, 'rgba(125, 255, 178, 0.32)');
+        aura.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = aura;
+        ctx.beginPath();
+        ctx.arc(0, -2, 28, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = enemy.hitFlash > 0 ? '#efe3d7' : '#11151b';
+        ctx.beginPath();
+        ctx.moveTo(-16, -6);
+        ctx.lineTo(-8, -16);
+        ctx.lineTo(12, -16);
+        ctx.lineTo(18, -4);
+        ctx.lineTo(12, 18);
+        ctx.lineTo(-12, 18);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#171c22';
+        ctx.beginPath();
+        ctx.moveTo(-6, -2);
+        ctx.lineTo(6, -6);
+        ctx.lineTo(14, 0);
+        ctx.lineTo(10, 10);
+        ctx.lineTo(-8, 10);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#7dffb2';
+        ctx.beginPath();
+        ctx.arc(1, -2, 5.5 + pulse * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(125, 255, 178, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-10, 10);
+        ctx.lineTo(1, -2);
+        ctx.lineTo(12, 10);
+        ctx.stroke();
+
+        ctx.fillStyle = '#0d1117';
+        ctx.fillRect(-18, -2, 6, 16);
+        ctx.fillRect(14, -2, 6, 16);
+      }
 
       ctx.restore();
     }
@@ -1630,29 +1670,16 @@ export class GameEngine {
         ctx.lineTo(item.x - 5, y);
         ctx.closePath();
         ctx.fill();
-
-        ctx.strokeStyle = 'rgba(255, 242, 185, 0.38)';
-        ctx.strokeRect(item.x - 1, y - 3, 2, 6);
       }
 
       if (item.type === 'heart') {
-        const potionGlass = ctx.createLinearGradient(
-          item.x,
-          y - 12,
-          item.x,
-          y + 12,
-        );
-        potionGlass.addColorStop(0, '#96d4ff');
-        potionGlass.addColorStop(1, '#4ea3de');
+        const potionGlass = ctx.createLinearGradient(item.x, y - 12, item.x, y + 12);
+        potionGlass.addColorStop(0, '#8fe7ad');
+        potionGlass.addColorStop(1, '#3eb46a');
 
-        const potionLiquid = ctx.createLinearGradient(
-          item.x,
-          y - 2,
-          item.x,
-          y + 10,
-        );
-        potionLiquid.addColorStop(0, '#ff8f78');
-        potionLiquid.addColorStop(1, '#d94a5a');
+        const potionLiquid = ctx.createLinearGradient(item.x, y - 2, item.x, y + 10);
+        potionLiquid.addColorStop(0, '#a9ffbe');
+        potionLiquid.addColorStop(1, '#48cb75');
 
         ctx.fillStyle = '#c7a37b';
         ctx.fillRect(item.x - 3, y - 12, 6, 5);
@@ -1679,30 +1706,97 @@ export class GameEngine {
         ctx.lineTo(item.x + 7, y + 1);
         ctx.closePath();
         ctx.fill();
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(item.x - 4, y - 3);
-        ctx.lineTo(item.x - 2, y + 6);
-        ctx.stroke();
       }
 
-      if (item.type === 'spark') {
-        ctx.fillStyle = '#7de8ff';
+      if (item.type === 'ray') {
+        ctx.strokeStyle = '#d0fbff';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(item.x, y - 10);
-        ctx.lineTo(item.x + 4, y - 2);
-        ctx.lineTo(item.x + 10, y - 2);
-        ctx.lineTo(item.x + 3, y + 3);
-        ctx.lineTo(item.x + 6, y + 11);
-        ctx.lineTo(item.x, y + 5);
-        ctx.lineTo(item.x - 6, y + 11);
-        ctx.lineTo(item.x - 3, y + 3);
-        ctx.lineTo(item.x - 10, y - 2);
-        ctx.lineTo(item.x - 4, y - 2);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(item.x - 4, y - 10);
+        ctx.lineTo(item.x + 2, y - 2);
+        ctx.lineTo(item.x - 1, y - 2);
+        ctx.lineTo(item.x + 5, y + 10);
+        ctx.stroke();
+      }
+    }
+  }
+
+  private drawChests(): void {
+    const ctx = this.ctx;
+
+    for (const chest of this.chests) {
+      if (chest.active) {
+        ctx.save();
+        ctx.translate(chest.x, chest.y);
+
+        const bob = Math.sin(performance.now() / 230 + chest.x * 0.01) * 0.8;
+        ctx.translate(0, bob);
+
+        if (chest.rare) {
+          ctx.fillStyle = '#24151f';
+          ctx.fillRect(2, 12, chest.width - 4, chest.height - 10);
+
+          ctx.fillStyle = '#5b2f6f';
+          ctx.fillRect(0, 10, chest.width, chest.height - 10);
+
+          ctx.fillStyle = '#8a58a8';
+          ctx.beginPath();
+          ctx.moveTo(0, 12);
+          ctx.lineTo(chest.width / 2, 0);
+          ctx.lineTo(chest.width, 12);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = '#d6fbff';
+          ctx.fillRect(chest.width / 2 - 4, 12, 8, 9);
+          ctx.fillRect(6, 18, chest.width - 12, 3);
+
+          ctx.strokeStyle = 'rgba(214, 251, 255, 0.42)';
+          ctx.strokeRect(1, 11, chest.width - 2, chest.height - 11);
+        } else {
+          ctx.fillStyle = '#2b170e';
+          ctx.fillRect(2, 12, chest.width - 4, chest.height - 10);
+
+          ctx.fillStyle = '#5d3a1f';
+          ctx.fillRect(0, 10, chest.width, chest.height - 10);
+
+          ctx.fillStyle = '#7b522b';
+          ctx.beginPath();
+          ctx.moveTo(0, 12);
+          ctx.lineTo(chest.width / 2, 0);
+          ctx.lineTo(chest.width, 12);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = '#b8945b';
+          ctx.fillRect(chest.width / 2 - 4, 12, 8, 9);
+          ctx.fillRect(6, 18, chest.width - 12, 3);
+
+          ctx.strokeStyle = 'rgba(255, 225, 170, 0.18)';
+          ctx.strokeRect(1, 11, chest.width - 2, chest.height - 11);
+        }
+
+        ctx.restore();
+      } else if (chest.breakTimer > 0) {
+        const progress = chest.breakTimer / 0.58;
+        const spread = (1 - progress) * 24;
+        const alpha = progress;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        ctx.fillStyle = chest.rare ? '#8a58a8' : '#7b522b';
+        ctx.fillRect(chest.x - spread, chest.y + 8, 14, 10);
+        ctx.fillRect(chest.x + chest.width - 4 + spread, chest.y + 5, 14, 10);
+        ctx.fillRect(chest.x + 10, chest.y + chest.height - 8 + spread * 0.25, 16, 8);
+
+        ctx.fillStyle = chest.rare
+          ? 'rgba(214, 251, 255, 0.45)'
+          : 'rgba(255, 225, 170, 0.35)';
+        ctx.fillRect(chest.x + chest.width / 2 - 2, chest.y - 4 - spread * 0.15, 4, 10);
+
+        ctx.restore();
       }
     }
   }
@@ -1714,69 +1808,179 @@ export class GameEngine {
 
     const ctx = this.ctx;
     const boss = this.boss;
+    const pulse = Math.sin(performance.now() / 180) * 0.5 + 0.5;
+    const introBoost = boss.introPulse > 0 ? boss.introPulse * 0.35 : 0;
+    const armMotion = Math.sin(boss.armSwing) * 0.32;
+    const torsoLean =
+      boss.castTimer > 0
+        ? -0.07
+        : Math.sin(performance.now() / 520) * 0.02;
+    const jumpStretch = !boss.onGround ? 1.05 : 1;
+    const jumpSquash = !boss.onGround ? 0.95 : 1;
+    const landingSquash =
+      boss.squashTimer > 0 ? 1 + (boss.squashTimer / 0.16) * 0.08 : 1;
+    const landingCompressY =
+      boss.squashTimer > 0 ? 1 - (boss.squashTimer / 0.16) * 0.06 : 1;
 
     ctx.save();
-    ctx.translate(boss.x, boss.y);
+    ctx.translate(boss.x + boss.width / 2, boss.y + boss.height / 2);
 
-    const aura = ctx.createRadialGradient(60, 72, 10, 60, 72, 90);
-    aura.addColorStop(0, 'rgba(80, 10, 20, 0.65)');
-    aura.addColorStop(0.45, 'rgba(100, 0, 40, 0.25)');
+    const auraRadius = 116 + pulse * 8 + introBoost * 40;
+    const aura = ctx.createRadialGradient(0, -10, 12, 0, -10, auraRadius);
+    aura.addColorStop(0, 'rgba(73, 8, 18, 0.82)');
+    aura.addColorStop(0.38, 'rgba(104, 0, 41, 0.34)');
+    aura.addColorStop(0.7, 'rgba(91, 16, 72, 0.12)');
     aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
     ctx.fillStyle = aura;
     ctx.beginPath();
-    ctx.arc(60, 72, 90, 0, Math.PI * 2);
+    ctx.arc(0, -10, auraRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = boss.hitFlash > 0 ? '#f5ece5' : '#0a0b10';
-    ctx.fillRect(16, 26, 88, 128);
+    const shadowScale = boss.onGround ? 1 : 0.72;
+    const shadowAlpha = boss.onGround ? 0.3 : 0.18;
+    ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
+    ctx.beginPath();
+    ctx.ellipse(
+      0,
+      boss.height / 2 - 2,
+      78 * shadowScale,
+      14 * shadowScale,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
 
-    ctx.fillStyle = '#040507';
-    ctx.fillRect(28, 0, 64, 38);
+    ctx.save();
+    ctx.scale(jumpStretch * landingSquash, jumpSquash * landingCompressY);
+    ctx.rotate(torsoLean);
 
-    ctx.fillStyle = '#12131a';
-    ctx.fillRect(-6, 34, 20, 80);
-    ctx.fillRect(106, 34, 20, 80);
+    ctx.fillStyle = boss.hitFlash > 0 ? '#f5ece5' : '#090a0f';
+    ctx.beginPath();
+    ctx.moveTo(-52, -52);
+    ctx.lineTo(-26, -84);
+    ctx.lineTo(30, -84);
+    ctx.lineTo(50, -50);
+    ctx.lineTo(40, 72);
+    ctx.lineTo(-42, 72);
+    ctx.closePath();
+    ctx.fill();
 
-    ctx.fillStyle = '#191b23';
-    ctx.fillRect(28, 132, 18, 28);
-    ctx.fillRect(74, 132, 18, 28);
+    ctx.fillStyle = '#131823';
+    ctx.beginPath();
+    ctx.moveTo(-24, -18);
+    ctx.lineTo(4, -28);
+    ctx.lineTo(26, -16);
+    ctx.lineTo(18, 24);
+    ctx.lineTo(-18, 24);
+    ctx.closePath();
+    ctx.fill();
 
-    const coreGlow = ctx.createRadialGradient(60, 70, 2, 60, 70, 28);
-    coreGlow.addColorStop(0, 'rgba(135, 240, 255, 1)');
-    coreGlow.addColorStop(0.4, 'rgba(100, 210, 255, 0.8)');
-    coreGlow.addColorStop(1, 'rgba(100, 210, 255, 0)');
+    ctx.fillStyle = '#171922';
+    this.drawBossArm(ctx, -62, -26, -0.46 - armMotion - (boss.castTimer > 0 ? 0.3 : 0), true);
+    this.drawBossArm(ctx, 60, -24, 0.38 + armMotion + (boss.castTimer > 0 ? 0.1 : 0), false);
 
+    ctx.fillStyle = '#24121b';
+    ctx.fillRect(-54, -8, 12, 36);
+    ctx.fillRect(44, -8, 12, 34);
+
+    ctx.fillStyle = '#240912';
+    ctx.beginPath();
+    ctx.moveTo(-40, -70);
+    ctx.lineTo(-32, -88);
+    ctx.lineTo(-24, -68);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(18, -68);
+    ctx.lineTo(30, -90);
+    ctx.lineTo(40, -70);
+    ctx.closePath();
+    ctx.fill();
+
+    const coreGlow = ctx.createRadialGradient(4, -12, 4, 4, -12, 42 + pulse * 5);
+    coreGlow.addColorStop(0, 'rgba(210, 250, 255, 1)');
+    coreGlow.addColorStop(0.22, 'rgba(140, 232, 255, 0.95)');
+    coreGlow.addColorStop(0.5, 'rgba(104, 202, 255, 0.7)');
+    coreGlow.addColorStop(1, 'rgba(104, 202, 255, 0)');
     ctx.fillStyle = coreGlow;
     ctx.beginPath();
-    ctx.arc(60, 70, 28, 0, Math.PI * 2);
+    ctx.arc(4, -12, 42 + pulse * 5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#7af2ff';
-    ctx.fillRect(50, 60, 20, 20);
-
-    ctx.strokeStyle = 'rgba(110, 225, 255, 0.35)';
-    ctx.lineWidth = 2;
+    ctx.fillStyle = '#9bf5ff';
     ctx.beginPath();
-    ctx.moveTo(28, 44);
-    ctx.lineTo(60, 70);
-    ctx.lineTo(92, 42);
-    ctx.moveTo(34, 102);
-    ctx.lineTo(60, 70);
-    ctx.lineTo(88, 100);
+    ctx.arc(4, -12, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = `rgba(125, 232, 255, ${0.35 + pulse * 0.2})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(-30, -40);
+    ctx.lineTo(4, -12);
+    ctx.lineTo(32, -42);
+    ctx.moveTo(-22, 16);
+    ctx.lineTo(4, -12);
+    ctx.lineTo(28, 16);
     ctx.stroke();
 
-    ctx.fillStyle = '#2a0611';
-    ctx.fillRect(18, 12, 10, 18);
-    ctx.fillRect(92, 12, 10, 18);
+    ctx.fillStyle = '#171922';
+    ctx.beginPath();
+    ctx.moveTo(-18, 68);
+    ctx.lineTo(10, 68);
+    ctx.lineTo(14, 86);
+    ctx.lineTo(-20, 86);
+    ctx.closePath();
+    ctx.fill();
 
+    ctx.restore();
     ctx.restore();
   }
 
-  private drawFallingProjectiles(): void {
+  private drawBossArm(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    angle: number,
+    left: boolean,
+  ): void {
+    const length = 40;
+    const handX = x + Math.cos(angle) * length;
+    const handY = y + Math.sin(angle) * length;
+
+    ctx.strokeStyle = '#171922';
+    ctx.lineWidth = 13;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(handX, handY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#0e1016';
+    ctx.beginPath();
+    ctx.arc(handX, handY, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#2a0c15';
+    ctx.beginPath();
+    if (left) {
+      ctx.moveTo(handX - 8, handY);
+      ctx.lineTo(handX - 16, handY + 8);
+      ctx.lineTo(handX - 4, handY + 6);
+    } else {
+      ctx.moveTo(handX + 8, handY);
+      ctx.lineTo(handX + 16, handY + 8);
+      ctx.lineTo(handX + 4, handY + 6);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  private drawBossProjectiles(): void {
     const ctx = this.ctx;
 
-    for (const projectile of this.fallingProjectiles) {
+    for (const projectile of this.bossProjectiles) {
       if (!projectile.active) {
         continue;
       }
@@ -1787,17 +1991,16 @@ export class GameEngine {
         1,
         projectile.x,
         projectile.y,
-        projectile.radius * 2.2,
+        projectile.radius * 2.4,
       );
 
-      if (projectile.dark) {
-        glow.addColorStop(0, 'rgba(138, 225, 255, 0.95)');
-        glow.addColorStop(0.28, 'rgba(134, 80, 255, 0.75)');
-        glow.addColorStop(0.7, 'rgba(73, 16, 38, 0.4)');
+      if (projectile.kind === 'ultimate') {
+        glow.addColorStop(0, 'rgba(255, 198, 137, 0.9)');
+        glow.addColorStop(0.4, 'rgba(153, 69, 219, 0.62)');
         glow.addColorStop(1, 'rgba(0,0,0,0)');
       } else {
-        glow.addColorStop(0, 'rgba(255, 180, 120, 0.95)');
-        glow.addColorStop(0.5, 'rgba(255, 120, 90, 0.4)');
+        glow.addColorStop(0, 'rgba(168, 240, 255, 0.9)');
+        glow.addColorStop(0.32, 'rgba(134, 80, 255, 0.58)');
         glow.addColorStop(1, 'rgba(0,0,0,0)');
       }
 
@@ -1806,54 +2009,99 @@ export class GameEngine {
       ctx.arc(
         projectile.x,
         projectile.y,
-        projectile.radius * 2.1,
+        projectile.radius * 2,
         0,
         Math.PI * 2,
       );
       ctx.fill();
 
-      ctx.fillStyle = projectile.dark ? '#7be8ff' : '#ff9e7d';
+      ctx.fillStyle = projectile.kind === 'ultimate' ? '#ffb77a' : '#8deeff';
       ctx.beginPath();
       ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.strokeStyle =
+        projectile.kind === 'ultimate'
+          ? 'rgba(255, 226, 190, 0.7)'
+          : 'rgba(214, 251, 255, 0.7)';
+      ctx.lineWidth = projectile.kind === 'ultimate' ? 3 : 2;
+      ctx.beginPath();
+      ctx.moveTo(projectile.x - 5, projectile.y - 6);
+      ctx.lineTo(projectile.x + 2, projectile.y);
+      ctx.lineTo(projectile.x - 2, projectile.y);
+      ctx.lineTo(projectile.x + 6, projectile.y + 8);
+      ctx.stroke();
     }
   }
 
-  private drawSpecialWaves(): void {
+  private drawSpecialStrikes(): void {
     const ctx = this.ctx;
 
-    for (const wave of this.specialWaves) {
-      const alpha = wave.life / wave.maxLife;
+    for (const strike of this.specialStrikes) {
+      const alpha = strike.life / strike.maxLife;
 
-      const gradient = ctx.createRadialGradient(
-        wave.x,
-        wave.y,
-        Math.max(wave.radius * 0.2, 1),
-        wave.x,
-        wave.y,
-        wave.radius,
-      );
-
-      gradient.addColorStop(0, `rgba(255, 238, 180, ${alpha * 0.22})`);
-      gradient.addColorStop(0.3, `rgba(255, 180, 90, ${alpha * 0.18})`);
-      gradient.addColorStop(1, 'rgba(255, 180, 90, 0)');
-
-      ctx.fillStyle = gradient;
+      ctx.strokeStyle = `rgba(117, 234, 255, ${alpha * 0.34})`;
+      ctx.lineWidth = strike.width * 2.6;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+
+      for (let index = 0; index < strike.points.length; index += 1) {
+        const point = strike.points[index];
+
+        if (index === 0) {
+          ctx.moveTo(point.x, point.y);
+        } else {
+          ctx.lineTo(point.x, point.y);
+        }
+      }
+
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(220, 252, 255, ${alpha})`;
+      ctx.lineWidth = strike.width;
+      ctx.beginPath();
+
+      for (let index = 0; index < strike.points.length; index += 1) {
+        const point = strike.points[index];
+
+        if (index === 0) {
+          ctx.moveTo(point.x, point.y);
+        } else {
+          ctx.lineTo(point.x, point.y);
+        }
+      }
+
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(121, 202, 255, ${alpha * 0.8})`;
+      ctx.lineWidth = Math.max(2, strike.width * 0.34);
+      ctx.beginPath();
+
+      for (let index = 0; index < strike.points.length; index += 1) {
+        const point = strike.points[index];
+
+        if (index === 0) {
+          ctx.moveTo(point.x, point.y);
+        } else {
+          ctx.lineTo(point.x, point.y);
+        }
+      }
+
+      ctx.stroke();
+    }
+  }
+
+  private drawBurstParticles(): void {
+    const ctx = this.ctx;
+
+    for (const particle of this.burstParticles) {
+      const alpha = particle.life / particle.maxLife;
+      ctx.fillStyle = this.hexToRgba(particle.color, alpha);
+
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size * alpha, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.strokeStyle = `rgba(255, 219, 143, ${alpha * 0.9})`;
-      ctx.lineWidth = wave.lineWidth;
-      ctx.beginPath();
-      ctx.arc(wave.x, wave.y, wave.radius * 0.82, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.strokeStyle = `rgba(255, 153, 61, ${alpha * 0.65})`;
-      ctx.lineWidth = wave.lineWidth * 0.45;
-      ctx.beginPath();
-      ctx.arc(wave.x, wave.y, wave.radius * 0.6, 0, Math.PI * 2);
-      ctx.stroke();
     }
   }
 
@@ -1861,14 +2109,14 @@ export class GameEngine {
     const ctx = this.ctx;
     const heroPanelX = 20;
     const heroPanelY = 18;
-    const heroPanelWidth = 320;
-    const heroPanelHeight = 96;
+    const heroPanelWidth = 360;
+    const heroPanelHeight = 104;
 
     ctx.save();
 
     ctx.fillStyle = 'rgba(6, 8, 12, 0.62)';
     ctx.fillRect(heroPanelX, heroPanelY, heroPanelWidth, heroPanelHeight);
-    ctx.fillRect(this.canvas.width - 240, 18, 220, 92);
+    ctx.fillRect(this.canvas.width - 250, 18, 230, 94);
 
     ctx.textAlign = 'left';
     ctx.fillStyle = '#f4e7c7';
@@ -1877,48 +2125,84 @@ export class GameEngine {
 
     const hpBarX = heroPanelX + 18;
     const hpBarY = heroPanelY + 40;
-    const hpBarWidth = 134;
-    const hpBarHeight = 12;
+    const hpBarWidth = 180;
+    const hpBarHeight = 14;
+    const hpPercent = this.hero.hp / this.hero.maxHp;
 
     ctx.fillStyle = '#181b24';
     ctx.fillRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
 
-    const hpGradient = ctx.createLinearGradient(
-      hpBarX,
-      hpBarY,
-      hpBarX + hpBarWidth,
-      hpBarY,
-    );
-    hpGradient.addColorStop(0, '#8d2538');
-    hpGradient.addColorStop(0.55, '#ca4b60');
-    hpGradient.addColorStop(1, '#ff9b73');
+    let hpColor = '#58d26c';
 
-    ctx.fillStyle = hpGradient;
-    ctx.fillRect(
-      hpBarX,
-      hpBarY,
-      (this.hero.hp / this.hero.maxHp) * hpBarWidth,
-      hpBarHeight,
-    );
+    if (hpPercent <= 0.15) {
+      const blink = Math.floor(performance.now() / 150) % 2 === 0;
+      hpColor = blink ? '#ff425d' : '#8f182b';
+    } else if (hpPercent <= 0.5) {
+      hpColor = '#58d26c';
+    }
+
+    ctx.fillStyle = hpColor;
+    ctx.fillRect(hpBarX, hpBarY, hpBarWidth * hpPercent, hpBarHeight);
 
     ctx.strokeStyle = 'rgba(244, 231, 199, 0.22)';
     ctx.strokeRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
 
     ctx.fillStyle = '#cfd8ea';
     ctx.font = '13px Arial';
-    ctx.fillText(
-      `${this.hero.hp}/${this.hero.maxHp}`,
-      hpBarX + hpBarWidth + 12,
-      hpBarY + 10,
+    ctx.fillText('Vida', hpBarX + hpBarWidth + 14, hpBarY + 11);
+
+    const specialBarX = heroPanelX + 18;
+    const specialBarY = heroPanelY + 72;
+    const specialBarWidth = 180;
+    const specialBarHeight = 12;
+    const specialPercent = this.specialCharge / 100;
+
+    ctx.fillStyle = '#131923';
+    ctx.fillRect(specialBarX, specialBarY, specialBarWidth, specialBarHeight);
+
+    const specialGradient = ctx.createLinearGradient(
+      specialBarX,
+      specialBarY,
+      specialBarX + specialBarWidth,
+      specialBarY,
+    );
+    specialGradient.addColorStop(0, '#5ac9ff');
+    specialGradient.addColorStop(0.5, '#8eeaff');
+    specialGradient.addColorStop(1, '#d6fbff');
+
+    ctx.fillStyle = specialGradient;
+    ctx.fillRect(
+      specialBarX,
+      specialBarY,
+      specialBarWidth * specialPercent,
+      specialBarHeight,
     );
 
-    ctx.fillStyle = '#d9deea';
-    ctx.font = '18px Arial';
-    ctx.fillText(
-      `Centelhas: ${this.sparks}/${this.specialThreshold}`,
-      heroPanelX + 18,
-      heroPanelY + 78,
+    ctx.strokeStyle =
+      this.specialCharge >= 100
+        ? '#d6fbff'
+        : 'rgba(141, 215, 255, 0.35)';
+    ctx.lineWidth = this.specialCharge >= 100 ? 2.4 : 1;
+    ctx.strokeRect(
+      specialBarX,
+      specialBarY,
+      specialBarWidth,
+      specialBarHeight,
     );
+
+    if (this.specialCharge >= 100) {
+      ctx.strokeStyle = 'rgba(168, 240, 255, 0.45)';
+      ctx.strokeRect(
+        specialBarX - 3,
+        specialBarY - 3,
+        specialBarWidth + 6,
+        specialBarHeight + 6,
+      );
+    }
+
+    ctx.fillStyle = '#d9deea';
+    ctx.font = '15px Arial';
+    ctx.fillText('Especial', specialBarX + specialBarWidth + 14, specialBarY + 10);
 
     ctx.textAlign = 'center';
     ctx.fillStyle = '#f4e7c7';
@@ -1965,15 +2249,29 @@ export class GameEngine {
       ctx.strokeRect(x, y, barWidth, barHeight);
     }
 
-    if (this.sparks >= this.specialThreshold) {
-      ctx.fillStyle = 'rgba(255, 225, 150, 0.18)';
-      ctx.fillRect(20, 122, 220, 32);
-      ctx.fillStyle = '#ffe08a';
+    if (this.specialCharge >= 100) {
+      ctx.fillStyle = 'rgba(117, 234, 255, 0.14)';
+      ctx.fillRect(20, 132, 250, 34);
+      ctx.fillStyle = '#d6fbff';
       ctx.font = 'bold 18px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('Especial pronto (L)', 34, 144);
+      ctx.fillText('Especial pronto (L)', 34, 154);
     }
 
     ctx.restore();
+  }
+
+  private hexToRgba(hex: string, alpha: number): string {
+    const normalized = hex.replace('#', '');
+
+    if (normalized.length !== 6) {
+      return `rgba(255,255,255,${alpha})`;
+    }
+
+    const r = Number.parseInt(normalized.slice(0, 2), 16);
+    const g = Number.parseInt(normalized.slice(2, 4), 16);
+    const b = Number.parseInt(normalized.slice(4, 6), 16);
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 }
