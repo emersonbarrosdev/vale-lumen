@@ -14,6 +14,8 @@ interface EngineCallbacks {
 
 interface Platform extends PlatformData {}
 
+type HeroState = 'idle' | 'run' | 'jump' | 'fall' | 'cast' | 'hurt';
+
 interface Hero {
   x: number;
   y: number;
@@ -32,6 +34,12 @@ interface Hero {
   invulnerabilityTimer: number;
   jumpsRemaining: number;
   maxJumps: number;
+  state: HeroState;
+  animationTime: number;
+  castTimer: number;
+  hurtTimer: number;
+  landingTimer: number;
+  name: string;
 }
 
 interface Bullet {
@@ -140,6 +148,12 @@ export class GameEngine {
     invulnerabilityTimer: 0,
     jumpsRemaining: 2,
     maxJumps: 2,
+    state: 'fall',
+    animationTime: 0,
+    castTimer: 0,
+    hurtTimer: 0,
+    landingTimer: 0,
+    name: 'Kael',
   };
 
   private readonly boss: Boss = {
@@ -169,6 +183,7 @@ export class GameEngine {
   private sparks = 0;
   private specialThreshold = 5;
   private paused = false;
+  private furthestScoreStep = 0;
 
   private specialFlashTimer = 0;
   private specialSequenceActive = false;
@@ -268,6 +283,7 @@ export class GameEngine {
     this.gameState.setCurrentScore(this.score);
 
     this.updateHero(deltaTime);
+    this.updateProgressScore();
     this.updateBullets(deltaTime);
     this.updateEnemies(deltaTime);
     this.updateCollectibles();
@@ -291,13 +307,28 @@ export class GameEngine {
     }
   }
 
+  private updateProgressScore(): void {
+    const scoreStep = Math.floor(this.hero.x / 220);
+
+    if (scoreStep > this.furthestScoreStep) {
+      this.score += (scoreStep - this.furthestScoreStep) * 15;
+      this.furthestScoreStep = scoreStep;
+    }
+  }
+
   private updateHero(deltaTime: number): void {
+    const wasOnGround = this.hero.onGround;
+
+    this.hero.animationTime += deltaTime;
     this.hero.shootCooldown = Math.max(0, this.hero.shootCooldown - deltaTime);
     this.hero.dashCooldown = Math.max(0, this.hero.dashCooldown - deltaTime);
     this.hero.invulnerabilityTimer = Math.max(
       0,
       this.hero.invulnerabilityTimer - deltaTime,
     );
+    this.hero.castTimer = Math.max(0, this.hero.castTimer - deltaTime);
+    this.hero.hurtTimer = Math.max(0, this.hero.hurtTimer - deltaTime);
+    this.hero.landingTimer = Math.max(0, this.hero.landingTimer - deltaTime);
 
     const movingLeft =
       this.input.isPressed('a') || this.input.isPressed('arrowleft');
@@ -333,6 +364,7 @@ export class GameEngine {
     if (this.input.isJustPressed('j') && this.hero.shootCooldown <= 0) {
       this.fireBullet();
       this.hero.shootCooldown = 0.2;
+      this.hero.castTimer = 0.14;
     }
 
     if (
@@ -341,6 +373,7 @@ export class GameEngine {
       !this.specialSequenceActive
     ) {
       this.activateSpecial();
+      this.hero.castTimer = 0.28;
     }
 
     const gravityThisFrame =
@@ -351,6 +384,10 @@ export class GameEngine {
     this.moveHeroHorizontally(deltaTime);
     this.moveHeroVertically(deltaTime);
 
+    if (!wasOnGround && this.hero.onGround) {
+      this.hero.landingTimer = 0.16;
+    }
+
     if (this.hero.x < 0) {
       this.hero.x = 0;
     }
@@ -358,6 +395,32 @@ export class GameEngine {
     if (this.hero.x + this.hero.width > this.worldWidth) {
       this.hero.x = this.worldWidth - this.hero.width;
     }
+
+    this.updateHeroState();
+  }
+
+  private updateHeroState(): void {
+    if (this.hero.hurtTimer > 0) {
+      this.hero.state = 'hurt';
+      return;
+    }
+
+    if (this.hero.castTimer > 0) {
+      this.hero.state = 'cast';
+      return;
+    }
+
+    if (!this.hero.onGround) {
+      this.hero.state = this.hero.vy < 0 ? 'jump' : 'fall';
+      return;
+    }
+
+    if (Math.abs(this.hero.vx) > 8) {
+      this.hero.state = 'run';
+      return;
+    }
+
+    this.hero.state = 'idle';
   }
 
   private moveHeroHorizontally(deltaTime: number): void {
@@ -576,14 +639,14 @@ export class GameEngine {
 
         switch (item.type) {
           case 'coin':
-            this.score += 10;
+            this.score += 5;
             break;
           case 'heart':
             this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 1);
             break;
           case 'spark':
             this.sparks = Math.min(this.specialThreshold, this.sparks + 1);
-            this.score += 25;
+            this.score += 10;
             break;
         }
       }
@@ -629,7 +692,11 @@ export class GameEngine {
       this.boss.secondaryCooldown = this.boss.hp <= 12 ? 1.9 : 3.2;
     }
 
-    if (!this.boss.onGround && this.boss.airShotsRemaining > 0 && this.boss.airShotCooldown <= 0) {
+    if (
+      !this.boss.onGround &&
+      this.boss.airShotsRemaining > 0 &&
+      this.boss.airShotCooldown <= 0
+    ) {
       this.releaseBossAirMagic();
       this.boss.airShotsRemaining -= 1;
       this.boss.airShotCooldown = 0.18;
@@ -797,6 +864,7 @@ export class GameEngine {
 
     this.hero.hp = Math.max(0, this.hero.hp - amount);
     this.hero.invulnerabilityTimer = 1;
+    this.hero.hurtTimer = 0.22;
     this.hero.vx = -this.hero.direction * 190;
     this.hero.vy = -260;
   }
@@ -893,7 +961,11 @@ export class GameEngine {
       ctx.fillStyle = '#f4e7c7';
       ctx.font = 'bold 42px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('PAUSADO', this.canvas.width / 2, this.canvas.height / 2 - 20);
+      ctx.fillText(
+        'PAUSADO',
+        this.canvas.width / 2,
+        this.canvas.height / 2 - 20,
+      );
 
       ctx.font = '20px Arial';
       ctx.fillStyle = '#d5d8de';
@@ -953,7 +1025,7 @@ export class GameEngine {
 
     ctx.fillStyle = 'rgba(100, 16, 26, 0.12)';
     for (let index = 0; index < 10; index += 1) {
-      const x = (index * 180 - (this.cameraX * 0.18)) % 1500;
+      const x = (index * 180 - this.cameraX * 0.18) % 1500;
       ctx.fillRect(x + 30, 470, 18, 90);
       ctx.fillRect(x, 560, 72, 40);
       ctx.fillRect(x + 52, 520, 14, 40);
@@ -963,7 +1035,8 @@ export class GameEngine {
     ctx.fillRect(0, 555, this.canvas.width, 165);
 
     for (let index = 0; index < 34; index += 1) {
-      const px = ((index * 97) + performance.now() * 0.01) % (this.canvas.width + 120);
+      const px =
+        (index * 97 + performance.now() * 0.01) % (this.canvas.width + 120);
       const py = 120 + ((index * 41) % 480);
       ctx.fillStyle = 'rgba(180, 190, 220, 0.04)';
       ctx.fillRect(px - 60, py, 2, 2);
@@ -991,11 +1064,21 @@ export class GameEngine {
       ctx.fillRect(platform.x, platform.y, platform.width, 6);
 
       ctx.fillStyle = '#130f17';
-      ctx.fillRect(platform.x, platform.y + platform.height - 8, platform.width, 8);
+      ctx.fillRect(
+        platform.x,
+        platform.y + platform.height - 8,
+        platform.width,
+        8,
+      );
 
       ctx.fillStyle = 'rgba(147, 103, 174, 0.18)';
       for (let index = 12; index < platform.width; index += 34) {
-        ctx.fillRect(platform.x + index, platform.y + 8, 3, platform.height - 16);
+        ctx.fillRect(
+          platform.x + index,
+          platform.y + 8,
+          3,
+          platform.height - 16,
+        );
       }
 
       ctx.strokeStyle = 'rgba(10, 8, 14, 0.6)';
@@ -1015,38 +1098,397 @@ export class GameEngine {
       return;
     }
 
+    const t = hero.animationTime;
+    const runCycle = Math.sin(t * 13);
+    const runCycleOpposite = Math.sin(t * 13 + Math.PI);
+    const idleSway = Math.sin(t * 1.8) * 0.02;
+    const landingCompression =
+      hero.landingTimer > 0 ? hero.landingTimer / 0.16 : 0;
+
+    let bodyBob = 0;
+    let torsoTilt = 0;
+    let headTilt = 0;
+    let frontLegAngle = 0;
+    let backLegAngle = 0;
+    let frontKnee = 0;
+    let backKnee = 0;
+    let frontArmAngle = 0;
+    let backArmAngle = 0;
+    let frontArmY = 0;
+    let backArmY = 0;
+    let trailSwing = 0;
+    let handSparkScale = 0;
+
+    switch (hero.state) {
+      case 'idle':
+        bodyBob = 0;
+        torsoTilt = idleSway;
+        headTilt = idleSway * 0.7;
+        frontLegAngle = 0.02;
+        backLegAngle = -0.02;
+        frontKnee = 0.01;
+        backKnee = 0.01;
+        frontArmAngle = hero.direction === 1 ? 0.16 : -0.16;
+        backArmAngle = hero.direction === 1 ? -0.08 : 0.08;
+        frontArmY = 0;
+        backArmY = 0;
+        trailSwing = Math.sin(t * 1.6) * 1.2;
+        handSparkScale = 0;
+        break;
+
+      case 'run':
+        bodyBob = Math.abs(runCycle) * 0.8;
+        torsoTilt = hero.direction * 0.08;
+        headTilt = hero.direction * 0.02;
+        frontLegAngle = runCycle * 0.88;
+        backLegAngle = runCycleOpposite * 0.7;
+        frontKnee = runCycle > 0 ? -0.34 : 0.14;
+        backKnee = runCycleOpposite > 0 ? -0.22 : 0.1;
+        frontArmAngle = runCycleOpposite * 0.55;
+        backArmAngle = runCycle * 0.34;
+        frontArmY = Math.abs(runCycleOpposite) * 0.7;
+        backArmY = Math.abs(runCycle) * 0.4;
+        trailSwing = runCycleOpposite * 3;
+        handSparkScale = 0;
+        break;
+
+      case 'jump':
+        bodyBob = -1.2;
+        torsoTilt = hero.direction * 0.06;
+        headTilt = hero.direction * 0.03;
+        frontLegAngle = hero.direction === 1 ? 0.4 : -0.4;
+        backLegAngle = hero.direction === 1 ? -0.12 : 0.12;
+        frontKnee = -0.68;
+        backKnee = -0.4;
+        frontArmAngle = hero.direction === 1 ? -0.22 : 0.22;
+        backArmAngle = hero.direction === 1 ? -0.48 : 0.48;
+        frontArmY = -1;
+        backArmY = -1;
+        trailSwing = -3;
+        handSparkScale = 0;
+        break;
+
+      case 'fall':
+        bodyBob = 1;
+        torsoTilt = -hero.direction * 0.04;
+        headTilt = -hero.direction * 0.02;
+        frontLegAngle = hero.direction === 1 ? -0.12 : 0.12;
+        backLegAngle = hero.direction === 1 ? 0.26 : -0.26;
+        frontKnee = -0.1;
+        backKnee = 0.16;
+        frontArmAngle = hero.direction === 1 ? 0.36 : -0.36;
+        backArmAngle = hero.direction === 1 ? -0.1 : 0.1;
+        frontArmY = 1.2;
+        backArmY = 0.3;
+        trailSwing = 3;
+        handSparkScale = 0;
+        break;
+
+      case 'cast':
+        bodyBob = 0;
+        torsoTilt = hero.direction * 0.14;
+        headTilt = hero.direction * 0.05;
+        frontLegAngle = 0.12;
+        backLegAngle = -0.08;
+        frontKnee = 0.04;
+        backKnee = 0.02;
+        frontArmAngle = hero.direction === 1 ? -0.94 : 0.94;
+        backArmAngle = hero.direction === 1 ? 0.12 : -0.12;
+        frontArmY = -1;
+        backArmY = 0;
+        trailSwing = -1;
+        handSparkScale = 1;
+        break;
+
+      case 'hurt':
+        bodyBob = 0.4;
+        torsoTilt = -hero.direction * 0.16;
+        headTilt = -hero.direction * 0.07;
+        frontLegAngle = -0.22;
+        backLegAngle = 0.25;
+        frontKnee = -0.1;
+        backKnee = 0.14;
+        frontArmAngle = hero.direction === 1 ? 0.7 : -0.7;
+        backArmAngle = hero.direction === 1 ? -0.16 : 0.16;
+        frontArmY = 0.8;
+        backArmY = 0.2;
+        trailSwing = 4;
+        handSparkScale = 0;
+        break;
+    }
+
+    bodyBob += landingCompression * 1.8;
+
+    const isFacingRight = hero.direction === 1;
+    const centerX = hero.x + hero.width / 2;
+    const baseY = hero.y + hero.height - landingCompression * 1.2;
+
+    const rearLegX = centerX + (isFacingRight ? -4 : 4);
+    const frontLegX = centerX + (isFacingRight ? 5 : -5);
+    const hipY = baseY - 24 + bodyBob;
+
+    const torsoTopY = hero.y + 18 + bodyBob + landingCompression;
+    const torsoBottomY = hero.y + 42 + bodyBob + landingCompression;
+    const headCenterX = centerX + (isFacingRight ? 4 : -4);
+    const headCenterY = hero.y + 12 + bodyBob + landingCompression;
+
+    const shoulderY = hero.y + 24 + bodyBob + landingCompression;
+    const rearShoulderX = centerX + (isFacingRight ? -6 : 6);
+    const frontShoulderX = centerX + (isFacingRight ? 8 : -8);
+
     ctx.save();
-    ctx.translate(hero.x, hero.y);
 
-    ctx.fillStyle = '#5e1622';
-    ctx.fillRect(hero.direction === 1 ? 9 : 27, 15, 10, 34);
+    const trailGradient = ctx.createLinearGradient(
+      centerX,
+      hero.y + 18,
+      centerX - hero.direction * 16,
+      baseY - 8,
+    );
+    trailGradient.addColorStop(0, 'rgba(120, 24, 36, 0.56)');
+    trailGradient.addColorStop(1, 'rgba(34, 8, 12, 0.1)');
 
-    ctx.fillStyle = '#24384d';
-    ctx.fillRect(12, 16, 20, 28);
-
-    ctx.fillStyle = '#1f2938';
-    ctx.fillRect(10, 36, 24, 24);
-
-    ctx.fillStyle = '#d7b899';
-    ctx.fillRect(14, 2, 16, 16);
-
-    ctx.fillStyle = '#151318';
-    ctx.fillRect(12, 0, 20, 7);
-
-    const handX = hero.direction === 1 ? 35 : 3;
-    const handGlow = ctx.createRadialGradient(handX, 26, 1, handX, 26, 12);
-    handGlow.addColorStop(0, 'rgba(255, 211, 132, 0.95)');
-    handGlow.addColorStop(0.45, 'rgba(255, 153, 51, 0.45)');
-    handGlow.addColorStop(1, 'rgba(255, 153, 51, 0)');
-
-    ctx.fillStyle = handGlow;
+    ctx.fillStyle = trailGradient;
     ctx.beginPath();
-    ctx.arc(handX, 26, 12, 0, Math.PI * 2);
+    ctx.moveTo(centerX - hero.direction * 4, hero.y + 20 + bodyBob);
+    ctx.lineTo(centerX - hero.direction * 15, hero.y + 28 + bodyBob);
+    ctx.lineTo(
+      centerX - hero.direction * 16,
+      baseY - 14 + bodyBob + trailSwing,
+    );
+    ctx.lineTo(centerX - hero.direction * 8, baseY - 8 + bodyBob);
+    ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#ffce78';
+    this.drawHeroLeg(
+      ctx,
+      rearLegX,
+      hipY,
+      backLegAngle,
+      backKnee,
+      '#2c3147',
+      '#3f4a66',
+      0.88,
+    );
+
+    this.drawHeroArm(
+      ctx,
+      rearShoulderX,
+      shoulderY,
+      backArmAngle,
+      11,
+      4,
+      '#3a4561',
+      '#7488b0',
+      0.9,
+      backArmY,
+    );
+
+    ctx.save();
+    ctx.translate(centerX, (torsoTopY + torsoBottomY) / 2);
+    ctx.rotate(torsoTilt);
+
+    const torsoGradient = ctx.createLinearGradient(0, -16, 0, 16);
+    torsoGradient.addColorStop(0, '#314965');
+    torsoGradient.addColorStop(0.55, '#24384d');
+    torsoGradient.addColorStop(1, '#17212f');
+
+    ctx.fillStyle = torsoGradient;
     ctx.beginPath();
-    ctx.arc(handX, 26, 4.5, 0, Math.PI * 2);
+    ctx.moveTo(-8, -14);
+    ctx.lineTo(7, -13);
+    ctx.lineTo(9, 11);
+    ctx.lineTo(1, 18);
+    ctx.lineTo(-8, 16);
+    ctx.lineTo(-10, -1);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#1b2331';
+    ctx.beginPath();
+    ctx.moveTo(-9, 6);
+    ctx.lineTo(8, 6);
+    ctx.lineTo(10, 18);
+    ctx.lineTo(-6, 18);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#4c647f';
+    ctx.fillRect(-5, -10, 8, 3);
+
+    ctx.fillStyle = '#611826';
+    ctx.beginPath();
+    ctx.moveTo(-6, -10);
+    ctx.lineTo(-1, -11);
+    ctx.lineTo(-3, 10);
+    ctx.lineTo(-7, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+
+    this.drawHeroLeg(
+      ctx,
+      frontLegX,
+      hipY,
+      frontLegAngle,
+      frontKnee,
+      '#343b55',
+      '#52607d',
+      1,
+    );
+
+    this.drawHeroArm(
+      ctx,
+      frontShoulderX,
+      shoulderY,
+      frontArmAngle,
+      15,
+      5,
+      '#41506f',
+      '#93add7',
+      1,
+      frontArmY,
+    );
+
+    ctx.save();
+    ctx.translate(headCenterX, headCenterY);
+    ctx.rotate(headTilt);
+
+    ctx.fillStyle = '#d8ba9a';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 8.5, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#151318';
+    ctx.beginPath();
+    ctx.moveTo(-7, -2);
+    ctx.lineTo(-4, -10);
+    ctx.lineTo(3, -11);
+    ctx.lineTo(7, -4);
+    ctx.lineTo(6, 1);
+    ctx.lineTo(0, 1.5);
+    ctx.lineTo(-5, 1.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#0e1016';
+    if (isFacingRight) {
+      ctx.fillRect(1, -1, 2, 2);
+      ctx.fillRect(4, 1, 2, 1);
+    } else {
+      ctx.fillRect(-3, -1, 2, 2);
+      ctx.fillRect(-6, 1, 2, 1);
+    }
+
+    ctx.restore();
+
+    if (handSparkScale > 0) {
+      const frontHandX = frontShoulderX + Math.cos(frontArmAngle) * 15;
+      const frontHandY = shoulderY + frontArmY + Math.sin(frontArmAngle) * 15;
+
+      const handGlow = ctx.createRadialGradient(
+        frontHandX,
+        frontHandY,
+        1,
+        frontHandX,
+        frontHandY,
+        14,
+      );
+      handGlow.addColorStop(0, 'rgba(255, 223, 162, 0.95)');
+      handGlow.addColorStop(0.45, 'rgba(255, 164, 70, 0.45)');
+      handGlow.addColorStop(1, 'rgba(255, 164, 70, 0)');
+
+      ctx.fillStyle = handGlow;
+      ctx.beginPath();
+      ctx.arc(frontHandX, frontHandY, 12 * handSparkScale, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255, 209, 120, 1)';
+      ctx.beginPath();
+      ctx.arc(frontHandX, frontHandY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  private drawHeroLeg(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    thighAngle: number,
+    kneeAngle: number,
+    upperColor: string,
+    lowerColor: string,
+    alpha: number,
+  ): void {
+    const thighLength = 12;
+    const shinLength = 12;
+
+    const kneeX = x + Math.sin(thighAngle) * thighLength;
+    const kneeY = y + Math.cos(thighAngle) * thighLength;
+
+    const shinTotalAngle = thighAngle + kneeAngle;
+    const footX = kneeX + Math.sin(shinTotalAngle) * shinLength;
+    const footY = kneeY + Math.cos(shinTotalAngle) * shinLength;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineCap = 'round';
+
+    ctx.strokeStyle = upperColor;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(kneeX, kneeY);
+    ctx.stroke();
+
+    ctx.strokeStyle = lowerColor;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(kneeX, kneeY);
+    ctx.lineTo(footX, footY);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#151922';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(footX - 4, footY);
+    ctx.lineTo(footX + 4, footY);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  private drawHeroArm(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    angle: number,
+    length: number,
+    lineWidth: number,
+    color: string,
+    handColor: string,
+    alpha: number,
+    yOffset = 0,
+  ): void {
+    const handX = x + Math.cos(angle) * length;
+    const handY = y + yOffset + Math.sin(angle) * length;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineCap = 'round';
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(handX, handY);
+    ctx.stroke();
+
+    ctx.fillStyle = handColor;
+    ctx.beginPath();
+    ctx.arc(handX, handY, 3.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
@@ -1056,32 +1498,14 @@ export class GameEngine {
     const ctx = this.ctx;
 
     for (const bullet of this.bullets) {
-      const glow = ctx.createRadialGradient(
-        bullet.x + bullet.width / 2,
-        bullet.y + bullet.height / 2,
-        1,
-        bullet.x + bullet.width / 2,
-        bullet.y + bullet.height / 2,
-        16,
-      );
-
-      glow.addColorStop(0, 'rgba(255, 220, 150, 1)');
-      glow.addColorStop(0.45, 'rgba(255, 170, 70, 0.85)');
-      glow.addColorStop(1, 'rgba(255, 170, 70, 0)');
-
-      ctx.fillStyle = glow;
+      ctx.fillStyle = '#ffca78';
       ctx.beginPath();
-      ctx.arc(
-        bullet.x + bullet.width / 2,
-        bullet.y + bullet.height / 2,
-        12,
-        0,
-        Math.PI * 2,
-      );
+      ctx.moveTo(bullet.x, bullet.y + bullet.height / 2);
+      ctx.lineTo(bullet.x + bullet.width - 3, bullet.y);
+      ctx.lineTo(bullet.x + bullet.width, bullet.y + bullet.height / 2);
+      ctx.lineTo(bullet.x + bullet.width - 3, bullet.y + bullet.height);
+      ctx.closePath();
       ctx.fill();
-
-      ctx.fillStyle = '#ffd083';
-      ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
     }
   }
 
@@ -1105,13 +1529,29 @@ export class GameEngine {
         enemy.height / 2,
         enemy.type === 'vigia' ? 38 : 28,
       );
-      aura.addColorStop(0, enemy.type === 'vigia' ? 'rgba(100, 229, 255, 0.9)' : 'rgba(122, 255, 151, 0.85)');
-      aura.addColorStop(0.45, enemy.type === 'vigia' ? 'rgba(50, 160, 255, 0.28)' : 'rgba(50, 255, 130, 0.22)');
+      aura.addColorStop(
+        0,
+        enemy.type === 'vigia'
+          ? 'rgba(100, 229, 255, 0.9)'
+          : 'rgba(122, 255, 151, 0.85)',
+      );
+      aura.addColorStop(
+        0.45,
+        enemy.type === 'vigia'
+          ? 'rgba(50, 160, 255, 0.28)'
+          : 'rgba(50, 255, 130, 0.22)',
+      );
       aura.addColorStop(1, 'rgba(0,0,0,0)');
 
       ctx.fillStyle = aura;
       ctx.beginPath();
-      ctx.arc(enemy.width / 2, enemy.height / 2, enemy.type === 'vigia' ? 36 : 26, 0, Math.PI * 2);
+      ctx.arc(
+        enemy.width / 2,
+        enemy.height / 2,
+        enemy.type === 'vigia' ? 36 : 26,
+        0,
+        Math.PI * 2,
+      );
       ctx.fill();
 
       ctx.fillStyle = enemy.hitFlash > 0 ? '#efe3d7' : '#13161c';
@@ -1127,7 +1567,10 @@ export class GameEngine {
       ctx.fillRect(5, 18, 4, enemy.height - 18);
       ctx.fillRect(enemy.width - 9, 18, 4, enemy.height - 18);
 
-      ctx.strokeStyle = enemy.type === 'vigia' ? 'rgba(100, 229, 255, 0.45)' : 'rgba(122, 255, 151, 0.4)';
+      ctx.strokeStyle =
+        enemy.type === 'vigia'
+          ? 'rgba(100, 229, 255, 0.45)'
+          : 'rgba(122, 255, 151, 0.4)';
       ctx.beginPath();
       ctx.moveTo(8, 18);
       ctx.lineTo(enemy.width / 2, enemy.height / 2);
@@ -1140,7 +1583,7 @@ export class GameEngine {
 
   private drawCollectibles(): void {
     const ctx = this.ctx;
-    const bob = Math.sin(performance.now() / 220) * 4;
+    const bob = Math.sin(performance.now() / 220) * 3;
 
     for (const item of this.collectibles) {
       if (item.collected) {
@@ -1150,45 +1593,94 @@ export class GameEngine {
       const y = item.y + bob;
 
       if (item.type === 'coin') {
-        ctx.fillStyle = '#f0c35b';
+        ctx.fillStyle = '#b88d3d';
         ctx.beginPath();
-        ctx.arc(item.x, y, 9, 0, Math.PI * 2);
+        ctx.moveTo(item.x, y - 10);
+        ctx.lineTo(item.x + 8, y);
+        ctx.lineTo(item.x, y + 10);
+        ctx.lineTo(item.x - 8, y);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = 'rgba(255, 238, 185, 0.45)';
+        ctx.fillStyle = '#e6c26d';
         ctx.beginPath();
-        ctx.arc(item.x - 2, y - 2, 3, 0, Math.PI * 2);
+        ctx.moveTo(item.x, y - 6);
+        ctx.lineTo(item.x + 5, y);
+        ctx.lineTo(item.x, y + 6);
+        ctx.lineTo(item.x - 5, y);
+        ctx.closePath();
         ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 242, 185, 0.38)';
+        ctx.strokeRect(item.x - 1, y - 3, 2, 6);
       }
 
       if (item.type === 'heart') {
-        ctx.fillStyle = '#f08a6b';
+        const potionGlass = ctx.createLinearGradient(
+          item.x,
+          y - 12,
+          item.x,
+          y + 12,
+        );
+        potionGlass.addColorStop(0, '#96d4ff');
+        potionGlass.addColorStop(1, '#4ea3de');
+
+        const potionLiquid = ctx.createLinearGradient(
+          item.x,
+          y - 2,
+          item.x,
+          y + 10,
+        );
+        potionLiquid.addColorStop(0, '#ff8f78');
+        potionLiquid.addColorStop(1, '#d94a5a');
+
+        ctx.fillStyle = '#c7a37b';
+        ctx.fillRect(item.x - 3, y - 12, 6, 5);
+
+        ctx.fillStyle = '#6f4b33';
+        ctx.fillRect(item.x - 5, y - 14, 10, 3);
+
+        ctx.fillStyle = potionGlass;
         ctx.beginPath();
-        ctx.arc(item.x - 5, y - 2, 6, 0, Math.PI * 2);
-        ctx.arc(item.x + 5, y - 2, 6, 0, Math.PI * 2);
-        ctx.lineTo(item.x, y + 10);
+        ctx.moveTo(item.x - 9, y - 4);
+        ctx.lineTo(item.x - 7, y + 8);
+        ctx.lineTo(item.x, y + 12);
+        ctx.lineTo(item.x + 7, y + 8);
+        ctx.lineTo(item.x + 9, y - 4);
         ctx.closePath();
         ctx.fill();
+
+        ctx.fillStyle = potionLiquid;
+        ctx.beginPath();
+        ctx.moveTo(item.x - 7, y + 1);
+        ctx.lineTo(item.x - 5, y + 8);
+        ctx.lineTo(item.x, y + 10);
+        ctx.lineTo(item.x + 5, y + 8);
+        ctx.lineTo(item.x + 7, y + 1);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(item.x - 4, y - 3);
+        ctx.lineTo(item.x - 2, y + 6);
+        ctx.stroke();
       }
 
       if (item.type === 'spark') {
-        const sparkGlow = ctx.createRadialGradient(item.x, y, 1, item.x, y, 18);
-        sparkGlow.addColorStop(0, 'rgba(125, 232, 255, 1)');
-        sparkGlow.addColorStop(0.5, 'rgba(125, 232, 255, 0.35)');
-        sparkGlow.addColorStop(1, 'rgba(125, 232, 255, 0)');
-        ctx.fillStyle = sparkGlow;
-        ctx.beginPath();
-        ctx.arc(item.x, y, 16, 0, Math.PI * 2);
-        ctx.fill();
-
         ctx.fillStyle = '#7de8ff';
         ctx.beginPath();
         ctx.moveTo(item.x, y - 10);
-        ctx.lineTo(item.x + 6, y);
-        ctx.lineTo(item.x + 2, y);
-        ctx.lineTo(item.x + 8, y + 10);
-        ctx.lineTo(item.x - 4, y + 2);
-        ctx.lineTo(item.x, y + 2);
+        ctx.lineTo(item.x + 4, y - 2);
+        ctx.lineTo(item.x + 10, y - 2);
+        ctx.lineTo(item.x + 3, y + 3);
+        ctx.lineTo(item.x + 6, y + 11);
+        ctx.lineTo(item.x, y + 5);
+        ctx.lineTo(item.x - 6, y + 11);
+        ctx.lineTo(item.x - 3, y + 3);
+        ctx.lineTo(item.x - 10, y - 2);
+        ctx.lineTo(item.x - 4, y - 2);
         ctx.closePath();
         ctx.fill();
       }
@@ -1291,7 +1783,13 @@ export class GameEngine {
 
       ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(projectile.x, projectile.y, projectile.radius * 2.1, 0, Math.PI * 2);
+      ctx.arc(
+        projectile.x,
+        projectile.y,
+        projectile.radius * 2.1,
+        0,
+        Math.PI * 2,
+      );
       ctx.fill();
 
       ctx.fillStyle = projectile.dark ? '#7be8ff' : '#ff9e7d';
@@ -1341,30 +1839,66 @@ export class GameEngine {
 
   private drawHud(): void {
     const ctx = this.ctx;
+    const heroPanelX = 20;
+    const heroPanelY = 18;
+    const heroPanelWidth = 320;
+    const heroPanelHeight = 96;
 
     ctx.save();
+
     ctx.fillStyle = 'rgba(6, 8, 12, 0.62)';
-    ctx.fillRect(20, 18, 250, 92);
+    ctx.fillRect(heroPanelX, heroPanelY, heroPanelWidth, heroPanelHeight);
     ctx.fillRect(this.canvas.width - 240, 18, 220, 92);
 
-    for (let index = 0; index < this.hero.maxHp; index += 1) {
-      const x = 40 + index * 34;
-      const y = 40;
-      const active = index < this.hero.hp;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#f4e7c7';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText(this.hero.name, heroPanelX + 18, heroPanelY + 28);
 
-      ctx.fillStyle = active ? '#f08a6b' : '#42323a';
-      ctx.beginPath();
-      ctx.arc(x - 6, y, 8, 0, Math.PI * 2);
-      ctx.arc(x + 6, y, 8, 0, Math.PI * 2);
-      ctx.lineTo(x, y + 14);
-      ctx.closePath();
-      ctx.fill();
-    }
+    const hpBarX = heroPanelX + 18;
+    const hpBarY = heroPanelY + 40;
+    const hpBarWidth = 134;
+    const hpBarHeight = 12;
+
+    ctx.fillStyle = '#181b24';
+    ctx.fillRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
+
+    const hpGradient = ctx.createLinearGradient(
+      hpBarX,
+      hpBarY,
+      hpBarX + hpBarWidth,
+      hpBarY,
+    );
+    hpGradient.addColorStop(0, '#8d2538');
+    hpGradient.addColorStop(0.55, '#ca4b60');
+    hpGradient.addColorStop(1, '#ff9b73');
+
+    ctx.fillStyle = hpGradient;
+    ctx.fillRect(
+      hpBarX,
+      hpBarY,
+      (this.hero.hp / this.hero.maxHp) * hpBarWidth,
+      hpBarHeight,
+    );
+
+    ctx.strokeStyle = 'rgba(244, 231, 199, 0.22)';
+    ctx.strokeRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
+
+    ctx.fillStyle = '#cfd8ea';
+    ctx.font = '13px Arial';
+    ctx.fillText(
+      `${this.hero.hp}/${this.hero.maxHp}`,
+      hpBarX + hpBarWidth + 12,
+      hpBarY + 10,
+    );
 
     ctx.fillStyle = '#d9deea';
     ctx.font = '18px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`Centelhas: ${this.sparks}/${this.specialThreshold}`, 36, 88);
+    ctx.fillText(
+      `Centelhas: ${this.sparks}/${this.specialThreshold}`,
+      heroPanelX + 18,
+      heroPanelY + 78,
+    );
 
     ctx.textAlign = 'center';
     ctx.fillStyle = '#f4e7c7';
@@ -1413,11 +1947,11 @@ export class GameEngine {
 
     if (this.sparks >= this.specialThreshold) {
       ctx.fillStyle = 'rgba(255, 225, 150, 0.18)';
-      ctx.fillRect(20, 118, 220, 36);
+      ctx.fillRect(20, 122, 220, 32);
       ctx.fillStyle = '#ffe08a';
       ctx.font = 'bold 18px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('Especial pronto (L)', 34, 142);
+      ctx.fillText('Especial pronto (L)', 34, 144);
     }
 
     ctx.restore();
