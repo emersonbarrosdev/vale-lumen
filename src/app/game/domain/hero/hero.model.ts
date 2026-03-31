@@ -1,0 +1,27 @@
+export type HeroState = 'idle' | 'run' | 'jump' | 'fall' | 'cast' | 'hurt';
+
+export interface Hero {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  vx: number;
+  vy: number;
+  speed: number;
+  jumpForce: number;
+  direction: 1 | -1;
+  onGround: boolean;
+  hp: number;
+  maxHp: number;
+  shootCooldown: number;
+  dashCooldown: number;
+  invulnerabilityTimer: number;
+  jumpsRemaining: number;
+  maxJumps: number;
+  state: HeroState;
+  animationTime: number;
+  castTimer: number;
+  hurtTimer: number;
+  landingTimer: number;
+  name: string;
+}

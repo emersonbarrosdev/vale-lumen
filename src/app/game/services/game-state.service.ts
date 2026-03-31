@@ -1,18 +1,46 @@
 import { Injectable } from '@angular/core';
+import { GAME_CONFIG } from '../../core/config/game.config';
+import { GameRunState } from '../../core/models/game/game-run-state.model';
+import { GameSettings } from '../../core/models/game/game-settings.model';
+import {
+  readStoredNumber,
+  writeStoredNumber,
+} from '../../core/utils/storage.util';
 
 @Injectable({
   providedIn: 'root',
 })
 export class GameStateService {
-  currentScore = 0;
-  lastScore = 0;
-  currentPhase = 1;
-  musicVolume = 70;
-  effectsVolume = 80;
+  currentScore: number = GAME_CONFIG.defaultCurrentScore;
+  lastScore: number = GAME_CONFIG.defaultLastScore;
+  currentPhase: number = GAME_CONFIG.defaultCurrentPhase;
+  musicVolume: number = GAME_CONFIG.defaultMusicVolume;
+  effectsVolume: number = GAME_CONFIG.defaultEffectsVolume;
 
   constructor() {
-    this.musicVolume = this.readNumber('musicVolume', 70);
-    this.effectsVolume = this.readNumber('effectsVolume', 80);
+    this.musicVolume = readStoredNumber(
+      'musicVolume',
+      GAME_CONFIG.defaultMusicVolume,
+    );
+    this.effectsVolume = readStoredNumber(
+      'effectsVolume',
+      GAME_CONFIG.defaultEffectsVolume,
+    );
+  }
+
+  get runState(): GameRunState {
+    return {
+      currentScore: this.currentScore,
+      lastScore: this.lastScore,
+      currentPhase: this.currentPhase,
+    };
+  }
+
+  get settings(): GameSettings {
+    return {
+      musicVolume: this.musicVolume,
+      effectsVolume: this.effectsVolume,
+    };
   }
 
   resetRun(): void {
@@ -33,30 +61,7 @@ export class GameStateService {
     this.musicVolume = musicVolume;
     this.effectsVolume = effectsVolume;
 
-    this.writeNumber('musicVolume', musicVolume);
-    this.writeNumber('effectsVolume', effectsVolume);
-  }
-
-  private readNumber(key: string, fallback: number): number {
-    if (!this.hasBrowserStorage()) {
-      return fallback;
-    }
-
-    const rawValue = window.localStorage.getItem(key);
-    const parsedValue = Number(rawValue);
-
-    return Number.isFinite(parsedValue) ? parsedValue : fallback;
-  }
-
-  private writeNumber(key: string, value: number): void {
-    if (!this.hasBrowserStorage()) {
-      return;
-    }
-
-    window.localStorage.setItem(key, String(value));
-  }
-
-  private hasBrowserStorage(): boolean {
-    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+    writeStoredNumber('musicVolume', musicVolume);
+    writeStoredNumber('effectsVolume', effectsVolume);
   }
 }

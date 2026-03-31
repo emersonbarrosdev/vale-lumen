@@ -6,8 +6,9 @@ import {
   ViewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { GameStateService } from '../../services/game-state.service';
-import { GameEngine } from '../../engine/game-engine';
+import { CANVAS_CONFIG } from '../../../../core/config/canvas.config';
+import { GameEngine } from '../../../engine/game-engine';
+import { GameStateService } from '../../../services/game-state.service';
 
 @Component({
   selector: 'app-game-canvas',
@@ -34,8 +35,8 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
       throw new Error('Não foi possível obter o contexto 2D do canvas.');
     }
 
-    canvas.width = 1280;
-    canvas.height = 720;
+    canvas.width = CANVAS_CONFIG.width;
+    canvas.height = CANVAS_CONFIG.height;
 
     this.engine = new GameEngine(context, canvas, this.gameState, {
       onGameOver: (score) => {

@@ -1,3 +1,5 @@
+import { INPUT_CONFIG } from '../../core/config/input.config';
+
 export class InputManager {
   private readonly pressed = new Set<string>();
   private readonly justPressed = new Set<string>();
@@ -11,7 +13,7 @@ export class InputManager {
 
     this.pressed.add(key);
 
-    if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+    if (INPUT_CONFIG.preventDefaultKeys.includes(key)) {
       event.preventDefault();
     }
   };

@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { GameCanvasComponent } from '../../game/ui/game-canvas/game-canvas.component';
+import { GameCanvasComponent } from '../../game/game-shell/components/game-canvas/game-canvas.component';
 
 @Component({
   selector: 'app-game',
