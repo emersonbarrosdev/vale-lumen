@@ -1,340 +1,128 @@
 import { Hero } from '../../domain/hero/hero.model';
 
 type PixelColor =
-  | 'outline'
-  | 'hoodDark'
-  | 'hoodMid'
-  | 'hoodLight'
-  | 'hair'
-  | 'skin'
-  | 'skinShadow'
-  | 'eye'
-  | 'cloakDark'
-  | 'cloakMid'
-  | 'tunicDark'
-  | 'tunicMid'
-  | 'tunicLight'
-  | 'belt'
-  | 'boot'
-  | 'magicBright'
-  | 'magicMid';
 
+  | 'outline' | 'hairDark' | 'hairMid' | 'hairLight'
+  | 'skin' | 'skinWarm' | 'eye' | 'shirtDark' | 'shirtMid'
+  | 'shirtLight' | 'pantsDark' | 'pantsMid' | 'bootDark'
+  | 'bootMid' | 'magic' | 'shadow';
+
+// Paleta refinada com alto contraste (Inspirada em Metal Slug/KOF)
 const PALETTE: Record<PixelColor, string> = {
-  outline: '#0a0c10',
-  hoodDark: '#18202c',
-  hoodMid: '#2d3749',
-  hoodLight: '#4d607d',
-  hair: '#1b1211',
-  skin: '#d8b895',
-  skinShadow: '#9d7a61',
-  eye: '#f3fbff',
-  cloakDark: '#2f0d15',
-  cloakMid: '#5f1b2a',
-  tunicDark: '#1b2431',
-  tunicMid: '#31425c',
-  tunicLight: '#667ea6',
-  belt: '#725736',
-  boot: '#141920',
-  magicBright: '#ffe1b6',
-  magicMid: '#ff9d63',
+  outline: '#08080c',
+  hairDark: '#0e0e15',   // Preto Profundo
+  hairMid: '#1a1d2e',    // Azul Marinho Sombrio
+  hairLight: '#4d5c8a',  // Brilho Metálico no Cabelo
+  skin: '#c48a60',       // Pele com tom mais "bronze" (mais contraste)
+  skinWarm: '#f2ccaf',   // Luz na pele
+  eye: '#ffffff',
+  shirtDark: '#0f172a',
+  shirtMid: '#1e293b',
+  shirtLight: '#38bdf8', // Azul Celeste para contraste forte na roupa
+  pantsDark: '#2c3327',
+  pantsMid: '#4d5d41',
+  bootDark: '#120d0b',
+  bootMid: '#2d1e18',
+  magic: '#facc15',
+  shadow: 'rgba(0, 0, 0, 0.35)'
 };
 
-interface PixelRect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  color: PixelColor;
-}
-
-interface HeroPose {
-  bobY: number;
-  frontLegX: number;
-  backLegX: number;
-  frontLegY: number;
-  backLegY: number;
-  frontArmY: number;
-  backArmY: number;
-  frontArmX: number;
-  castMode: boolean;
-  hurtShake: number;
-}
+interface PixelRect { x: number; y: number; w: number; h: number; color: PixelColor; }
+interface HeroPose { bob: number; legX: number; legY: number; armY: number; shake: number; hairWave: number; }
 
 const PIXEL = 3;
-const SPRITE_WIDTH = 18;
-const SPRITE_HEIGHT = 24;
+const SPRITE_W = 18;
+const SPRITE_H = 24;
 
-export function drawHero(
-  ctx: CanvasRenderingContext2D,
-  hero: Hero,
-): void {
-  const flicker =
-    hero.invulnerabilityTimer > 0 &&
-    Math.floor(hero.invulnerabilityTimer * 18) % 2 === 0;
+export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
+  if (hero.invulnerabilityTimer > 0 && Math.floor(hero.invulnerabilityTimer * 18) % 2 === 0) return;
 
-  if (flicker) {
-    return;
-  }
+  const t = hero.animationTime;
+  const pose = calculatePose(hero, t);
 
-  const pose = getPose(hero);
-
-  const centerX = hero.x + hero.width / 2 + pose.hurtShake;
-  const centerY = hero.y + hero.height / 2 + pose.bobY;
+  const centerX = hero.x + hero.width / 2 + pose.shake;
+  const centerY = hero.y + hero.height / 2 + pose.bob;
 
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   ctx.translate(centerX, centerY);
 
-  /**
-   * Sprite-base olhando para a DIREITA.
-   */
+  // Sombra Projetada
+  ctx.fillStyle = PALETTE.shadow;
+  ctx.beginPath();
+  const s = hero.state === 'jump' ? 0.6 : 1.0;
+  ctx.ellipse(0, (SPRITE_H * PIXEL) / 2 - 2, 7 * PIXEL * s, 2 * PIXEL, 0, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.scale(hero.direction, 1);
+  const baseX = -Math.floor((SPRITE_W * PIXEL) / 2);
+  const baseY = -Math.floor((SPRITE_H * PIXEL) / 2);
 
-  const baseX = -Math.floor((SPRITE_WIDTH * PIXEL) / 2);
-  const baseY = -Math.floor((SPRITE_HEIGHT * PIXEL) / 2);
-
-  const parts = buildHeroParts(pose);
-
-  for (const part of parts) {
-    ctx.fillStyle = PALETTE[part.color];
-    ctx.fillRect(
-      baseX + part.x * PIXEL,
-      baseY + part.y * PIXEL,
-      part.w * PIXEL,
-      part.h * PIXEL,
-    );
-  }
-
-  if (pose.castMode) {
-    drawMagicOrb(ctx, baseX, baseY);
+  const parts = buildHeroParts(pose, hero.state);
+  for (const p of parts) {
+    ctx.fillStyle = PALETTE[p.color];
+    ctx.fillRect(baseX + p.x * PIXEL, baseY + p.y * PIXEL, p.w * PIXEL, p.h * PIXEL);
   }
 
   ctx.restore();
 }
 
-function getPose(hero: Hero): HeroPose {
-  const t = hero.animationTime;
-  const run = Math.sin(t * 10);
-  const runOpposite = Math.sin(t * 10 + Math.PI);
-  const idleBob = Math.sin(t * 2.2) * 1.1;
-
-  const pose: HeroPose = {
-    bobY: 0,
-    frontLegX: 0,
-    backLegX: 0,
-    frontLegY: 0,
-    backLegY: 0,
-    frontArmY: 0,
-    backArmY: 0,
-    frontArmX: 0,
-    castMode: false,
-    hurtShake: 0,
+function calculatePose(hero: any, t: number): HeroPose {
+  const run = Math.sin(t * 12);
+  return {
+    bob: hero.state === 'idle' ? Math.sin(t * 3) * 1.5 : 0,
+    legX: hero.state === 'run' ? Math.round(run * 1.8) : 0,
+    legY: hero.state === 'run' ? Math.round(Math.abs(run) * 0.8) : 0,
+    armY: hero.state === 'run' ? Math.round(Math.abs(run)) : 0,
+    shake: hero.state === 'hurt' ? Math.sin(t * 40) * 2 : 0,
+    hairWave: Math.sin(t * 6) * 1 // O cabelo flutua levemente
   };
-
-  switch (hero.state) {
-    case 'idle':
-      pose.bobY = idleBob;
-      break;
-
-    case 'run':
-      /**
-       * Corrida menos “quebrada”.
-       * O torso quase não mexe; a leitura vem de pernas e braços.
-       */
-      pose.bobY = Math.abs(run) * 1.0;
-      pose.frontLegX = Math.round(run * 1.3);
-      pose.backLegX = Math.round(runOpposite * 1.3);
-      pose.frontLegY = Math.round(Math.abs(runOpposite) * 1);
-      pose.backLegY = Math.round(Math.abs(run) * 1);
-      pose.frontArmY = Math.round(Math.abs(run) * 1);
-      pose.backArmY = Math.round(Math.abs(runOpposite) * 1);
-      break;
-
-    case 'jump':
-      pose.bobY = -2;
-      pose.frontLegY = -1;
-      pose.backLegY = -1;
-      pose.frontArmY = -1;
-      pose.backArmY = -1;
-      break;
-
-    case 'fall':
-      pose.bobY = 1;
-      pose.frontLegY = 1;
-      pose.backLegY = 2;
-      pose.frontArmY = 1;
-      pose.backArmY = 0;
-      break;
-
-    case 'cast':
-      pose.castMode = true;
-      pose.frontArmX = 1;
-      pose.frontArmY = -2;
-      pose.backArmY = 1;
-      break;
-
-    case 'hurt':
-      pose.hurtShake = Math.round(Math.sin(t * 34) * 1.5);
-      pose.frontArmY = 1;
-      pose.backArmY = -1;
-      pose.frontLegY = 1;
-      pose.backLegY = 0;
-      break;
-  }
-
-  return pose;
 }
 
-function buildHeroParts(pose: HeroPose): PixelRect[] {
+function buildHeroParts(pose: HeroPose, state: string): PixelRect[] {
   const torsoY = 9;
-  const legsY = 18;
-
-  const backArmX = 4;
-  const frontArmX = pose.castMode ? 13 : 12;
+  const isRun = state === 'run';
 
   return [
-    /**
-     * CAPA ATRÁS
-     */
-    { x: 2, y: 9, w: 1, h: 8, color: 'cloakDark' },
-    { x: 3, y: 10, w: 1, h: 8, color: 'cloakMid' },
-    { x: 4, y: 15, w: 1, h: 4, color: 'cloakDark' },
+    /** CABELO LONGO (Agora flui pelas costas) */
+    // Mecha de trás (mais escura)
+    { x: 3 + pose.hairWave, y: 1, w: 4, h: 8, color: 'hairDark' },
+    { x: 4 + pose.hairWave, y: 8, w: 3, h: 5, color: 'hairDark' },
 
-    /**
-     * CABEÇA
-     * Menos “capacete”, mais rosto/cabelo.
-     */
-    { x: 6, y: 0, w: 5, h: 1, color: 'outline' },
-    { x: 5, y: 1, w: 7, h: 1, color: 'outline' },
+    // Topo da cabeça e franja
+    { x: 5, y: 0, w: 7, h: 4, color: 'hairMid' },
+    { x: 7, y: 1, w: 4, h: 1, color: 'hairLight' }, // Brilho no topo
+    { x: 12, y: 3, w: 1, h: 4, color: 'hairMid' },  // Mecha lateral 3/4
 
-    { x: 4, y: 2, w: 8, h: 1, color: 'hoodDark' },
-    { x: 5, y: 3, w: 7, h: 1, color: 'hoodMid' },
-    { x: 6, y: 2, w: 3, h: 1, color: 'hoodLight' },
+    /** ROSTO (Proporções mais "Hero") */
+    { x: 6, y: 4, w: 7, h: 5, color: 'skin' },
+    { x: 10, y: 4, w: 4, h: 3, color: 'skinWarm' }, // Luz na bochecha
+    { x: 9, y: 6, w: 1, h: 1, color: 'eye' },      // Olho distante
+    { x: 12, y: 6, w: 2, h: 1, color: 'eye' },     // Olho frontal proeminente
 
-    // parte de trás da cabeça/capuz
-    { x: 4, y: 3, w: 1, h: 4, color: 'hoodDark' },
-    { x: 5, y: 4, w: 1, h: 3, color: 'hoodMid' },
+    /** TORSO (V-Shape robusto) */
+    { x: 6, y: torsoY, w: 3, h: 6, color: 'shirtDark' },
+    { x: 8, y: torsoY - 1, w: 6, h: 7, color: 'shirtMid' },
+    { x: 11, y: torsoY + 1, w: 3, h: 4, color: 'shirtLight' }, // Brilho no peito
 
-    // cabelo aparecendo
-    { x: 8, y: 4, w: 1, h: 1, color: 'hair' },
-    { x: 8, y: 5, w: 1, h: 1, color: 'hair' },
+    /** BRAÇOS (Mais detalhados) */
+    // Trás
+    { x: 3, y: 10 + pose.armY, w: 3, h: 4, color: 'shirtDark' },
+    { x: 3, y: 14 + pose.armY, w: 2, h: 2, color: 'skin' },
+    // Frente
+    { x: 12 + (state === 'cast' ? 3 : 0), y: 10 + pose.armY, w: 3, h: 5, color: 'shirtLight' },
+    { x: 13 + (state === 'cast' ? 3 : 0), y: 15 + pose.armY, w: 3, h: 2, color: 'skin' },
 
-    // rosto mais aberto
-    { x: 9, y: 4, w: 2, h: 3, color: 'skin' },
-    { x: 11, y: 4, w: 1, h: 3, color: 'skinShadow' },
-    { x: 10, y: 4, w: 1, h: 1, color: 'eye' },
+    /** PERNAS (Curvatura estilo "Street Fighter/Metal Slug") */
+    { x: 6 + pose.legX, y: 17 + pose.legY, w: 4, h: 5, color: 'pantsDark' },
+    { x: 11 - pose.legX, y: 17 + (pose.legY * 0.5), w: 4, h: 5, color: 'pantsMid' },
 
-    // ponta frontal do capuz
-    { x: 12, y: 3, w: 1, h: 4, color: 'outline' },
+    /** BOTAS (Peso visual) */
+    { x: 5 + pose.legX, y: 22 + pose.legY, w: 5, h: 2, color: 'bootDark' },
+    { x: 11 - pose.legX, y: 22 + (pose.legY * 0.5), w: 6, h: 2, color: 'bootMid' },
 
-    /**
-     * GOLA
-     */
-    { x: 6, y: 7, w: 5, h: 1, color: 'cloakMid' },
-    { x: 5, y: 8, w: 7, h: 1, color: 'cloakDark' },
-
-    /**
-     * TORSO / TÚNICA
-     * Mais cara de herói do que armadura pesada.
-     */
-    { x: 6, y: torsoY, w: 5, h: 1, color: 'tunicDark' },
-    { x: 5, y: torsoY + 1, w: 7, h: 4, color: 'tunicMid' },
-    { x: 7, y: torsoY + 1, w: 2, h: 3, color: 'tunicLight' },
-    { x: 5, y: torsoY + 5, w: 7, h: 1, color: 'tunicDark' },
-
-    // frente do peito mais clara para reforçar direção
-    { x: 10, y: torsoY + 1, w: 1, h: 3, color: 'tunicLight' },
-
-    /**
-     * Cinto
-     */
-    { x: 6, y: torsoY + 6, w: 5, h: 1, color: 'belt' },
-
-    /**
-     * BRAÇO DE TRÁS
-     */
-    { x: backArmX, y: torsoY + 1 + pose.backArmY, w: 1, h: 4, color: 'tunicDark' },
-    { x: backArmX, y: torsoY + 5 + pose.backArmY, w: 1, h: 1, color: 'skin' },
-
-    /**
-     * BRAÇO DA FRENTE
-     */
-    {
-      x: frontArmX + pose.frontArmX,
-      y: torsoY + 1 + pose.frontArmY,
-      w: 1,
-      h: 4,
-      color: pose.castMode ? 'magicMid' : 'tunicLight',
-    },
-    {
-      x: frontArmX + pose.frontArmX,
-      y: torsoY + 5 + pose.frontArmY,
-      w: 1,
-      h: 1,
-      color: 'skin',
-    },
-
-    /**
-     * PERNAS
-     */
-    {
-      x: 7 + pose.backLegX,
-      y: legsY + pose.backLegY,
-      w: 1,
-      h: 4,
-      color: 'tunicDark',
-    },
-    {
-      x: 7 + pose.backLegX,
-      y: legsY + 4 + pose.backLegY,
-      w: 2,
-      h: 1,
-      color: 'boot',
-    },
-
-    {
-      x: 10 + pose.frontLegX,
-      y: legsY + pose.frontLegY,
-      w: 1,
-      h: 4,
-      color: 'tunicLight',
-    },
-    {
-      x: 10 + pose.frontLegX,
-      y: legsY + 4 + pose.frontLegY,
-      w: 2,
-      h: 1,
-      color: 'boot',
-    },
-
-    /**
-     * CONTORNOS
-     */
-    { x: 5, y: 4, w: 1, h: 3, color: 'outline' },
-    { x: 5, y: 10, w: 1, h: 4, color: 'outline' },
+    /** CONTORNOS DE DEFINIÇÃO */
+    { x: 5, y: 5, w: 1, h: 5, color: 'outline' },
+    { x: 14, y: torsoY + 1, w: 1, h: 4, color: 'outline' }
   ];
-}
-
-function drawMagicOrb(
-  ctx: CanvasRenderingContext2D,
-  baseX: number,
-  baseY: number,
-): void {
-  const p = PIXEL;
-  const orbX = baseX + 14 * p;
-  const orbY = baseY + 8 * p;
-
-  ctx.fillStyle = 'rgba(255, 190, 110, 0.10)';
-  ctx.fillRect(orbX - p, orbY - p, 5 * p, 5 * p);
-
-  ctx.fillStyle = PALETTE.magicMid;
-  ctx.fillRect(orbX, orbY, p, p);
-  ctx.fillRect(orbX + p, orbY, p, p);
-  ctx.fillRect(orbX, orbY + p, p, p);
-  ctx.fillRect(orbX + p, orbY + p, p, p);
-
-  ctx.fillStyle = PALETTE.magicBright;
-  ctx.fillRect(orbX + p, orbY - p, p, p);
-  ctx.fillRect(orbX + 2 * p, orbY, p, p);
-  ctx.fillRect(orbX + p, orbY + 2 * p, p, p);
 }
