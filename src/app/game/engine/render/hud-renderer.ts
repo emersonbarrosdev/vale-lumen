@@ -8,6 +8,8 @@ export function drawHud(
   specialCharge: number,
   score: number,
   boss: Boss,
+  phaseTitle: string,
+  bossName: string,
 ): void {
   const heroPanelX = 20;
   const heroPanelY = 18;
@@ -39,7 +41,11 @@ export function drawHud(
   if (hpPercent <= 0.15) {
     const blink = Math.floor(performance.now() / 150) % 2 === 0;
     hpColor = blink ? '#ff425d' : '#8f182b';
-  } else if (hpPercent <= 0.5) {
+  } else if (hpPercent <= 0.3) {
+    hpColor = '#ff7b62';
+  } else if (hpPercent <= 0.6) {
+    hpColor = '#d9c85c';
+  } else {
     hpColor = '#58d26c';
   }
 
@@ -107,7 +113,7 @@ export function drawHud(
   ctx.textAlign = 'center';
   ctx.fillStyle = '#f4e7c7';
   ctx.font = 'bold 20px Arial';
-  ctx.fillText('Fase 1 - Ruínas do Vale', canvas.width / 2, 42);
+  ctx.fillText(`Fase ${phaseTitle}`, canvas.width / 2, 42);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#d9deea';
@@ -127,7 +133,7 @@ export function drawHud(
     ctx.textAlign = 'center';
     ctx.fillStyle = '#f3d6c0';
     ctx.font = 'bold 18px Arial';
-    ctx.fillText('Arauto das Cinzas', canvas.width / 2, y - 10);
+    ctx.fillText(bossName, canvas.width / 2, y - 10);
 
     ctx.fillStyle = '#181b24';
     ctx.fillRect(x, y, barWidth, barHeight);

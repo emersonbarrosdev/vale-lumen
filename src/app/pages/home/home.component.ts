@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { GameStateService } from '../../game/services/game-state.service';
+import { AudioService } from '../../game/services/audio.service';
+import { PhaseFlowService } from '../../game/services/phase-flow.service';
 
 @Component({
   selector: 'app-home',
@@ -12,11 +13,13 @@ import { GameStateService } from '../../game/services/game-state.service';
 export class HomeComponent {
   constructor(
     private readonly router: Router,
-    private readonly gameState: GameStateService,
+    private readonly phaseFlowService: PhaseFlowService,
+    private readonly audioService: AudioService,
   ) {}
 
   startGame(): void {
-    this.gameState.resetRun();
-    this.router.navigateByUrl('/game');
+    this.phaseFlowService.startNewRun();
+    this.audioService.playSfx('ui-confirm');
+    this.router.navigateByUrl('/phase-loading');
   }
 }

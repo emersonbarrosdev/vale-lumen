@@ -1,5 +1,4 @@
 import { EngineCallbacks } from '../../core/models/game/engine-callbacks.model';
-import { PhaseOneScene } from '../content/phases/phase-01-ruinas-do-vale/phase-01.data';
 import { Boss } from '../domain/bosses/boss.model';
 import { BossProjectile } from '../domain/bosses/boss-projectile.model';
 import { BurstParticle } from '../domain/combat/burst-particle.model';
@@ -10,6 +9,7 @@ import { Hero } from '../domain/hero/hero.model';
 import { BossArenaData } from '../domain/world/boss-arena.model';
 import { Chest } from '../domain/world/chest.model';
 import { Collectible } from '../domain/world/collectible.model';
+import { PhasePlayableData } from '../domain/world/phase-playable-data.model';
 import { Platform } from '../domain/world/platform.model';
 import { GameStateService } from '../services/game-state.service';
 import { InputManager } from './input-manager';
@@ -32,6 +32,7 @@ export class GameEngine {
   private readonly input = new InputManager();
   private readonly callbacks: EngineCallbacks;
   private readonly gameState: GameStateService;
+  private readonly phaseData: PhasePlayableData;
 
   private animationFrameId = 0;
   private lastTime = 0;
@@ -46,11 +47,13 @@ export class GameEngine {
   private readonly chests: Chest[];
   private readonly bossArena: BossArenaData;
 
-  private readonly hero: Hero = {
+  private bossIntroShown = false;
+
+   private readonly hero: Hero = {
     x: 120,
     y: 500,
-    width: 46,
-    height: 70,
+    width: 48,
+    height: 72,
     vx: 0,
     vy: 0,
     speed: 275,
@@ -116,45 +119,51 @@ export class GameEngine {
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
     gameState: GameStateService,
+    phaseData: PhasePlayableData,
     callbacks: EngineCallbacks,
   ) {
     this.ctx = ctx;
     this.canvas = canvas;
     this.gameState = gameState;
+    this.phaseData = phaseData;
     this.callbacks = callbacks;
 
-    const phase = PhaseOneScene.build();
-    this.worldWidth = phase.worldWidth;
-    this.platforms = phase.platforms;
-    this.bossArena = phase.bossArena;
+    this.worldWidth = phaseData.worldWidth;
+    this.platforms = phaseData.platforms;
+    this.bossArena = phaseData.bossArena;
+
+    this.hero.maxHp = this.gameState.heroProgress.maxHp;
+    this.hero.hp = this.gameState.heroProgress.currentHp;
 
     this.boss.x = this.bossArena.bossX;
     this.boss.y = this.bossArena.groundY - this.boss.height;
+    this.boss.hp = phaseData.definition.boss.maxHp;
+    this.boss.maxHp = phaseData.definition.boss.maxHp;
 
-    this.enemies = phase.enemies.map((enemy) => ({
+    this.enemies = phaseData.enemies.map((enemy) => ({
       type: enemy.type,
       x: enemy.x,
       y: enemy.y,
       width: enemy.type === 'vigia' ? 58 : 44,
       height: enemy.type === 'vigia' ? 72 : 50,
-      speed: enemy.type === 'vigia' ? 48 : 84,
+      speed: enemy.type === 'vigia' ? 48 + phaseData.definition.difficulty * 2 : 84 + phaseData.definition.difficulty * 2,
       direction: -1,
       patrolLeft: enemy.patrolLeft,
       patrolRight: enemy.patrolRight,
-      hp: enemy.type === 'vigia' ? 4 : 2,
+      hp: enemy.type === 'vigia' ? 4 + Math.floor(phaseData.definition.difficulty / 2) : 2 + Math.floor(phaseData.definition.difficulty / 3),
       active: true,
       hitFlash: 0,
       hoverOffset: Math.random() * Math.PI * 2,
     }));
 
-    this.collectibles = phase.collectibles.map((item) => ({
+    this.collectibles = phaseData.collectibles.map((item) => ({
       ...item,
       width: item.type === 'coin' ? 18 : 22,
       height: item.type === 'coin' ? 18 : 22,
       collected: false,
     }));
 
-    this.chests = phase.chests.map((chest) => ({
+    this.chests = phaseData.chests.map((chest) => ({
       ...chest,
       active: true,
       breakTimer: 0,
@@ -720,6 +729,11 @@ export class GameEngine {
     if (!this.boss.active && this.hero.x >= this.bossArena.startX - 240) {
       this.boss.active = true;
       this.boss.introPulse = 1.5;
+
+      if (!this.bossIntroShown && this.callbacks.onBossIntro) {
+        this.bossIntroShown = true;
+        this.callbacks.onBossIntro(this.phaseData.definition.boss.dialog);
+      }
     }
 
     if (!this.boss.active || this.boss.hp <= 0) {
@@ -926,6 +940,7 @@ export class GameEngine {
     this.hero.hurtTimer = 0.24;
     this.hero.vx = -this.hero.direction * 190;
     this.hero.vy = -260;
+    this.gameState.heroProgress.currentHp = this.hero.hp;
   }
 
   private updateCamera(): void {
@@ -1005,6 +1020,8 @@ export class GameEngine {
       this.specialCharge,
       this.score,
       this.boss,
+      this.phaseData.definition.title,
+      this.phaseData.definition.boss.bossName,
     );
 
     if (this.specialFlashTimer > 0) {

@@ -2,13 +2,21 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  Inject,
   OnDestroy,
+  PLATFORM_ID,
   ViewChild,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { CANVAS_CONFIG } from '../../../../core/config/canvas.config';
+import { buildPlayablePhaseData } from '../../../content/registry/phase-data.factory';
 import { GameEngine } from '../../../engine/game-engine';
+import { AudioService } from '../../../services/audio.service';
+import { BossDialogService } from '../../../services/boss-dialog.service';
 import { GameStateService } from '../../../services/game-state.service';
+import { LoadingOverlayService } from '../../../services/loading-overlay.service';
+import { PhaseFlowService } from '../../../services/phase-flow.service';
 
 @Component({
   selector: 'app-game-canvas',
@@ -21,13 +29,25 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
   private readonly canvasRef!: ElementRef<HTMLCanvasElement>;
 
   private engine: GameEngine | null = null;
+  private readonly isBrowser: boolean;
 
   constructor(
+    @Inject(PLATFORM_ID) platformId: object,
     private readonly router: Router,
     private readonly gameState: GameStateService,
-  ) {}
+    private readonly phaseFlowService: PhaseFlowService,
+    private readonly audioService: AudioService,
+    private readonly bossDialogService: BossDialogService,
+    private readonly loadingOverlayService: LoadingOverlayService,
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngAfterViewInit(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
     const canvas = this.canvasRef.nativeElement;
     const context = canvas.getContext('2d');
 
@@ -35,17 +55,39 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
       throw new Error('Não foi possível obter o contexto 2D do canvas.');
     }
 
+    const phaseDefinition = this.phaseFlowService.getCurrentPhaseDefinition();
+    const phaseData = buildPlayablePhaseData(phaseDefinition);
+
     canvas.width = CANVAS_CONFIG.width;
     canvas.height = CANVAS_CONFIG.height;
 
-    this.engine = new GameEngine(context, canvas, this.gameState, {
+    context.imageSmoothingEnabled = false;
+
+    this.loadingOverlayService.hide();
+    this.audioService.playMusic(phaseDefinition.audio.explorationMusicId);
+
+    this.engine = new GameEngine(context, canvas, this.gameState, phaseData, {
       onGameOver: (score) => {
-        this.gameState.finishRun(score);
+        this.audioService.stopMusic();
+        this.phaseFlowService.registerDeath(score);
         this.router.navigateByUrl('/game-over');
       },
       onVictory: (score) => {
-        this.gameState.finishRun(score);
-        this.router.navigateByUrl('/victory');
+        this.audioService.stopMusic();
+
+        const result = this.phaseFlowService.completeCurrentPhase(score);
+
+        if (result.finishedGame) {
+          this.router.navigateByUrl('/true-ending');
+          return;
+        }
+
+        this.router.navigateByUrl('/phase-clear');
+      },
+      onBossIntro: (dialog) => {
+        this.audioService.playSfx('boss-intro');
+        this.audioService.playMusic(phaseDefinition.audio.bossMusicId);
+        this.bossDialogService.open(dialog);
       },
     });
 
@@ -53,6 +95,10 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
     this.engine?.destroy();
   }
 }

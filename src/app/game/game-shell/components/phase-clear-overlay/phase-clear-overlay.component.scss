@@ -1,0 +1,37 @@
+.phase-clear-card {
+  width: min(520px, 100%);
+  padding: 28px;
+  border-radius: 20px;
+  background: rgba(18, 21, 31, 0.95);
+  border: 1px solid rgba(244, 231, 199, 0.14);
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.45);
+}
+
+h2,
+h3 {
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+h2 {
+  color: #f4e8cb;
+}
+
+h3 {
+  color: #cfb58a;
+  margin-bottom: 24px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  color: #d9deea;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.total {
+  margin-top: 6px;
+  font-size: 1.05rem;
+  color: #fff4df;
+}

@@ -20,7 +20,7 @@
   margin-top: 20px;
 }
 
-a {
+button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -30,5 +30,5 @@ a {
   border: 1px solid rgba(255, 180, 180, 0.16);
   background: #33252a;
   color: #fff;
-  text-decoration: none;
+  cursor: pointer;
 }

@@ -1,12 +1,23 @@
 <div class="page-shell">
   <div class="card">
     <h1>Game Over</h1>
-    <p>Kael caiu nas ruínas do vale.</p>
+    <p>Kael caiu no vale.</p>
     <p><strong>Pontuação:</strong> {{ gameState.lastScore }}</p>
 
-    <div class="actions">
-      <a routerLink="/game">Tentar novamente</a>
-      <a routerLink="/">Menu inicial</a>
-    </div>
+    @if (canContinue) {
+      <p>Continues usados nesta fase: {{ gameState.continuesUsedInCurrentPhase }}/2</p>
+
+      <div class="actions">
+        <button type="button" (click)="continuePhase()">Continuar da fase</button>
+        <button type="button" (click)="goToMenu()">Menu inicial</button>
+      </div>
+    } @else {
+      <p>Os continues desta fase acabaram. A jornada recomeça desde o início.</p>
+
+      <div class="actions">
+        <button type="button" (click)="restartFromBeginning()">Recomeçar</button>
+        <button type="button" (click)="goToMenu()">Menu inicial</button>
+      </div>
+    }
   </div>
 </div>

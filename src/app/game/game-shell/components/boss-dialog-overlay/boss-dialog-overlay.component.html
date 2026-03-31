@@ -1,0 +1,11 @@
+<ng-container *ngIf="dialog$ | async as dialog">
+  <div class="boss-dialog-backdrop">
+    <div class="boss-dialog-card">
+      <div class="boss-dialog-name">{{ dialog.bossName }}</div>
+
+      <p class="boss-dialog-line" *ngFor="let line of dialog.lines">
+        {{ line }}
+      </p>
+    </div>
+  </div>
+</ng-container>

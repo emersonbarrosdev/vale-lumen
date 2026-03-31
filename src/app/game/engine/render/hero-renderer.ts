@@ -1,5 +1,69 @@
 import { Hero } from '../../domain/hero/hero.model';
 
+type PixelColor =
+  | 'outline'
+  | 'hoodDark'
+  | 'hoodMid'
+  | 'hoodLight'
+  | 'hair'
+  | 'skin'
+  | 'skinShadow'
+  | 'eye'
+  | 'cloakDark'
+  | 'cloakMid'
+  | 'tunicDark'
+  | 'tunicMid'
+  | 'tunicLight'
+  | 'belt'
+  | 'boot'
+  | 'magicBright'
+  | 'magicMid';
+
+const PALETTE: Record<PixelColor, string> = {
+  outline: '#0a0c10',
+  hoodDark: '#18202c',
+  hoodMid: '#2d3749',
+  hoodLight: '#4d607d',
+  hair: '#1b1211',
+  skin: '#d8b895',
+  skinShadow: '#9d7a61',
+  eye: '#f3fbff',
+  cloakDark: '#2f0d15',
+  cloakMid: '#5f1b2a',
+  tunicDark: '#1b2431',
+  tunicMid: '#31425c',
+  tunicLight: '#667ea6',
+  belt: '#725736',
+  boot: '#141920',
+  magicBright: '#ffe1b6',
+  magicMid: '#ff9d63',
+};
+
+interface PixelRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: PixelColor;
+}
+
+interface HeroPose {
+  bobY: number;
+  frontLegX: number;
+  backLegX: number;
+  frontLegY: number;
+  backLegY: number;
+  frontArmY: number;
+  backArmY: number;
+  frontArmX: number;
+  castMode: boolean;
+  hurtShake: number;
+}
+
+const PIXEL = 3;
+const SPRITE_WIDTH = 18;
+const SPRITE_HEIGHT = 24;
+
 export function drawHero(
   ctx: CanvasRenderingContext2D,
   hero: Hero,
@@ -12,206 +76,265 @@ export function drawHero(
     return;
   }
 
-  const t = hero.animationTime;
-  const runCycle = Math.sin(t * 10);
-  const runOpposite = Math.sin(t * 10 + Math.PI);
-  const idleFloat = Math.sin(t * 2.4) * 1.5;
-  const landingCompression =
-    hero.landingTimer > 0 ? hero.landingTimer / 0.16 : 0;
+  const pose = getPose(hero);
 
-  let bodyBob = 0;
-  let frontLegAngle = 0;
-  let backLegAngle = 0;
-  let frontArmAngle = 0;
-  let backArmAngle = 0;
-  let handGlow = 0;
-
-  switch (hero.state) {
-    case 'idle':
-      bodyBob = idleFloat;
-      frontLegAngle = 0.04;
-      backLegAngle = -0.04;
-      frontArmAngle = -0.08;
-      backArmAngle = 0.08;
-      break;
-    case 'run':
-      bodyBob = Math.abs(runCycle) * 2.4;
-      frontLegAngle = runCycle * 0.85;
-      backLegAngle = runOpposite * 0.7;
-      frontArmAngle = runOpposite * 0.28;
-      backArmAngle = runCycle * 0.22;
-      break;
-    case 'jump':
-      bodyBob = -2;
-      frontLegAngle = 0.42;
-      backLegAngle = -0.16;
-      frontArmAngle = -0.2;
-      backArmAngle = -0.36;
-      break;
-    case 'fall':
-      bodyBob = 1.5;
-      frontLegAngle = -0.18;
-      backLegAngle = 0.28;
-      frontArmAngle = 0.22;
-      backArmAngle = -0.1;
-      break;
-    case 'cast':
-      bodyBob = 0;
-      frontLegAngle = 0.08;
-      backLegAngle = -0.04;
-      frontArmAngle = -1.05;
-      backArmAngle = 0.1;
-      handGlow = 1;
-      break;
-    case 'hurt':
-      bodyBob = 1;
-      frontLegAngle = -0.26;
-      backLegAngle = 0.26;
-      frontArmAngle = 0.34;
-      backArmAngle = -0.14;
-      break;
-  }
-
-  bodyBob += landingCompression * 2.2;
-
-  const centerX = hero.x + hero.width / 2;
-  const topY = hero.y + 8 + bodyBob;
+  const centerX = hero.x + hero.width / 2 + pose.hurtShake;
+  const centerY = hero.y + hero.height / 2 + pose.bobY;
 
   ctx.save();
-  ctx.translate(centerX, topY);
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(centerX, centerY);
+
+  /**
+   * Sprite-base olhando para a DIREITA.
+   */
   ctx.scale(hero.direction, 1);
 
-  const cloakGradient = ctx.createLinearGradient(-12, 6, -20, 54);
-  cloakGradient.addColorStop(0, 'rgba(127, 22, 35, 0.72)');
-  cloakGradient.addColorStop(1, 'rgba(35, 9, 14, 0.08)');
-  ctx.fillStyle = cloakGradient;
-  ctx.beginPath();
-  ctx.moveTo(-8, 8);
-  ctx.lineTo(-20, 18);
-  ctx.lineTo(-18, 55 + runOpposite * 1.5);
-  ctx.lineTo(-7, 46);
-  ctx.closePath();
-  ctx.fill();
+  const baseX = -Math.floor((SPRITE_WIDTH * PIXEL) / 2);
+  const baseY = -Math.floor((SPRITE_HEIGHT * PIXEL) / 2);
 
-  drawLimb(ctx, -5, 40, backLegAngle, 13, 12, '#2b3148', '#4d5a79', 0.88);
-  drawLimb(ctx, 6, 40, frontLegAngle, 13, 12, '#353d57', '#5b6b90', 1);
+  const parts = buildHeroParts(pose);
 
-  drawLimb(ctx, -7, 18, backArmAngle, 11, 0, '#35435d', '#9bb1d7', 0.84);
-  drawLimb(ctx, 9, 18, frontArmAngle, 15, 0, '#435674', '#c2d6ff', 1);
+  for (const part of parts) {
+    ctx.fillStyle = PALETTE[part.color];
+    ctx.fillRect(
+      baseX + part.x * PIXEL,
+      baseY + part.y * PIXEL,
+      part.w * PIXEL,
+      part.h * PIXEL,
+    );
+  }
 
-  const torsoGradient = ctx.createLinearGradient(0, 4, 0, 34);
-  torsoGradient.addColorStop(0, '#2d4664');
-  torsoGradient.addColorStop(0.55, '#23384d');
-  torsoGradient.addColorStop(1, '#17212f');
-
-  ctx.fillStyle = torsoGradient;
-  ctx.beginPath();
-  ctx.moveTo(-10, 8);
-  ctx.lineTo(9, 7);
-  ctx.lineTo(11, 32);
-  ctx.lineTo(2, 40);
-  ctx.lineTo(-9, 36);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = '#191f2d';
-  ctx.fillRect(-8, 28, 18, 10);
-
-  ctx.fillStyle = '#601926';
-  ctx.beginPath();
-  ctx.moveTo(-8, 10);
-  ctx.lineTo(-2, 8);
-  ctx.lineTo(-4, 30);
-  ctx.lineTo(-9, 26);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = '#d8ba9a';
-  ctx.beginPath();
-  ctx.ellipse(2, 1, 9, 10.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#14161d';
-  ctx.beginPath();
-  ctx.moveTo(-6, -2);
-  ctx.lineTo(-3, -10);
-  ctx.lineTo(5, -11);
-  ctx.lineTo(10, -5);
-  ctx.lineTo(8, 2);
-  ctx.lineTo(1, 2);
-  ctx.lineTo(-6, 1);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = '#0f1117';
-  ctx.fillRect(3, -1, 2, 2);
-  ctx.fillRect(6, 1, 2, 1);
-
-  if (handGlow > 0) {
-    const handX = 9 + Math.cos(frontArmAngle) * 15;
-    const handY = 18 + Math.sin(frontArmAngle) * 15;
-
-    ctx.strokeStyle = 'rgba(255, 174, 102, 0.95)';
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.moveTo(handX - 5, handY - 8);
-    ctx.lineTo(handX + 1, handY - 1);
-    ctx.lineTo(handX - 3, handY - 1);
-    ctx.lineTo(handX + 5, handY + 10);
-    ctx.stroke();
+  if (pose.castMode) {
+    drawMagicOrb(ctx, baseX, baseY);
   }
 
   ctx.restore();
 }
 
-function drawLimb(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  angle: number,
-  firstLength: number,
-  secondLength: number,
-  primaryColor: string,
-  secondaryColor: string,
-  alpha: number,
-): void {
-  const jointX = x + Math.sin(angle) * firstLength;
-  const jointY = y + Math.cos(angle) * firstLength;
+function getPose(hero: Hero): HeroPose {
+  const t = hero.animationTime;
+  const run = Math.sin(t * 10);
+  const runOpposite = Math.sin(t * 10 + Math.PI);
+  const idleBob = Math.sin(t * 2.2) * 1.1;
 
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.lineCap = 'round';
+  const pose: HeroPose = {
+    bobY: 0,
+    frontLegX: 0,
+    backLegX: 0,
+    frontLegY: 0,
+    backLegY: 0,
+    frontArmY: 0,
+    backArmY: 0,
+    frontArmX: 0,
+    castMode: false,
+    hurtShake: 0,
+  };
 
-  ctx.strokeStyle = primaryColor;
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(jointX, jointY);
-  ctx.stroke();
+  switch (hero.state) {
+    case 'idle':
+      pose.bobY = idleBob;
+      break;
 
-  if (secondLength > 0) {
-    const footX = jointX + Math.sin(angle * 0.75) * secondLength;
-    const footY = jointY + Math.cos(angle * 0.75) * secondLength;
+    case 'run':
+      /**
+       * Corrida menos “quebrada”.
+       * O torso quase não mexe; a leitura vem de pernas e braços.
+       */
+      pose.bobY = Math.abs(run) * 1.0;
+      pose.frontLegX = Math.round(run * 1.3);
+      pose.backLegX = Math.round(runOpposite * 1.3);
+      pose.frontLegY = Math.round(Math.abs(runOpposite) * 1);
+      pose.backLegY = Math.round(Math.abs(run) * 1);
+      pose.frontArmY = Math.round(Math.abs(run) * 1);
+      pose.backArmY = Math.round(Math.abs(runOpposite) * 1);
+      break;
 
-    ctx.strokeStyle = secondaryColor;
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(jointX, jointY);
-    ctx.lineTo(footX, footY);
-    ctx.stroke();
+    case 'jump':
+      pose.bobY = -2;
+      pose.frontLegY = -1;
+      pose.backLegY = -1;
+      pose.frontArmY = -1;
+      pose.backArmY = -1;
+      break;
 
-    ctx.strokeStyle = '#151922';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(footX - 4, footY);
-    ctx.lineTo(footX + 4, footY);
-    ctx.stroke();
-  } else {
-    ctx.fillStyle = secondaryColor;
-    ctx.beginPath();
-    ctx.arc(jointX, jointY, 3.5, 0, Math.PI * 2);
-    ctx.fill();
+    case 'fall':
+      pose.bobY = 1;
+      pose.frontLegY = 1;
+      pose.backLegY = 2;
+      pose.frontArmY = 1;
+      pose.backArmY = 0;
+      break;
+
+    case 'cast':
+      pose.castMode = true;
+      pose.frontArmX = 1;
+      pose.frontArmY = -2;
+      pose.backArmY = 1;
+      break;
+
+    case 'hurt':
+      pose.hurtShake = Math.round(Math.sin(t * 34) * 1.5);
+      pose.frontArmY = 1;
+      pose.backArmY = -1;
+      pose.frontLegY = 1;
+      pose.backLegY = 0;
+      break;
   }
 
-  ctx.restore();
+  return pose;
+}
+
+function buildHeroParts(pose: HeroPose): PixelRect[] {
+  const torsoY = 9;
+  const legsY = 18;
+
+  const backArmX = 4;
+  const frontArmX = pose.castMode ? 13 : 12;
+
+  return [
+    /**
+     * CAPA ATRÁS
+     */
+    { x: 2, y: 9, w: 1, h: 8, color: 'cloakDark' },
+    { x: 3, y: 10, w: 1, h: 8, color: 'cloakMid' },
+    { x: 4, y: 15, w: 1, h: 4, color: 'cloakDark' },
+
+    /**
+     * CABEÇA
+     * Menos “capacete”, mais rosto/cabelo.
+     */
+    { x: 6, y: 0, w: 5, h: 1, color: 'outline' },
+    { x: 5, y: 1, w: 7, h: 1, color: 'outline' },
+
+    { x: 4, y: 2, w: 8, h: 1, color: 'hoodDark' },
+    { x: 5, y: 3, w: 7, h: 1, color: 'hoodMid' },
+    { x: 6, y: 2, w: 3, h: 1, color: 'hoodLight' },
+
+    // parte de trás da cabeça/capuz
+    { x: 4, y: 3, w: 1, h: 4, color: 'hoodDark' },
+    { x: 5, y: 4, w: 1, h: 3, color: 'hoodMid' },
+
+    // cabelo aparecendo
+    { x: 8, y: 4, w: 1, h: 1, color: 'hair' },
+    { x: 8, y: 5, w: 1, h: 1, color: 'hair' },
+
+    // rosto mais aberto
+    { x: 9, y: 4, w: 2, h: 3, color: 'skin' },
+    { x: 11, y: 4, w: 1, h: 3, color: 'skinShadow' },
+    { x: 10, y: 4, w: 1, h: 1, color: 'eye' },
+
+    // ponta frontal do capuz
+    { x: 12, y: 3, w: 1, h: 4, color: 'outline' },
+
+    /**
+     * GOLA
+     */
+    { x: 6, y: 7, w: 5, h: 1, color: 'cloakMid' },
+    { x: 5, y: 8, w: 7, h: 1, color: 'cloakDark' },
+
+    /**
+     * TORSO / TÚNICA
+     * Mais cara de herói do que armadura pesada.
+     */
+    { x: 6, y: torsoY, w: 5, h: 1, color: 'tunicDark' },
+    { x: 5, y: torsoY + 1, w: 7, h: 4, color: 'tunicMid' },
+    { x: 7, y: torsoY + 1, w: 2, h: 3, color: 'tunicLight' },
+    { x: 5, y: torsoY + 5, w: 7, h: 1, color: 'tunicDark' },
+
+    // frente do peito mais clara para reforçar direção
+    { x: 10, y: torsoY + 1, w: 1, h: 3, color: 'tunicLight' },
+
+    /**
+     * Cinto
+     */
+    { x: 6, y: torsoY + 6, w: 5, h: 1, color: 'belt' },
+
+    /**
+     * BRAÇO DE TRÁS
+     */
+    { x: backArmX, y: torsoY + 1 + pose.backArmY, w: 1, h: 4, color: 'tunicDark' },
+    { x: backArmX, y: torsoY + 5 + pose.backArmY, w: 1, h: 1, color: 'skin' },
+
+    /**
+     * BRAÇO DA FRENTE
+     */
+    {
+      x: frontArmX + pose.frontArmX,
+      y: torsoY + 1 + pose.frontArmY,
+      w: 1,
+      h: 4,
+      color: pose.castMode ? 'magicMid' : 'tunicLight',
+    },
+    {
+      x: frontArmX + pose.frontArmX,
+      y: torsoY + 5 + pose.frontArmY,
+      w: 1,
+      h: 1,
+      color: 'skin',
+    },
+
+    /**
+     * PERNAS
+     */
+    {
+      x: 7 + pose.backLegX,
+      y: legsY + pose.backLegY,
+      w: 1,
+      h: 4,
+      color: 'tunicDark',
+    },
+    {
+      x: 7 + pose.backLegX,
+      y: legsY + 4 + pose.backLegY,
+      w: 2,
+      h: 1,
+      color: 'boot',
+    },
+
+    {
+      x: 10 + pose.frontLegX,
+      y: legsY + pose.frontLegY,
+      w: 1,
+      h: 4,
+      color: 'tunicLight',
+    },
+    {
+      x: 10 + pose.frontLegX,
+      y: legsY + 4 + pose.frontLegY,
+      w: 2,
+      h: 1,
+      color: 'boot',
+    },
+
+    /**
+     * CONTORNOS
+     */
+    { x: 5, y: 4, w: 1, h: 3, color: 'outline' },
+    { x: 5, y: 10, w: 1, h: 4, color: 'outline' },
+  ];
+}
+
+function drawMagicOrb(
+  ctx: CanvasRenderingContext2D,
+  baseX: number,
+  baseY: number,
+): void {
+  const p = PIXEL;
+  const orbX = baseX + 14 * p;
+  const orbY = baseY + 8 * p;
+
+  ctx.fillStyle = 'rgba(255, 190, 110, 0.10)';
+  ctx.fillRect(orbX - p, orbY - p, 5 * p, 5 * p);
+
+  ctx.fillStyle = PALETTE.magicMid;
+  ctx.fillRect(orbX, orbY, p, p);
+  ctx.fillRect(orbX + p, orbY, p, p);
+  ctx.fillRect(orbX, orbY + p, p, p);
+  ctx.fillRect(orbX + p, orbY + p, p, p);
+
+  ctx.fillStyle = PALETTE.magicBright;
+  ctx.fillRect(orbX + p, orbY - p, p, p);
+  ctx.fillRect(orbX + 2 * p, orbY, p, p);
+  ctx.fillRect(orbX + p, orbY + 2 * p, p, p);
 }
