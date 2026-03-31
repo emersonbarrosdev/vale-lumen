@@ -61,7 +61,8 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
     canvas.width = CANVAS_CONFIG.width;
     canvas.height = CANVAS_CONFIG.height;
 
-    context.imageSmoothingEnabled = false;
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
 
     this.loadingOverlayService.hide();
     this.audioService.playMusic(phaseDefinition.audio.explorationMusicId);
