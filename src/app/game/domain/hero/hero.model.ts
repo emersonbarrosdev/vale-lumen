@@ -1,4 +1,11 @@
-export type HeroState = 'idle' | 'run' | 'jump' | 'fall' | 'cast' | 'hurt';
+export type HeroState =
+  | 'idle'
+  | 'run'
+  | 'jump'
+  | 'fall'
+  | 'cast'
+  | 'crouch'
+  | 'hurt';
 
 export interface Hero {
   x: number;
@@ -21,6 +28,7 @@ export interface Hero {
   state: HeroState;
   animationTime: number;
   castTimer: number;
+  castDuration: number;
   hurtTimer: number;
   landingTimer: number;
   name: string;

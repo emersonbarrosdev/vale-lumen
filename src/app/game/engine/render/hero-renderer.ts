@@ -1,225 +1,483 @@
 import { Hero, HeroState } from '../../domain/hero/hero.model';
 
 const COLORS = {
-  outline: '#05070b',
-  shadow: '#0b1018',
-  skin: '#d7b08e',
-  skinShadow: '#b58767',
+  outline: '#0d1015',
+  deepShadow: '#11161d',
+  shadow: '#1b222c',
 
-  // Cores do Cabelo (Cinzento/Azulado Determinado)
-  hair: '#e1e5f0',
-  hairShadow: '#949fb5',
-  hairGlow: '#ffffff',
+  skin: '#d7cbbf',
+  skinLight: '#f1e6da',
+  skinShadow: '#a99b90',
 
-  scarf: '#6d1f2b',
-  scarfShadow: '#43131c',
-  coat: '#1b2433',
-  coatLight: '#2a3548',
-  coatShadow: '#101722',
-  belt: '#5b472e',
-  beltMetal: '#9ca3af',
-  pants: '#141a24',
-  pantsLight: '#232c39',
-  boots: '#2e241d',
-  bootsLight: '#4a3a2d',
-  glove: '#161c26',
-  eye: '#57c7ff',
-  eyeGlow: '#a8ebff',
-  rune: '#4fd3ff',
+  crack: '#e8c97a',
+  crackGlow: '#fff2be',
+
+  hair: '#241f26',
+  hairLight: '#463b48',
+  hairGlow: '#b9874d',
+  hairShadow: '#151118',
+
+  cape: '#6f2a31',
+  capeLight: '#96434b',
+  capeShadow: '#491a20',
+
+  scarf: '#7d3438',
+  scarfLight: '#a64a51',
+  scarfShadow: '#592329',
+
+  tunic: '#d8d0c3',
+  tunicLight: '#eee6d8',
+  tunicShadow: '#b8ae9f',
+
+  vest: '#314457',
+  vestLight: '#49627a',
+  vestShadow: '#233241',
+
+  belt: '#6d5338',
+  beltLight: '#94704b',
+  buckle: '#b8c0c8',
+  pouch: '#59452f',
+
+  pants: '#3f4752',
+  pantsLight: '#56616d',
+  pantsShadow: '#2b3139',
+
+  boots: '#4d3a2d',
+  bootsLight: '#6d5240',
+  bootsShadow: '#30241c',
+
+  glove: '#594534',
+  gloveLight: '#765b43',
+
+  eye: '#dcb16b',
+  eyeGlow: '#fff0c6',
+
+  ember: '#f1c775',
+  emberLight: '#fff0bf',
 };
 
 export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
-  if (hero.invulnerabilityTimer > 0 && Math.floor(hero.invulnerabilityTimer * 20) % 2 === 0) return;
+  if (
+    hero.invulnerabilityTimer > 0 &&
+    Math.floor(hero.invulnerabilityTimer * 20) % 2 === 0
+  ) {
+    return;
+  }
 
   const t = hero.animationTime;
   const isRun = hero.state === 'run';
   const isAir = hero.state === 'jump' || hero.state === 'fall';
+  const isCast = hero.state === 'cast';
+  const isCrouch = hero.state === 'crouch';
+  const isHurt = hero.state === 'hurt';
 
-  const speed = 14;
-  const cycle = isRun ? t * speed : 0;
+  const runCycle = isRun ? t * 12 : 0;
 
-  const bob = isRun ? Math.sin(cycle * 2) * 2 : Math.sin(t * 3) * 0.5;
-  const lean = isRun ? 0.22 : 0;
+  const castProgress =
+    hero.castDuration > 0 && hero.castTimer > 0
+      ? 1 - hero.castTimer / hero.castDuration
+      : 0;
+
+  // Ajuste de Bobbing (movimento vertical) mais sutil para humanos
+  const bob = isRun
+    ? Math.sin(runCycle * 2) * 1.2
+    : isCrouch
+      ? 0
+      : Math.sin(t * 2.5) * 0.4;
+
+  const lean = isRun
+    ? 0.12 + Math.sin(runCycle) * 0.02
+    : isCast
+      ? 0.05
+      : isHurt
+        ? -0.15
+        : 0;
+
+  const crouchOffsetY = isCrouch ? 12 : 0;
 
   ctx.save();
-  ctx.translate(hero.x + hero.width / 2, hero.y + hero.height / 2 + bob);
-  ctx.scale(hero.direction * 1.3, 1.3);
+  // Centralização baseada no pé para facilitar proporção
+  ctx.translate(
+    hero.x + hero.width / 2,
+    hero.y + hero.height / 2 + bob + crouchOffsetY,
+  );
 
-  // 1. Capa Traseira
-  drawBackCape(ctx, cycle, isRun, isAir);
+  // Escala levemente reduzida para compensar o aumento das pernas
+  ctx.scale(hero.direction * 1.1, 1.1);
 
-  // 2. Membros de TRÁS
-  drawPixelLeg(ctx, cycle + Math.PI, false, isRun, isAir);
-  drawArmArticulated(ctx, cycle, false, isRun, isAir);
+  // Ordem de renderização: Camadas de trás para frente
+  drawBackCape(ctx, t, runCycle, isRun, isAir, isCrouch, isCast, castProgress);
 
-  // 3. CORPO
+  // Perna de trás
+  drawLeg(ctx, runCycle + Math.PI, false, isRun, isAir, isCrouch);
+
+  // Braço de trás
+  drawArm(ctx, hero, runCycle, false, isRun, isAir, isCrouch, castProgress);
+
+  // Tronco (mais longo e estreito)
   ctx.save();
   ctx.rotate(lean);
-  drawPixelTorso(ctx, t, isAir);
+  drawTorso(ctx, hero, t, isAir, isCrouch, castProgress);
   ctx.restore();
 
-  // 4. Membros da FRENTE
-  drawPixelLeg(ctx, cycle, true, isRun, isAir);
-  drawArmArticulated(ctx, cycle + Math.PI, true, isRun, isAir);
+  // Perna da frente
+  drawLeg(ctx, runCycle, true, isRun, isAir, isCrouch);
 
-  // 5. CABEÇA (CORRIGIDA: Rosto determinado em perfil total)
-  drawPixelHeadCorrected(ctx, isRun, isAir, lean);
+  // Braço da frente
+  drawArm(
+    ctx,
+    hero,
+    runCycle + Math.PI,
+    true,
+    isRun,
+    isAir,
+    isCrouch,
+    castProgress,
+  );
 
-  // 6. Cachecol frontal
-  drawFrontScarfTail(ctx, cycle, isRun, isAir);
+  // Cabeça (proporcionalmente menor que no anterior)
+  drawHead(ctx, hero.state, t, isRun, isAir, isCrouch, lean, castProgress);
+
+  drawFrontCape(ctx, runCycle, isRun, isAir, isCrouch, isCast, castProgress);
 
   ctx.restore();
 }
 
-/**
- * DESENHO DA CABEÇA EM PERFIL TOTAL (PLATAFORMA 2D)
- */
-function drawPixelHeadCorrected(ctx: CanvasRenderingContext2D, isRun: boolean, isAir: boolean, lean: number): void {
+function drawHead(
+  ctx: CanvasRenderingContext2D,
+  state: HeroState,
+  t: number,
+  isRun: boolean,
+  isAir: boolean,
+  isCrouch: boolean,
+  lean: number,
+  castProgress: number,
+): void {
   ctx.save();
-  const neckX = (isRun ? 5 : 1);
-  const neckY = -24 + (isAir ? -1 : 0);
-  ctx.translate(neckX, neckY);
+  const isCast = state === 'cast';
 
-  // Cabelo Traseiro
-  ctx.fillStyle = COLORS.hairShadow;
-  ctx.beginPath();
-  ctx.moveTo(-9, -8);
-  ctx.lineTo(-13, -18); ctx.lineTo(-7, -23);
-  ctx.lineTo(-3, -27); ctx.lineTo(3, -25);
-  ctx.lineTo(8, -21); ctx.lineTo(10, -12);
-  ctx.lineTo(7, -6);
-  ctx.closePath();
-  ctx.fill();
+  // Posição da cabeça muito mais alta para proporção humana
+  const headX = isRun ? 4 : 2;
+  const headY = -38 + (isAir ? -1 : 0) + (isCrouch ? 6 : 0);
+  const faceTilt = isCast ? Math.sin(castProgress * Math.PI) * -0.1 : 0;
 
-  // --- ROSTO DETERMINADO EM PERFIL TOTAL (CORRIGIDO) ---
+  ctx.translate(headX, headY);
+  ctx.rotate(lean * 0.2 + faceTilt);
+
+  drawNeck(ctx, isCast, castProgress);
+
+  // Formato de rosto mais oval/adulto
   ctx.fillStyle = COLORS.skin;
   ctx.strokeStyle = COLORS.outline;
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(-6, -5); ctx.lineTo(5, -5); ctx.lineTo(7, -1); ctx.lineTo(6, 4);
-  ctx.lineTo(3, 7); ctx.lineTo(-2, 8); ctx.lineTo(-6, 5); ctx.closePath();
-  ctx.fill(); ctx.stroke();
-
-  // Olho determinado nítido focado na frente
-  ctx.fillStyle = COLORS.shadow; ctx.fillRect(-6, -2, 11, 4);
-  ctx.fillStyle = COLORS.eye; ctx.fillRect(1, -1, 3, 2);
-  ctx.fillStyle = COLORS.eyeGlow; ctx.fillRect(3, -1, 1, 1);
-
-  // Cabelo Frontal
-  ctx.fillStyle = COLORS.hair;
-  ctx.strokeStyle = COLORS.outline;
-  ctx.beginPath();
-  ctx.moveTo(-11, -6);
-  ctx.bezierCurveTo(-16, -20, -10, -18, -4, -28);
-  ctx.bezierCurveTo(-2, -22, 1, -22, 5, -30);
-  ctx.bezierCurveTo(9, -20, 15, -23, 13, -8);
-  ctx.bezierCurveTo(10, -12, 5, -12, 3, -6);
+  ctx.moveTo(-3.5, -5.5);
+  ctx.lineTo(-1.5, -7.5);
+  ctx.lineTo(1.5, -7.5);
+  ctx.lineTo(4.0, -5.0);
+  ctx.lineTo(4.5, 0);
+  ctx.lineTo(3.5, 4.5);
+  ctx.lineTo(0, 7.5); // Queixo mais fino
+  ctx.lineTo(-3.0, 4.5);
+  ctx.lineTo(-4.5, 0);
   ctx.closePath();
-  ctx.fill(); ctx.stroke();
+  ctx.fill();
+  ctx.stroke();
 
-  // Brilho
-  ctx.fillStyle = COLORS.hairGlow;
-  ctx.globalAlpha = 0.5;
+  // Cabelo curto conforme solicitado anteriormente, mas adaptado à cabeça menor
+  ctx.fillStyle = COLORS.hair;
   ctx.beginPath();
-  ctx.moveTo(-3, -23); ctx.lineTo(2, -25); ctx.lineTo(0, -18);
-  ctx.closePath(); ctx.fill();
-  ctx.globalAlpha = 1;
+  ctx.moveTo(-5, -4);
+  ctx.lineTo(-4.5, -8.5);
+  ctx.lineTo(-1, -10.5);
+  ctx.lineTo(3, -9.5);
+  ctx.lineTo(5, -5);
+  ctx.lineTo(4, -3.5);
+  ctx.lineTo(2, -4.5);
+  ctx.lineTo(0, -3.5);
+  ctx.lineTo(-2.5, -4.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
 
-  // Cachecol
-  ctx.fillStyle = COLORS.scarf;
-  ctx.strokeStyle = COLORS.outline;
-  ctx.fillRect(-6, 7, 12, 3);
-  ctx.strokeRect(-6, 7, 12, 3);
+  // Olhos menores e mais sérios
+  ctx.fillStyle = isCast ? COLORS.eyeGlow : COLORS.eye;
+  ctx.fillRect(1.0, -1, 2.5, 1.2);
+  ctx.fillStyle = COLORS.outline;
+  ctx.fillRect(1.0, -1.5, 2.8, 0.6); // Sobrancelha
 
+  drawScarfCollar(ctx, isCast, castProgress);
   ctx.restore();
 }
 
-// MANTIDAS TODAS AS SUAS FUNÇÕES ORIGINAIS DE LOGICA ABAIXO, SEM ALTERAÇÕES:
-
-function drawArmArticulated(ctx: CanvasRenderingContext2D, cycle: number, isFront: boolean, isRun: boolean, isAir: boolean): void {
+function drawTorso(
+  ctx: CanvasRenderingContext2D,
+  hero: Hero,
+  t: number,
+  isAir: boolean,
+  isCrouch: boolean,
+  castProgress: number,
+): void {
   ctx.save();
-  ctx.translate(isFront ? 6 : -6, -15);
-  const armRot = isRun ? Math.sin(cycle) * 0.7 : (isAir ? -0.5 : 0);
-  ctx.rotate(armRot);
+  const isCast = hero.state === 'cast';
+  const torsoShiftY = isCrouch ? 6 : 0;
+
+  ctx.translate(0, torsoShiftY);
+
+  // Base da Túnica (Mais longa e definida)
   ctx.strokeStyle = COLORS.outline;
   ctx.lineWidth = 1.2;
-  ctx.fillStyle = isFront ? COLORS.coatLight : COLORS.coatShadow;
-  ctx.fillRect(-2.5, 0, 5, 8);
-  ctx.strokeRect(-2.5, 0, 5, 8);
-  ctx.translate(0, 7);
-  const elbowRot = isRun ? -1.1 : (isAir ? 0.4 : 0.2);
-  ctx.rotate(elbowRot);
-  ctx.fillStyle = COLORS.coat;
-  ctx.fillRect(-2, 0, 4, 8);
-  ctx.strokeRect(-2, 0, 4, 8);
-  ctx.fillStyle = COLORS.glove;
-  ctx.fillRect(-2.5, 6, 5, 4);
-  ctx.strokeRect(-2.5, 6, 5, 4);
+  ctx.fillStyle = COLORS.tunic;
+  ctx.beginPath();
+  ctx.moveTo(-7, -32); // Ombro
+  ctx.lineTo(7, -32); // Ombro
+  ctx.lineTo(6, 2); // Cintura
+  ctx.lineTo(-6, 2); // Cintura
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Colete/Armadura de peito
+  ctx.fillStyle = COLORS.vest;
+  ctx.beginPath();
+  ctx.moveTo(-7.5, -31);
+  ctx.lineTo(-3, -30);
+  ctx.lineTo(-3.5, -5);
+  ctx.lineTo(-7, -4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(7.5, -31);
+  ctx.lineTo(3, -30);
+  ctx.lineTo(3.5, -5);
+  ctx.lineTo(7, -4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  drawChestCore(ctx, isCast, castProgress);
+  drawBelt(ctx);
   ctx.restore();
 }
 
-function drawPixelLeg(ctx: CanvasRenderingContext2D, cycle: number, isFront: boolean, isRun: boolean, isAir: boolean): void {
+function drawLeg(
+  ctx: CanvasRenderingContext2D,
+  cycle: number,
+  isFront: boolean,
+  isRun: boolean,
+  isAir: boolean,
+  isCrouch: boolean,
+): void {
   ctx.save();
-  ctx.translate(isFront ? 3 : -3, 4);
-  const hipRot = isRun ? Math.sin(cycle) * 0.65 : (isAir ? (isFront ? -0.5 : 0.5) : 0);
-  const kneeRot = isRun ? Math.max(0, -Math.cos(cycle - 0.2)) * 1.3 : (isAir ? 0.4 : 0);
+  const hipY = isCrouch ? 8 : 2;
+  ctx.translate(isFront ? 3 : -3, hipY);
+
+  let hipRot = 0;
+  let kneeRot = 0;
+
+  if (isRun) {
+    hipRot = Math.sin(cycle) * 0.6;
+    kneeRot = Math.max(0, -Math.cos(cycle)) * 1.1;
+  } else if (isAir) {
+    hipRot = isFront ? -0.4 : 0.5;
+    kneeRot = 0.4;
+  } else if (isCrouch) {
+    hipRot = isFront ? 1.2 : -0.2;
+    kneeRot = isFront ? -1.4 : -1.1;
+  }
+
   ctx.rotate(hipRot);
+
+  // Coxa (Mais longa)
   ctx.strokeStyle = COLORS.outline;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.2;
   ctx.fillStyle = isFront ? COLORS.pantsLight : COLORS.pants;
-  ctx.fillRect(-3.5, 0, 7, 10);
-  ctx.strokeRect(-3.5, 0, 7, 10);
-  ctx.translate(0, 9);
+  ctx.beginPath();
+  ctx.moveTo(-2.5, 0);
+  ctx.lineTo(2.5, 0);
+  ctx.lineTo(2, 16); // Comprimento aumentado
+  ctx.lineTo(-2, 16);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Canela e Bota
+  ctx.translate(0, 16);
   ctx.rotate(kneeRot);
-  ctx.fillStyle = isFront ? COLORS.pants : COLORS.coatShadow;
-  ctx.fillRect(-3, 0, 6, 10);
-  ctx.strokeRect(-3, 0, 6, 10);
+
+  ctx.fillStyle = isFront ? COLORS.pants : COLORS.pantsShadow;
+  ctx.fillRect(-2, 0, 4, 14);
+  ctx.strokeRect(-2, 0, 4, 14);
+
+  // Bota com detalhe de pé humano
   ctx.fillStyle = COLORS.boots;
-  ctx.fillRect(-3.5, 9, 9, 5);
-  ctx.strokeRect(-3.5, 9, 9, 5);
+  ctx.beginPath();
+  ctx.moveTo(-2.5, 12);
+  ctx.lineTo(5, 12); // Pé apontando para frente
+  ctx.lineTo(5, 16);
+  ctx.lineTo(-2.5, 16);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
   ctx.restore();
 }
 
-function drawPixelTorso(ctx: CanvasRenderingContext2D, t: number, isAir: boolean): void {
+function drawArm(
+  ctx: CanvasRenderingContext2D,
+  hero: Hero,
+  cycle: number,
+  isFront: boolean,
+  isRun: boolean,
+  isAir: boolean,
+  isCrouch: boolean,
+  castProgress: number,
+): void {
   ctx.save();
+  const shoulderY = isCrouch ? -22 : -28;
+  const shoulderX = isFront ? 7 : -7;
+  ctx.translate(shoulderX, shoulderY);
+
+  let armRot = 0;
+  let elbowRot = 0;
+
+  if (isRun) {
+    armRot = Math.sin(cycle) * 0.7;
+    elbowRot = -0.9;
+  } else if (hero.state === 'cast') {
+    armRot = isFront ? -1.4 : 0.2;
+    elbowRot = isFront ? 0.4 : 0.2;
+  } else {
+    armRot = 0.1;
+    elbowRot = 0.2;
+  }
+
+  ctx.rotate(armRot);
+
+  // Braço superior
+  ctx.fillStyle = isFront ? COLORS.tunic : COLORS.tunicShadow;
   ctx.strokeStyle = COLORS.outline;
-  ctx.lineWidth = 2;
-  ctx.fillStyle = COLORS.coat;
   ctx.beginPath();
-  ctx.moveTo(-10, -18); ctx.lineTo(10, -18); ctx.lineTo(8, 4); ctx.lineTo(-8, 4);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = COLORS.coatLight;
-  ctx.fillRect(-6, -17, 3, 10); ctx.fillRect(3, -17, 3, 10);
-  ctx.fillStyle = COLORS.rune; ctx.globalAlpha = 0.8; ctx.fillRect(-1, -10, 3, 3); ctx.globalAlpha = 1;
+  ctx.moveTo(-1.8, 0);
+  ctx.lineTo(1.8, 0);
+  ctx.lineTo(1.5, 14);
+  ctx.lineTo(-1.5, 14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Antebraço e Mão
+  ctx.translate(0, 14);
+  ctx.rotate(elbowRot);
+  ctx.fillStyle = isFront ? COLORS.gloveLight : COLORS.glove;
+  ctx.fillRect(-1.8, 0, 3.6, 12);
+  ctx.strokeRect(-1.8, 0, 3.6, 12);
+
+  ctx.restore();
+}
+
+// Reutilização otimizada das funções de detalhe (ajustadas para escala)
+function drawNeck(
+  ctx: CanvasRenderingContext2D,
+  isCast: boolean,
+  castProgress: number,
+): void {
+  ctx.fillStyle = COLORS.skinShadow;
+  ctx.fillRect(-1.2, 5, 2.4, 4);
+}
+
+function drawChestCore(
+  ctx: CanvasRenderingContext2D,
+  isCast: boolean,
+  castProgress: number,
+): void {
+  const pulse = isCast ? 1 + Math.sin(castProgress * Math.PI) * 0.3 : 0.9;
+  ctx.fillStyle = COLORS.crack;
+  ctx.beginPath();
+  ctx.arc(0, -20, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  const glow = ctx.createRadialGradient(0, -20, 1, 0, -20, 8 * pulse);
+  glow.addColorStop(0, 'rgba(255, 242, 190, 0.8)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fill();
+}
+
+function drawBelt(ctx: CanvasRenderingContext2D): void {
   ctx.fillStyle = COLORS.belt;
-  ctx.fillRect(-9, 1, 18, 4); ctx.strokeRect(-9, 1, 18, 4);
-  ctx.fillStyle = COLORS.beltMetal; ctx.fillRect(-1, 1, 4, 4);
-  ctx.restore();
+  ctx.fillRect(-6.5, 0, 13, 3);
+  ctx.fillStyle = COLORS.buckle;
+  ctx.fillRect(-1, -0.5, 2, 4);
 }
 
-function drawBackCape(ctx: CanvasRenderingContext2D, cycle: number, isRun: boolean, isAir: boolean): void {
-  ctx.save();
-  const sway = isRun ? Math.sin(cycle) * 5 : (isAir ? -8 : 0);
-  ctx.translate(-3, -10);
-  ctx.rotate(sway * Math.PI / 180);
-  ctx.fillStyle = COLORS.shadow;
-  ctx.strokeStyle = COLORS.outline;
-  ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(-10, 10); ctx.lineTo(-7, 22); ctx.lineTo(0, 16);
-  ctx.lineTo(7, 22); ctx.lineTo(10, 8); ctx.closePath();
-  ctx.fill(); ctx.stroke();
-  ctx.restore();
-}
-
-function drawFrontScarfTail(ctx: CanvasRenderingContext2D, cycle: number, isRun: boolean, isAir: boolean): void {
-  ctx.save();
-  const sway = isRun ? Math.cos(cycle) * 3 : 0;
-  ctx.translate(4, -10);
-  ctx.rotate(sway * Math.PI / 180);
+function drawScarfCollar(
+  ctx: CanvasRenderingContext2D,
+  isCast: boolean,
+  castProgress: number,
+): void {
   ctx.fillStyle = COLORS.scarf;
-  ctx.strokeStyle = COLORS.outline;
   ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(6, 4); ctx.lineTo(4, 14); ctx.lineTo(0, 10);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.moveTo(-4, 5);
+  ctx.lineTo(4, 5);
+  ctx.lineTo(3, 8);
+  ctx.lineTo(-3, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
+
+function drawBackCape(
+  ctx: CanvasRenderingContext2D,
+  t: number,
+  cycle: number,
+  isRun: boolean,
+  isAir: boolean,
+  isCrouch: boolean,
+  isCast: boolean,
+  castProgress: number,
+): void {
+  ctx.save();
+  const sway = isRun ? Math.sin(cycle) * 6 : isAir ? -10 : Math.sin(t * 3) * 2;
+  ctx.translate(-4, isCrouch ? -15 : -28);
+  ctx.rotate((sway * Math.PI) / 180);
+  ctx.fillStyle = COLORS.capeShadow;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(-12, 10);
+  ctx.lineTo(-10, 45); // Capa longa
+  ctx.lineTo(0, 38);
+  ctx.lineTo(10, 45);
+  ctx.lineTo(8, 5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFrontCape(
+  ctx: CanvasRenderingContext2D,
+  cycle: number,
+  isRun: boolean,
+  isAir: boolean,
+  isCrouch: boolean,
+  isCast: boolean,
+  castProgress: number,
+): void {
+  // Versão humanoide geralmente usa menos a capa frontal para não poluir o sprite, mas mantemos o gancho
+  ctx.save();
+  ctx.translate(5, isCrouch ? -15 : -26);
+  ctx.rotate(isRun ? Math.cos(cycle) * 0.1 : 0);
+  ctx.fillStyle = COLORS.cape;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(6, 15);
+  ctx.lineTo(2, 35);
+  ctx.lineTo(-2, 25);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
   ctx.restore();
 }

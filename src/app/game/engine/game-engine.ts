@@ -49,7 +49,7 @@ export class GameEngine {
 
   private bossIntroShown = false;
 
-   private readonly hero: Hero = {
+  private readonly hero: Hero = {
     x: 120,
     y: 500,
     width: 48,
@@ -70,6 +70,7 @@ export class GameEngine {
     state: 'fall',
     animationTime: 0,
     castTimer: 0,
+    castDuration: 0,
     hurtTimer: 0,
     landingTimer: 0,
     name: 'Kael',
@@ -146,11 +147,17 @@ export class GameEngine {
       y: enemy.y,
       width: enemy.type === 'vigia' ? 58 : 44,
       height: enemy.type === 'vigia' ? 72 : 50,
-      speed: enemy.type === 'vigia' ? 48 + phaseData.definition.difficulty * 2 : 84 + phaseData.definition.difficulty * 2,
+      speed:
+        enemy.type === 'vigia'
+          ? 48 + phaseData.definition.difficulty * 2
+          : 84 + phaseData.definition.difficulty * 2,
       direction: -1,
       patrolLeft: enemy.patrolLeft,
       patrolRight: enemy.patrolRight,
-      hp: enemy.type === 'vigia' ? 4 + Math.floor(phaseData.definition.difficulty / 2) : 2 + Math.floor(phaseData.definition.difficulty / 3),
+      hp:
+        enemy.type === 'vigia'
+          ? 4 + Math.floor(phaseData.definition.difficulty / 2)
+          : 2 + Math.floor(phaseData.definition.difficulty / 3),
       active: true,
       hitFlash: 0,
       hoverOffset: Math.random() * Math.PI * 2,
@@ -265,12 +272,22 @@ export class GameEngine {
     this.hero.hurtTimer = Math.max(0, this.hero.hurtTimer - deltaTime);
     this.hero.landingTimer = Math.max(0, this.hero.landingTimer - deltaTime);
 
+    if (this.hero.castTimer <= 0) {
+      this.hero.castDuration = 0;
+    }
+
     const movingLeft =
       this.input.isPressed('a') || this.input.isPressed('arrowleft');
     const movingRight =
       this.input.isPressed('d') || this.input.isPressed('arrowright');
+    const crouching =
+      this.hero.onGround &&
+      (this.input.isPressed('s') || this.input.isPressed('arrowdown')) &&
+      this.hero.hurtTimer <= 0;
 
-    if (movingLeft && !movingRight) {
+    if (crouching) {
+      this.hero.vx = 0;
+    } else if (movingLeft && !movingRight) {
       this.hero.vx = -this.hero.speed;
       this.hero.direction = -1;
     } else if (movingRight && !movingLeft) {
@@ -281,6 +298,7 @@ export class GameEngine {
     }
 
     if (
+      !crouching &&
       (this.input.isJustPressed(' ') ||
         this.input.isJustPressed('w') ||
         this.input.isJustPressed('arrowup')) &&
@@ -291,7 +309,7 @@ export class GameEngine {
       this.hero.onGround = false;
     }
 
-    if (this.input.isJustPressed('k') && this.hero.dashCooldown <= 0) {
+    if (!crouching && this.input.isJustPressed('k') && this.hero.dashCooldown <= 0) {
       this.hero.vx = this.hero.direction * 610;
       this.hero.dashCooldown = 0.7;
     }
@@ -300,6 +318,7 @@ export class GameEngine {
       this.fireBullet();
       this.hero.shootCooldown = 0.22;
       this.hero.castTimer = 0.16;
+      this.hero.castDuration = 0.16;
     }
 
     if (
@@ -309,6 +328,7 @@ export class GameEngine {
     ) {
       this.activateSpecial();
       this.hero.castTimer = 0.42;
+      this.hero.castDuration = 0.42;
     }
 
     const gravityThisFrame =
@@ -330,10 +350,10 @@ export class GameEngine {
       this.hero.x = this.worldWidth - this.hero.width;
     }
 
-    this.updateHeroState();
+    this.updateHeroState(crouching);
   }
 
-  private updateHeroState(): void {
+  private updateHeroState(crouching: boolean): void {
     if (this.hero.hurtTimer > 0) {
       this.hero.state = 'hurt';
       return;
@@ -346,6 +366,11 @@ export class GameEngine {
 
     if (!this.hero.onGround) {
       this.hero.state = this.hero.vy < 0 ? 'jump' : 'fall';
+      return;
+    }
+
+    if (crouching) {
+      this.hero.state = 'crouch';
       return;
     }
 
@@ -1062,7 +1087,14 @@ export class GameEngine {
       const centerX = bullet.x + bullet.width / 2;
       const centerY = bullet.y + bullet.height / 2;
 
-      const glow = ctx.createRadialGradient(centerX, centerY, 1, centerX, centerY, 12);
+      const glow = ctx.createRadialGradient(
+        centerX,
+        centerY,
+        1,
+        centerX,
+        centerY,
+        12,
+      );
       glow.addColorStop(0, 'rgba(255, 192, 120, 0.85)');
       glow.addColorStop(0.45, 'rgba(255, 124, 72, 0.45)');
       glow.addColorStop(1, 'rgba(0,0,0,0)');
