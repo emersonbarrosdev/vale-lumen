@@ -307,57 +307,78 @@ export function drawSpecialStrikes(
   specialStrikes: SpecialStrike[],
 ): void {
   for (const strike of specialStrikes) {
-    const alpha = strike.life / strike.maxLife;
+    const alpha = Math.max(0, strike.life / strike.maxLife);
 
-    ctx.strokeStyle = `rgba(117, 234, 255, ${alpha * 0.34})`;
-    ctx.lineWidth = strike.width * 2.6;
+    if (strike.points.length < 2) {
+      continue;
+    }
+
+    ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.beginPath();
 
+    // brilho externo laranja
+    ctx.strokeStyle = `rgba(255, 140, 40, ${alpha * 0.22})`;
+    ctx.lineWidth = strike.width * 2;
+    ctx.beginPath();
     for (let index = 0; index < strike.points.length; index += 1) {
       const point = strike.points[index];
-
       if (index === 0) {
         ctx.moveTo(point.x, point.y);
       } else {
         ctx.lineTo(point.x, point.y);
       }
     }
-
     ctx.stroke();
 
-    ctx.strokeStyle = `rgba(220, 252, 255, ${alpha})`;
+    // corpo principal da magia
+    ctx.strokeStyle = `rgba(255, 106, 0, ${alpha * 0.96})`;
     ctx.lineWidth = strike.width;
     ctx.beginPath();
-
     for (let index = 0; index < strike.points.length; index += 1) {
       const point = strike.points[index];
-
       if (index === 0) {
         ctx.moveTo(point.x, point.y);
       } else {
         ctx.lineTo(point.x, point.y);
       }
     }
-
     ctx.stroke();
 
-    ctx.strokeStyle = `rgba(121, 202, 255, ${alpha * 0.8})`;
-    ctx.lineWidth = Math.max(2, strike.width * 0.34);
+    // núcleo claro
+    ctx.strokeStyle = `rgba(255, 225, 170, ${alpha * 0.92})`;
+    ctx.lineWidth = Math.max(1.5, strike.width * 0.34);
     ctx.beginPath();
-
     for (let index = 0; index < strike.points.length; index += 1) {
       const point = strike.points[index];
-
       if (index === 0) {
         ctx.moveTo(point.x, point.y);
       } else {
         ctx.lineTo(point.x, point.y);
       }
     }
-
     ctx.stroke();
+
+    // glow na ponta para parecer projétil mágico
+    const tip = strike.points[strike.points.length - 1];
+    const glow = ctx.createRadialGradient(
+      tip.x,
+      tip.y,
+      1,
+      tip.x,
+      tip.y,
+      strike.width * 1.5,
+    );
+    glow.addColorStop(0, `rgba(255, 230, 185, ${alpha})`);
+    glow.addColorStop(0.45, `rgba(255, 106, 0, ${alpha * 0.72})`);
+    glow.addColorStop(1, 'rgba(255, 106, 0, 0)');
+
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(tip.x, tip.y, strike.width * 1.35, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
   }
 }
 

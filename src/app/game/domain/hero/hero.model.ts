@@ -4,7 +4,6 @@ export type HeroState =
   | 'jump'
   | 'fall'
   | 'cast'
-  | 'crouch'
   | 'hurt';
 
 export interface Hero {
