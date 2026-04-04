@@ -313,70 +313,67 @@ export function drawSpecialStrikes(
       continue;
     }
 
+    const head = strike.points[strike.points.length - 1];
+    const prev = strike.points[strike.points.length - 2];
+
     ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
 
-    // brilho externo laranja
-    ctx.strokeStyle = `rgba(255, 140, 40, ${alpha * 0.22})`;
-    ctx.lineWidth = strike.width * 2;
-    ctx.beginPath();
-    for (let index = 0; index < strike.points.length; index += 1) {
-      const point = strike.points[index];
-      if (index === 0) {
-        ctx.moveTo(point.x, point.y);
-      } else {
-        ctx.lineTo(point.x, point.y);
-      }
+    // rastro curto, como projétil lançado
+    for (let index = strike.points.length - 1; index > 0; index -= 1) {
+      const p1 = strike.points[index];
+      const p0 = strike.points[index - 1];
+      const segAlpha = alpha * (index / strike.points.length) * 0.55;
+
+      ctx.strokeStyle = `rgba(255, 130, 35, ${segAlpha})`;
+      ctx.lineWidth = Math.max(3, strike.width * (index / strike.points.length) * 0.7);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
     }
-    ctx.stroke();
 
-    // corpo principal da magia
-    ctx.strokeStyle = `rgba(255, 106, 0, ${alpha * 0.96})`;
-    ctx.lineWidth = strike.width;
-    ctx.beginPath();
-    for (let index = 0; index < strike.points.length; index += 1) {
-      const point = strike.points[index];
-      if (index === 0) {
-        ctx.moveTo(point.x, point.y);
-      } else {
-        ctx.lineTo(point.x, point.y);
-      }
-    }
-    ctx.stroke();
-
-    // núcleo claro
-    ctx.strokeStyle = `rgba(255, 225, 170, ${alpha * 0.92})`;
-    ctx.lineWidth = Math.max(1.5, strike.width * 0.34);
-    ctx.beginPath();
-    for (let index = 0; index < strike.points.length; index += 1) {
-      const point = strike.points[index];
-      if (index === 0) {
-        ctx.moveTo(point.x, point.y);
-      } else {
-        ctx.lineTo(point.x, point.y);
-      }
-    }
-    ctx.stroke();
-
-    // glow na ponta para parecer projétil mágico
-    const tip = strike.points[strike.points.length - 1];
     const glow = ctx.createRadialGradient(
-      tip.x,
-      tip.y,
+      head.x,
+      head.y,
       1,
-      tip.x,
-      tip.y,
-      strike.width * 1.5,
+      head.x,
+      head.y,
+      strike.width * 2.8,
     );
-    glow.addColorStop(0, `rgba(255, 230, 185, ${alpha})`);
-    glow.addColorStop(0.45, `rgba(255, 106, 0, ${alpha * 0.72})`);
+    glow.addColorStop(0, `rgba(255, 228, 185, ${alpha})`);
+    glow.addColorStop(0.35, `rgba(255, 132, 42, ${alpha * 0.95})`);
     glow.addColorStop(1, 'rgba(255, 106, 0, 0)');
 
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(tip.x, tip.y, strike.width * 1.35, 0, Math.PI * 2);
+    ctx.arc(head.x, head.y, strike.width * 2.5, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.fillStyle = `rgba(255, 120, 24, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, strike.width * 0.95, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(255, 230, 195, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(head.x - 1.2, head.y - 1.2, Math.max(2, strike.width * 0.35), 0, Math.PI * 2);
+    ctx.fill();
+
+    // cauda direcional leve, para parecer disparo
+    const dx = head.x - prev.x;
+    const dy = head.y - prev.y;
+    const len = Math.max(1, Math.hypot(dx, dy));
+    const nx = dx / len;
+    const ny = dy / len;
+
+    ctx.strokeStyle = `rgba(255, 210, 150, ${alpha * 0.55})`;
+    ctx.lineWidth = Math.max(2, strike.width * 0.28);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(head.x - nx * strike.width * 1.8, head.y - ny * strike.width * 1.8);
+    ctx.lineTo(head.x - nx * strike.width * 3.6, head.y - ny * strike.width * 3.6);
+    ctx.stroke();
 
     ctx.restore();
   }

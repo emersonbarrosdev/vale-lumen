@@ -320,8 +320,8 @@ export class GameEngine {
       !this.specialSequenceActive
     ) {
       this.activateSpecial();
-      this.hero.castTimer = 0.8;
-      this.hero.castDuration = 0.8;
+      this.hero.castTimer = 2.1;
+      this.hero.castDuration = 2.1;
     }
 
     const gravityThisFrame =
@@ -424,11 +424,9 @@ export class GameEngine {
   private activateSpecial(): void {
     this.specialCharge = 0;
     this.specialSequenceActive = true;
-
-    // 24 magias no total = 8 ondas de 3
     this.specialPulsesRemaining = 8;
     this.specialPulseTimer = 0;
-    this.specialFlashTimer = 0.52;
+    this.specialFlashTimer = 1.6;
   }
 
   private updateSpecialSequence(deltaTime: number): void {
@@ -451,8 +449,8 @@ export class GameEngine {
       return;
     }
 
-    // uma atrás da outra, não tudo num piscar
-    this.specialPulseTimer = 0.055;
+    // mais tempo entre cada rajada
+    this.specialPulseTimer = 0.18;
   }
 
   private releaseSpecialPulse(): void {
@@ -460,18 +458,17 @@ export class GameEngine {
     const originY = this.hero.y + this.hero.height * 0.56;
     const direction = this.hero.direction;
 
-    // sempre 3 por onda; ao longo das 8 ondas = 24 magias
-    const localOffsets = [-14, 0, 14];
+    const localOffsets = [-16, 0, 16];
 
     for (let index = 0; index < localOffsets.length; index += 1) {
       const startX = originX + direction * this.randomRange(2, 10);
-      const startY = originY + localOffsets[index] + this.randomRange(-4, 4);
+      const startY = originY + localOffsets[index] + this.randomRange(-5, 5);
 
       this.specialStrikes.push({
         points: this.buildMagicVolleyPath(startX, startY, direction),
-        life: 0.22,
-        maxLife: 0.22,
-        width: this.randomRange(5.2, 7.2),
+        life: 0.75,
+        maxLife: 0.75,
+        width: this.randomRange(12, 17),
       });
     }
 
@@ -486,7 +483,7 @@ export class GameEngine {
         direction === 1
           ? enemyCenterX >= originX - 6
           : enemyCenterX <= originX + 6;
-      const closeEnoughX = Math.abs(enemyCenterX - originX) <= 560;
+      const closeEnoughX = Math.abs(enemyCenterX - originX) <= 1680;
       const closeEnoughY = Math.abs(enemyCenterY - originY) <= 95;
 
       if (inFront && closeEnoughX && closeEnoughY) {
@@ -497,9 +494,9 @@ export class GameEngine {
           enemy.hp = 0;
           enemy.active = false;
           this.score += enemy.type === 'vigia' ? 100 : 50;
-          this.spawnBurst(enemyCenterX, enemyCenterY, '#ff6a00', 14);
+          this.spawnBurst(enemyCenterX, enemyCenterY, '#ff6a00', 18);
         } else {
-          this.spawnBurst(enemyCenterX, enemyCenterY, '#ff6a00', 6);
+          this.spawnBurst(enemyCenterX, enemyCenterY, '#ff6a00', 8);
         }
       }
     }
@@ -515,7 +512,7 @@ export class GameEngine {
         direction === 1
           ? chestCenterX >= originX - 6
           : chestCenterX <= originX + 6;
-      const closeEnoughX = Math.abs(chestCenterX - originX) <= 560;
+      const closeEnoughX = Math.abs(chestCenterX - originX) <= 1680;
       const closeEnoughY = Math.abs(chestCenterY - originY) <= 95;
 
       if (inFront && closeEnoughX && closeEnoughY) {
@@ -530,13 +527,13 @@ export class GameEngine {
         direction === 1
           ? bossCenterX >= originX - 6
           : bossCenterX <= originX + 6;
-      const closeEnoughX = Math.abs(bossCenterX - originX) <= 620;
+      const closeEnoughX = Math.abs(bossCenterX - originX) <= 1860;
       const closeEnoughY = Math.abs(bossCenterY - originY) <= 115;
 
       if (inFront && closeEnoughX && closeEnoughY) {
         this.boss.hp = Math.max(0, this.boss.hp - 3);
         this.boss.hitFlash = 0.18;
-        this.spawnBurst(bossCenterX, bossCenterY, '#ff6a00', 10);
+        this.spawnBurst(bossCenterX, bossCenterY, '#ff6a00', 12);
       }
     }
 
@@ -552,11 +549,13 @@ export class GameEngine {
 
     let x = startX;
     let y = startY;
-    const segments = 3;
+
+    // 3x mais distante e com mais pontos para parecer projétil viajando
+    const segments = 10;
 
     for (let index = 0; index < segments; index += 1) {
-      x += this.randomRange(16, 24) * direction;
-      y += this.randomRange(-2.2, 2.2);
+      x += this.randomRange(52, 78) * direction;
+      y += this.randomRange(-3, 3);
       points.push({ x, y });
     }
 
@@ -1055,10 +1054,10 @@ export class GameEngine {
     );
 
     if (this.specialFlashTimer > 0) {
-      ctx.fillStyle = `rgba(255, 106, 0, ${Math.min(
-        this.specialFlashTimer * 0.16,
-        0.16,
-      )})`;
+      const pulse = 0.5 + Math.sin(performance.now() * 0.03) * 0.5;
+      const alpha = Math.min(this.specialFlashTimer * 0.3, 0.3) * (0.7 + pulse * 0.3);
+
+      ctx.fillStyle = `rgba(255, 106, 0, ${alpha})`;
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
