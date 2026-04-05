@@ -1,4 +1,3 @@
-// boss-renderer.ts
 import { Boss } from '../../domain/bosses/boss.model';
 import { BossProjectile } from '../../domain/bosses/boss-projectile.model';
 
@@ -33,11 +32,6 @@ const COLORS = {
 
   armTop: '#62ef73',
   armDark: '#0d4b27',
-
-  projBright: '#ecffa8',
-  projMid: '#91ff5e',
-  projDark: '#279c44',
-  projLob: '#c8ff72',
 };
 
 export function drawBoss(
@@ -359,134 +353,116 @@ export function drawBoss(
 
 export function drawBossProjectiles(
   ctx: CanvasRenderingContext2D,
-  projectiles: BossProjectile[],
+  bossProjectiles: BossProjectile[],
 ): void {
-  for (const projectile of projectiles) {
+  for (const projectile of bossProjectiles) {
     if (!projectile.active) {
       continue;
     }
 
-    const pulse = Math.sin(performance.now() / 120 + projectile.elapsed * 8) * 0.5 + 0.5;
-    const wobble = Math.sin(projectile.elapsed * 10) * 1.4;
-    const isUltimate = projectile.kind === 'ultimate';
-    const isLob = projectile.kind === 'lob';
+    if (projectile.kind === 'lob') {
+      drawGooProjectile(ctx, projectile);
+      continue;
+    }
 
     const glow = ctx.createRadialGradient(
       projectile.x,
       projectile.y,
-      2,
+      1,
       projectile.x,
       projectile.y,
-      projectile.radius * (isLob ? 3.2 : 2.6),
+      projectile.radius * 2.6,
     );
 
-    glow.addColorStop(
-      0,
-      isUltimate
-        ? 'rgba(240, 255, 190, 0.96)'
-        : isLob
-          ? 'rgba(232, 255, 180, 0.92)'
-          : 'rgba(220, 255, 175, 0.88)',
-    );
-    glow.addColorStop(
-      0.42,
-      isUltimate
-        ? 'rgba(154, 255, 90, 0.52)'
-        : isLob
-          ? 'rgba(118, 255, 90, 0.46)'
-          : 'rgba(64, 255, 120, 0.34)',
-    );
-    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    if (projectile.kind === 'ultimate') {
+      glow.addColorStop(0, 'rgba(176, 255, 150, 0.95)');
+      glow.addColorStop(0.32, 'rgba(44, 122, 52, 0.88)');
+      glow.addColorStop(0.68, 'rgba(14, 54, 23, 0.45)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+    } else {
+      glow.addColorStop(0, 'rgba(180, 255, 186, 0.92)');
+      glow.addColorStop(0.34, 'rgba(79, 214, 102, 0.7)');
+      glow.addColorStop(0.72, 'rgba(26, 88, 36, 0.26)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+    }
 
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(
       projectile.x,
       projectile.y,
-      projectile.radius * (isLob ? 2.8 : 2.3) + pulse * 1.8,
+      projectile.radius * 2.2,
       0,
       Math.PI * 2,
     );
     ctx.fill();
 
-    if (isLob) {
-      ctx.strokeStyle = 'rgba(182,255,120,0.32)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(projectile.x, projectile.y + projectile.radius);
-      ctx.quadraticCurveTo(
-        projectile.x - 8 + wobble,
-        projectile.y + 12,
-        projectile.x - 3,
-        projectile.y + 24,
-      );
-      ctx.moveTo(projectile.x + 2, projectile.y + projectile.radius * 0.6);
-      ctx.quadraticCurveTo(
-        projectile.x + 10 - wobble,
-        projectile.y + 8,
-        projectile.x + 6,
-        projectile.y + 20,
-      );
-      ctx.stroke();
-    }
-
-    ctx.fillStyle = isUltimate
-      ? COLORS.projLob
-      : isLob
-        ? COLORS.projLob
-        : COLORS.projMid;
-
+    ctx.fillStyle = projectile.kind === 'ultimate' ? '#1e6c2a' : '#54d768';
     ctx.beginPath();
-    if (isLob) {
-      ctx.ellipse(
-        projectile.x,
-        projectile.y,
-        projectile.radius * 1.16,
-        projectile.radius * 0.94,
-        projectile.elapsed * 2.3,
-        0,
-        Math.PI * 2,
-      );
-    } else {
-      ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
-    }
+    ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = COLORS.projBright;
+    ctx.fillStyle = projectile.kind === 'ultimate' ? '#c8ffd1' : '#e4ffea';
     ctx.beginPath();
     ctx.arc(
-      projectile.x - projectile.radius * 0.28,
-      projectile.y - projectile.radius * 0.22,
+      projectile.x - projectile.radius * 0.24,
+      projectile.y - projectile.radius * 0.3,
       Math.max(2, projectile.radius * 0.34),
       0,
       Math.PI * 2,
     );
     ctx.fill();
+  }
+}
 
-    ctx.strokeStyle = isUltimate ? '#efffb4' : '#d8ff98';
-    ctx.lineWidth = 2;
+function drawGooProjectile(
+  ctx: CanvasRenderingContext2D,
+  projectile: BossProjectile,
+): void {
+  const aura = ctx.createRadialGradient(
+    projectile.x,
+    projectile.y,
+    1,
+    projectile.x,
+    projectile.y,
+    projectile.radius * 2.8,
+  );
+  aura.addColorStop(0, 'rgba(181, 255, 176, 0.88)');
+  aura.addColorStop(0.3, 'rgba(84, 210, 92, 0.72)');
+  aura.addColorStop(0.65, 'rgba(22, 96, 34, 0.32)');
+  aura.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.fillStyle = aura;
+  ctx.beginPath();
+  ctx.arc(projectile.x, projectile.y, projectile.radius * 2.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#3ab34f';
+  ctx.beginPath();
+  ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(221, 255, 224, 0.88)';
+  ctx.beginPath();
+  ctx.arc(
+    projectile.x - projectile.radius * 0.28,
+    projectile.y - projectile.radius * 0.34,
+    Math.max(2, projectile.radius * 0.28),
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+
+  const splatCount = 4;
+  for (let index = 0; index < splatCount; index += 1) {
+    const angle = -1.8 + index * 0.65;
+    const dist = projectile.radius + 4;
+    const px = projectile.x + Math.cos(angle) * dist;
+    const py = projectile.y + Math.sin(angle) * dist;
+
+    ctx.fillStyle = 'rgba(95, 230, 110, 0.76)';
     ctx.beginPath();
-    if (isLob) {
-      ctx.ellipse(
-        projectile.x,
-        projectile.y,
-        projectile.radius * 0.72,
-        projectile.radius * 0.56,
-        projectile.elapsed * 2.3,
-        0,
-        Math.PI * 2,
-      );
-    } else {
-      ctx.arc(projectile.x, projectile.y, projectile.radius * 0.62, 0, Math.PI * 2);
-    }
-    ctx.stroke();
-
-    if (isLob) {
-      ctx.fillStyle = 'rgba(228,255,160,0.26)';
-      ctx.beginPath();
-      ctx.arc(projectile.x - 7, projectile.y + 6, projectile.radius * 0.45, 0, Math.PI * 2);
-      ctx.arc(projectile.x + 6, projectile.y - 5, projectile.radius * 0.32, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.arc(px, py, 2.2 + (index % 2), 0, Math.PI * 2);
+    ctx.fill();
   }
 }

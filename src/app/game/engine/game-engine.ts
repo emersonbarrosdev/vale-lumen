@@ -127,6 +127,7 @@ export class GameEngine {
   private specialSequenceActive = false;
   private specialPulseTimer = 0;
   private specialPulsesRemaining = 0;
+  private bossAttackPatternIndex = 0;
   private ending: 'game-over' | 'victory' | null = null;
   private endingTimer = 0;
 
@@ -977,19 +978,19 @@ export class GameEngine {
       this.boss.castTimer = 0.9;
       this.boss.secondaryCooldown = 1;
     } else if (this.boss.secondaryCooldown <= 0) {
-      const shouldUseLob =
-        bossHpRatio <= 0.65
-        && Math.random() < (bossHpRatio <= 0.3 ? 0.58 : 0.38);
+      const useGooVolley = this.bossAttackPatternIndex % 2 === 1 || bossHpRatio <= 0.55;
 
-      if (shouldUseLob) {
-        this.fireBossLobShot();
-        this.boss.secondaryCooldown = bossHpRatio <= 0.3 ? 1.45 : 1.95;
-        this.boss.castTimer = 0.72;
+      if (useGooVolley) {
+        this.fireBossGooVolley();
+        this.boss.secondaryCooldown = bossHpRatio <= 0.3 ? 1.15 : 1.7;
+        this.boss.castTimer = 0.58;
       } else {
         this.fireBossWaveShot();
         this.boss.secondaryCooldown = bossHpRatio <= 0.3 ? 1.1 : 1.65;
         this.boss.castTimer = 0.45;
       }
+
+      this.bossAttackPatternIndex += 1;
     }
 
     if (
@@ -1050,6 +1051,39 @@ export class GameEngine {
     }
   }
 
+  private fireBossGooVolley(): void {
+    const launchX = this.boss.x + 26;
+    const launchY = this.boss.y + 110;
+    const targetX = this.hero.x + this.hero.width / 2 + this.hero.vx * 0.28;
+    const count = this.boss.hp / this.boss.maxHp <= 0.35 ? 3 : 2;
+    const gravity = 960;
+    const middleIndex = (count - 1) / 2;
+
+    for (let index = 0; index < count; index += 1) {
+      const spread = (index - middleIndex) * 34;
+      const landingX = targetX + spread;
+      const timeToLand = this.randomRange(0.8, 1.02);
+      const vx = (landingX - launchX) / timeToLand;
+      const vy = -this.randomRange(420, 520);
+
+      this.bossProjectiles.push({
+        x: launchX,
+        y: launchY,
+        vx,
+        vy,
+        gravity,
+        radius: 11 + index,
+        active: true,
+        waveOffset: Math.random() * Math.PI * 2,
+        amplitude: 0,
+        frequency: 0,
+        elapsed: 0,
+        damage: 18,
+        kind: 'lob',
+      });
+    }
+  }
+
   private fireBossUltimateShot(): void {
     this.bossProjectiles.push({
       x: this.boss.x + 24,
@@ -1066,42 +1100,6 @@ export class GameEngine {
     });
   }
 
-  private fireBossLobShot(): void {
-    const originX = this.boss.x + 24;
-    const originY = this.boss.y + 106;
-    const heroCenterX = this.hero.x + this.hero.width / 2;
-
-    const directionToHero = heroCenterX < originX ? -1 : 1;
-    const targetX = heroCenterX + directionToHero * this.randomRange(110, 170);
-    const clampedTargetX = Math.max(
-      this.bossArena.startX + 20,
-      Math.min(targetX, this.bossArena.endX - 20),
-    );
-
-    const targetY = this.bossArena.groundY - 10;
-    const gravity = 980;
-    const travelTime = this.randomRange(0.78, 0.92);
-
-    const vx = (clampedTargetX - originX) / travelTime;
-    const vy = (targetY - originY - 0.5 * gravity * travelTime * travelTime) / travelTime;
-
-    this.bossProjectiles.push({
-      x: originX,
-      y: originY,
-      vx,
-      vy,
-      gravity,
-      radius: 15,
-      active: true,
-      waveOffset: 0,
-      amplitude: 0,
-      frequency: 0,
-      elapsed: 0,
-      damage: 28,
-      kind: 'lob',
-    });
-  }
-
   private updateBossProjectiles(deltaTime: number): void {
     for (const projectile of this.bossProjectiles) {
       if (!projectile.active) {
@@ -1111,20 +1109,20 @@ export class GameEngine {
       projectile.elapsed += deltaTime;
 
       if (projectile.kind === 'lob') {
-        projectile.vy = (projectile.vy ?? 0) + (projectile.gravity ?? 980) * deltaTime;
+        projectile.vy = (projectile.vy ?? 0) + (projectile.gravity ?? 0) * deltaTime;
         projectile.x += projectile.vx * deltaTime;
         projectile.y += (projectile.vy ?? 0) * deltaTime;
 
-        const touchedGround = projectile.y + projectile.radius >= this.bossArena.groundY - 6;
+        this.spawnBurst(projectile.x, projectile.y, '#45b857', 1);
 
-        if (touchedGround) {
+        if (projectile.y + projectile.radius >= this.bossArena.groundY) {
           projectile.active = false;
-          this.spawnBurst(projectile.x, this.bossArena.groundY - 10, '#b6ff74', 12);
+          this.spawnBurst(projectile.x, this.bossArena.groundY - 6, '#45b857', 14);
 
           if (
-            this.hero.invulnerabilityTimer <= 0
-            && Math.abs((this.hero.x + this.hero.width / 2) - projectile.x) <= 42
-            && this.hero.y + this.hero.height >= this.bossArena.groundY - 80
+            this.hero.invulnerabilityTimer <= 0 &&
+            Math.abs(this.hero.x + this.hero.width / 2 - projectile.x) <= 46 &&
+            this.hero.y + this.hero.height >= this.bossArena.groundY - 40
           ) {
             this.applyHeroDamage(projectile.damage);
           }
@@ -1133,31 +1131,40 @@ export class GameEngine {
         }
       } else {
         projectile.x += projectile.vx * deltaTime;
-        projectile.y += Math.sin(
-          projectile.elapsed * projectile.frequency + projectile.waveOffset,
-        ) * projectile.amplitude * deltaTime;
-      }
+        projectile.y +=
+          Math.sin(
+            projectile.elapsed * projectile.frequency + projectile.waveOffset,
+          ) *
+          projectile.amplitude *
+          deltaTime;
 
-      if (
-        projectile.x + projectile.radius < this.bossArena.startX - 120
-        || projectile.x - projectile.radius > this.bossArena.endX + 120
-        || projectile.y < 260
-        || projectile.y > this.bossArena.groundY + 120
-      ) {
-        projectile.active = false;
-        continue;
-      }
+        if (
+          projectile.x + projectile.radius < this.bossArena.startX - 80 ||
+          projectile.y < 420 ||
+          projectile.y > this.bossArena.groundY - 38
+        ) {
+          projectile.active = false;
+          continue;
+        }
 
-      if (
-        this.hero.invulnerabilityTimer <= 0
-        && this.circleRectOverlap(projectile.x, projectile.y, projectile.radius, this.hero)
-      ) {
-        projectile.active = false;
-        this.applyHeroDamage(projectile.damage);
+        if (
+          this.hero.invulnerabilityTimer <= 0 &&
+          this.circleRectOverlap(
+            projectile.x,
+            projectile.y,
+            projectile.radius,
+            this.hero,
+          )
+        ) {
+          projectile.active = false;
+          this.applyHeroDamage(projectile.damage);
+        }
       }
     }
 
-    this.bossProjectiles = this.bossProjectiles.filter((projectile) => projectile.active);
+    this.bossProjectiles = this.bossProjectiles.filter(
+      (projectile) => projectile.active,
+    );
   }
 
   private updateBurstParticles(deltaTime: number): void {
