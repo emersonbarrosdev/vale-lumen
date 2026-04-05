@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { CANVAS_CONFIG } from '../../../../core/config/canvas.config';
 import { buildPlayablePhaseData } from '../../../content/registry/phase-data.factory';
 import { GameEngine } from '../../../engine/game-engine';
@@ -30,6 +31,8 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
 
   private engine: GameEngine | null = null;
   private readonly isBrowser: boolean;
+  private dialogSubscription?: Subscription;
+  private waitingBossDialogClose = false;
 
   constructor(
     @Inject(PLATFORM_ID) platformId: object,
@@ -88,8 +91,16 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
       onBossIntro: (dialog) => {
         this.audioService.playSfx('boss-intro');
         this.audioService.playMusic(phaseDefinition.audio.bossMusicId);
+        this.waitingBossDialogClose = true;
         this.bossDialogService.open(dialog);
       },
+    });
+
+    this.dialogSubscription = this.bossDialogService.dialog$.subscribe((dialog) => {
+      if (!dialog && this.waitingBossDialogClose) {
+        this.waitingBossDialogClose = false;
+        this.engine?.resumeBossBattle();
+      }
     });
 
     this.engine.start();
@@ -100,6 +111,7 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    this.dialogSubscription?.unsubscribe();
     this.engine?.destroy();
   }
 }

@@ -10,122 +10,386 @@ export function drawBackground(
   cameraX: number,
 ): void {
   const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  skyGradient.addColorStop(0, '#131620');
-  skyGradient.addColorStop(0.25, '#0d1017');
-  skyGradient.addColorStop(0.55, '#090b10');
-  skyGradient.addColorStop(1, '#040507');
+  skyGradient.addColorStop(0, '#07090d');
+  skyGradient.addColorStop(0.24, '#10131b');
+  skyGradient.addColorStop(0.58, '#140f16');
+  skyGradient.addColorStop(0.82, '#090a0f');
+  skyGradient.addColorStop(1, '#030405');
 
   ctx.fillStyle = skyGradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const moonX = 980 - cameraX * 0.08;
-  const moonY = 128;
-  const moonGlow = ctx.createRadialGradient(moonX, moonY, 10, moonX, moonY, 200);
-  moonGlow.addColorStop(0, 'rgba(255, 196, 118, 0.15)');
-  moonGlow.addColorStop(0.36, 'rgba(255, 142, 82, 0.09)');
-  moonGlow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = moonGlow;
+  ctx.fillStyle = 'rgba(82, 20, 30, 0.1)';
   ctx.beginPath();
-  ctx.arc(moonX, moonY, 190, 0, Math.PI * 2);
+  ctx.ellipse(220 - cameraX * 0.025, 118, 170, 78, -0.08, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(81, 18, 29, 0.16)';
-  ctx.beginPath();
-  ctx.arc(240, 110, 170, 0, Math.PI * 2);
-  ctx.fill();
+  drawMountainLayer(
+    ctx,
+    cameraX,
+    canvas.width,
+    0.07,
+    'rgba(16, 18, 26, 0.97)',
+    [468, 354, 404, 286, 408, 258, 388, 244, 720],
+  );
 
-  ctx.fillStyle = 'rgba(18, 21, 29, 0.96)';
-  ctx.beginPath();
-  ctx.moveTo(0, 430);
-  ctx.lineTo(140, 305);
-  ctx.lineTo(280, 364);
-  ctx.lineTo(470, 246);
-  ctx.lineTo(650, 392);
-  ctx.lineTo(850, 264);
-  ctx.lineTo(1040, 362);
-  ctx.lineTo(1280, 228);
-  ctx.lineTo(1280, 720);
-  ctx.lineTo(0, 720);
-  ctx.closePath();
-  ctx.fill();
+  drawMountainLayer(
+    ctx,
+    cameraX,
+    canvas.width,
+    0.12,
+    'rgba(23, 27, 37, 0.94)',
+    [534, 452, 506, 414, 520, 428, 530, 418, 720],
+  );
 
-  ctx.fillStyle = 'rgba(32, 36, 47, 0.94)';
-  ctx.beginPath();
-  ctx.moveTo(0, 525);
-  ctx.lineTo(170, 446);
-  ctx.lineTo(334, 500);
-  ctx.lineTo(520, 420);
-  ctx.lineTo(760, 505);
-  ctx.lineTo(980, 434);
-  ctx.lineTo(1280, 530);
-  ctx.lineTo(1280, 720);
-  ctx.lineTo(0, 720);
-  ctx.closePath();
-  ctx.fill();
+  drawMountainLayer(
+    ctx,
+    cameraX,
+    canvas.width,
+    0.19,
+    'rgba(32, 24, 34, 0.84)',
+    [584, 520, 554, 482, 566, 494, 578, 510, 720],
+  );
 
-  ctx.fillStyle = 'rgba(68, 18, 30, 0.14)';
-  for (let index = 0; index < 9; index += 1) {
-    const x = (index * 210 - cameraX * 0.19) % 1500;
-    ctx.fillRect(x + 34, 478, 20, 96);
-    ctx.fillRect(x, 572, 84, 44);
-    ctx.fillRect(x + 58, 532, 14, 42);
+  drawDeadForest(ctx, cameraX, canvas.width);
+
+  const haze = ctx.createLinearGradient(0, 420, 0, canvas.height);
+  haze.addColorStop(0, 'rgba(40, 24, 30, 0)');
+  haze.addColorStop(0.45, 'rgba(52, 20, 28, 0.08)');
+  haze.addColorStop(1, 'rgba(10, 10, 12, 0.32)');
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, 420, canvas.width, canvas.height - 420);
+
+  drawAbyssGlow(ctx, canvas);
+}
+
+function drawMountainLayer(
+  ctx: CanvasRenderingContext2D,
+  cameraX: number,
+  canvasWidth: number,
+  parallax: number,
+  color: string,
+  heights: number[],
+): void {
+  const offset = -((cameraX * parallax) % canvasWidth);
+
+  ctx.fillStyle = color;
+
+  for (let layer = -1; layer <= 1; layer += 1) {
+    const startX = offset + layer * canvasWidth;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, heights[0]);
+
+    const segmentWidth = canvasWidth / (heights.length - 2);
+
+    for (let index = 1; index < heights.length - 1; index += 1) {
+      ctx.lineTo(startX + segmentWidth * index, heights[index]);
+    }
+
+    ctx.lineTo(startX + canvasWidth, heights[heights.length - 2]);
+    ctx.lineTo(startX + canvasWidth, heights[heights.length - 1]);
+    ctx.lineTo(startX, heights[heights.length - 1]);
+    ctx.closePath();
+    ctx.fill();
   }
+}
 
-  ctx.fillStyle = 'rgba(208, 217, 245, 0.028)';
-  ctx.beginPath();
-  ctx.ellipse(640, 564, 830, 84, 0, 0, Math.PI * 2);
-  ctx.fill();
+function drawDeadForest(
+  ctx: CanvasRenderingContext2D,
+  cameraX: number,
+  canvasWidth: number,
+): void {
+  for (let index = 0; index < 15; index += 1) {
+    const x = ((index * 166) - cameraX * 0.21) % (canvasWidth + 220);
 
-  ctx.fillStyle = 'rgba(180, 195, 225, 0.022)';
-  ctx.beginPath();
-  ctx.ellipse(700, 620, 980, 120, 0, 0, Math.PI * 2);
-  ctx.fill();
+    ctx.fillStyle = 'rgba(22, 17, 20, 0.58)';
+    ctx.fillRect(x + 38, 432, 18, 120);
 
-  for (let index = 0; index < 28; index += 1) {
-    const px =
-      (index * 111 + performance.now() * 0.008) % (canvas.width + 140);
-    const py = 110 + ((index * 47) % 460);
-    ctx.fillStyle = 'rgba(180, 190, 220, 0.038)';
-    ctx.fillRect(px - 60, py, 2, 2);
+    ctx.strokeStyle = 'rgba(46, 24, 32, 0.44)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x + 46, 454);
+    ctx.lineTo(x + 24, 418);
+    ctx.moveTo(x + 46, 474);
+    ctx.lineTo(x + 72, 436);
+    ctx.moveTo(x + 48, 494);
+    ctx.lineTo(x + 22, 468);
+    ctx.stroke();
   }
+}
+
+function drawAbyssGlow(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+): void {
+  const abyss = ctx.createLinearGradient(0, 600, 0, canvas.height);
+  abyss.addColorStop(0, 'rgba(255, 130, 70, 0)');
+  abyss.addColorStop(0.12, 'rgba(200, 58, 26, 0.16)');
+  abyss.addColorStop(0.28, 'rgba(130, 20, 18, 0.28)');
+  abyss.addColorStop(0.56, 'rgba(20, 3, 7, 0.58)');
+  abyss.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
+  ctx.fillStyle = abyss;
+  ctx.fillRect(0, 600, canvas.width, canvas.height - 600);
 }
 
 export function drawPlatforms(
   ctx: CanvasRenderingContext2D,
   platforms: Platform[],
 ): void {
-  for (const platform of platforms) {
-    const gradient = ctx.createLinearGradient(
-      platform.x,
-      platform.y,
-      platform.x,
-      platform.y + platform.height,
-    );
-    gradient.addColorStop(0, '#524151');
-    gradient.addColorStop(0.3, '#362b38');
-    gradient.addColorStop(1, '#17141c');
+  const groundSegments = platforms
+    .filter((platform) => platform.height >= 70)
+    .sort((a, b) => a.x - b.x);
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+  for (let index = 0; index < groundSegments.length; index += 1) {
+    drawGroundSegment(ctx, groundSegments[index]);
 
-    ctx.fillStyle = '#8a7383';
-    ctx.fillRect(platform.x, platform.y, platform.width, 5);
+    const current = groundSegments[index];
+    const next = groundSegments[index + 1];
 
-    ctx.fillStyle = '#241c24';
-    for (let x = 0; x < platform.width; x += 34) {
-      ctx.fillRect(platform.x + x, platform.y + 6, 17, platform.height - 12);
+    if (next && next.x > current.x + current.width) {
+      drawPit(
+        ctx,
+        current.x + current.width,
+        next.x,
+        current.y,
+      );
     }
+  }
 
-    ctx.fillStyle = '#130f16';
-    ctx.fillRect(
-      platform.x,
-      platform.y + platform.height - 8,
-      platform.width,
-      8,
-    );
+  const elevatedPlatforms = platforms.filter((platform) => platform.height < 70);
 
-    ctx.strokeStyle = 'rgba(8, 8, 12, 0.65)';
-    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+  for (const platform of elevatedPlatforms) {
+    drawRuinedPlatform(ctx, platform);
+  }
+}
+
+function drawGroundSegment(
+  ctx: CanvasRenderingContext2D,
+  platform: Platform,
+): void {
+  const topGradient = ctx.createLinearGradient(
+    platform.x,
+    platform.y,
+    platform.x,
+    platform.y + platform.height,
+  );
+  topGradient.addColorStop(0, '#6d5b46');
+  topGradient.addColorStop(0.07, '#4d4135');
+  topGradient.addColorStop(0.12, '#2c2927');
+  topGradient.addColorStop(0.46, '#17161c');
+  topGradient.addColorStop(1, '#09090d');
+
+  ctx.fillStyle = topGradient;
+  ctx.beginPath();
+  ctx.moveTo(platform.x, platform.y + 8);
+
+  for (let x = 0; x <= platform.width; x += 22) {
+    const yOffset = Math.sin((platform.x + x) * 0.055) * 2.4;
+    ctx.lineTo(platform.x + x, platform.y + yOffset);
+  }
+
+  ctx.lineTo(platform.x + platform.width, platform.y + platform.height);
+  ctx.lineTo(platform.x, platform.y + platform.height);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#8f6d4d';
+  ctx.fillRect(platform.x, platform.y, platform.width, 5);
+
+  ctx.fillStyle = '#392f2e';
+  for (let x = 10; x < platform.width - 8; x += 38) {
+    ctx.fillRect(platform.x + x, platform.y + 7, 14, 12);
+    ctx.fillRect(platform.x + x + 12, platform.y + 13, 9, 9);
+  }
+
+  ctx.strokeStyle = 'rgba(255, 162, 84, 0.12)';
+  ctx.lineWidth = 1;
+  for (let crack = 28; crack < platform.width - 12; crack += 64) {
+    ctx.beginPath();
+    ctx.moveTo(platform.x + crack, platform.y + 12);
+    ctx.lineTo(platform.x + crack - 5, platform.y + 24);
+    ctx.lineTo(platform.x + crack + 3, platform.y + 36);
+    ctx.lineTo(platform.x + crack - 4, platform.y + 54);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = '#0c0d12';
+  ctx.fillRect(platform.x, platform.y + platform.height - 10, platform.width, 10);
+
+  ctx.strokeStyle = 'rgba(8, 8, 12, 0.82)';
+  ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+
+  drawGroundRoots(ctx, platform);
+  drawGroundEdges(ctx, platform);
+}
+
+function drawGroundRoots(
+  ctx: CanvasRenderingContext2D,
+  platform: Platform,
+): void {
+  ctx.strokeStyle = 'rgba(33, 22, 25, 0.7)';
+  ctx.lineWidth = 3;
+
+  for (let x = 18; x < platform.width - 10; x += 58) {
+    const rootX = platform.x + x;
+    const startY = platform.y + platform.height - 2;
+
+    ctx.beginPath();
+    ctx.moveTo(rootX, startY);
+    ctx.bezierCurveTo(rootX - 6, startY + 18, rootX + 8, startY + 34, rootX - 3, startY + 52);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(rootX + 8, startY + 8);
+    ctx.bezierCurveTo(rootX + 18, startY + 20, rootX + 10, startY + 32, rootX + 16, startY + 42);
+    ctx.stroke();
+  }
+}
+
+function drawGroundEdges(
+  ctx: CanvasRenderingContext2D,
+  platform: Platform,
+): void {
+  const leftGlow = ctx.createLinearGradient(platform.x - 30, 0, platform.x + 10, 0);
+  leftGlow.addColorStop(0, 'rgba(255, 132, 74, 0)');
+  leftGlow.addColorStop(1, 'rgba(255, 132, 74, 0.24)');
+  ctx.fillStyle = leftGlow;
+  ctx.fillRect(platform.x - 30, platform.y + 6, 30, platform.height - 6);
+
+  const rightGlow = ctx.createLinearGradient(
+    platform.x + platform.width - 10,
+    0,
+    platform.x + platform.width + 30,
+    0,
+  );
+  rightGlow.addColorStop(0, 'rgba(255, 132, 74, 0.24)');
+  rightGlow.addColorStop(1, 'rgba(255, 132, 74, 0)');
+  ctx.fillStyle = rightGlow;
+  ctx.fillRect(platform.x + platform.width, platform.y + 6, 30, platform.height - 6);
+}
+
+function drawPit(
+  ctx: CanvasRenderingContext2D,
+  startX: number,
+  endX: number,
+  groundY: number,
+): void {
+  const pitWidth = endX - startX;
+
+  const pitGradient = ctx.createLinearGradient(0, groundY, 0, 720);
+  pitGradient.addColorStop(0, 'rgba(255, 96, 42, 0.12)');
+  pitGradient.addColorStop(0.08, 'rgba(125, 20, 18, 0.18)');
+  pitGradient.addColorStop(0.26, 'rgba(28, 6, 10, 0.72)');
+  pitGradient.addColorStop(1, 'rgba(0, 0, 0, 0.98)');
+  ctx.fillStyle = pitGradient;
+  ctx.fillRect(startX, groundY, pitWidth, 120);
+
+  ctx.fillStyle = 'rgba(255, 120, 62, 0.1)';
+  ctx.beginPath();
+  ctx.moveTo(startX, groundY + 4);
+  ctx.lineTo(startX + 20, groundY + 28);
+  ctx.lineTo(startX, groundY + 56);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(endX, groundY + 4);
+  ctx.lineTo(endX - 20, groundY + 28);
+  ctx.lineTo(endX, groundY + 56);
+  ctx.closePath();
+  ctx.fill();
+
+  const emberY = groundY + 84;
+
+  for (let index = 0; index < Math.max(2, Math.floor(pitWidth / 70)); index += 1) {
+    const px = startX + 30 + index * 62 + Math.sin(performance.now() * 0.003 + index) * 10;
+
+    ctx.fillStyle = 'rgba(255, 132, 72, 0.18)';
+    ctx.beginPath();
+    ctx.arc(px, emberY + Math.sin(performance.now() * 0.004 + index) * 8, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255, 186, 115, 0.1)';
+    ctx.beginPath();
+    ctx.arc(px, emberY + 2 + Math.sin(performance.now() * 0.004 + index) * 6, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawRuinedPlatform(
+  ctx: CanvasRenderingContext2D,
+  platform: Platform,
+): void {
+  const slab = ctx.createLinearGradient(
+    platform.x,
+    platform.y,
+    platform.x,
+    platform.y + platform.height,
+  );
+  slab.addColorStop(0, '#7c7078');
+  slab.addColorStop(0.14, '#5a4e58');
+  slab.addColorStop(0.55, '#2b2630');
+  slab.addColorStop(1, '#14131a');
+
+  ctx.fillStyle = slab;
+  ctx.beginPath();
+  ctx.moveTo(platform.x + 4, platform.y + 4);
+  ctx.lineTo(platform.x + platform.width - 6, platform.y + 2);
+  ctx.lineTo(platform.x + platform.width, platform.y + 10);
+  ctx.lineTo(platform.x + platform.width - 5, platform.y + platform.height);
+  ctx.lineTo(platform.x + 7, platform.y + platform.height);
+  ctx.lineTo(platform.x, platform.y + 11);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#a18b99';
+  ctx.fillRect(platform.x + 6, platform.y, platform.width - 12, 4);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  ctx.fillRect(platform.x + 18, platform.y + 6, platform.width * 0.22, 3);
+
+  ctx.fillStyle = '#231f28';
+  for (let x = 10; x < platform.width - 12; x += 26) {
+    ctx.fillRect(platform.x + x, platform.y + 6, 12, platform.height - 12);
+  }
+
+  ctx.strokeStyle = 'rgba(9, 9, 12, 0.74)';
+  ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+
+  ctx.strokeStyle = 'rgba(255, 190, 140, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(platform.x + 24, platform.y + 5);
+  ctx.lineTo(platform.x + 18, platform.y + 13);
+  ctx.lineTo(platform.x + 28, platform.y + 20);
+  ctx.stroke();
+
+  drawPlatformSupports(ctx, platform);
+}
+
+function drawPlatformSupports(
+  ctx: CanvasRenderingContext2D,
+  platform: Platform,
+): void {
+  ctx.strokeStyle = 'rgba(22, 18, 24, 0.72)';
+  ctx.lineWidth = 4;
+
+  const supportCount = Math.max(1, Math.floor(platform.width / 120));
+
+  for (let index = 0; index < supportCount; index += 1) {
+    const t = supportCount === 1 ? 0.5 : index / (supportCount - 1);
+    const x = platform.x + 18 + (platform.width - 36) * t;
+
+    ctx.beginPath();
+    ctx.moveTo(x, platform.y + platform.height - 2);
+    ctx.lineTo(x - 12, platform.y + platform.height + 28);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x, platform.y + platform.height - 2);
+    ctx.lineTo(x + 12, platform.y + platform.height + 28);
+    ctx.stroke();
   }
 }
 
@@ -144,7 +408,7 @@ export function drawCollectibles(
     const y = item.y + offsetY;
 
     if (item.type === 'coin') {
-      ctx.fillStyle = '#b88d3d';
+      ctx.fillStyle = '#8f6840';
       ctx.beginPath();
       ctx.moveTo(item.x, y - 10);
       ctx.lineTo(item.x + 8, y);
@@ -153,7 +417,7 @@ export function drawCollectibles(
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillStyle = '#e6c26d';
+      ctx.fillStyle = '#d4a66a';
       ctx.beginPath();
       ctx.moveTo(item.x, y - 6);
       ctx.lineTo(item.x + 5, y);
@@ -165,12 +429,12 @@ export function drawCollectibles(
 
     if (item.type === 'heart') {
       const potionGlass = ctx.createLinearGradient(item.x, y - 12, item.x, y + 12);
-      potionGlass.addColorStop(0, '#8fe7ad');
-      potionGlass.addColorStop(1, '#3eb46a');
+      potionGlass.addColorStop(0, '#9be9ba');
+      potionGlass.addColorStop(1, '#4aa06a');
 
       const potionLiquid = ctx.createLinearGradient(item.x, y - 2, item.x, y + 10);
-      potionLiquid.addColorStop(0, '#a9ffbe');
-      potionLiquid.addColorStop(1, '#48cb75');
+      potionLiquid.addColorStop(0, '#c0ffd0');
+      potionLiquid.addColorStop(1, '#5bd482');
 
       ctx.fillStyle = '#c7a37b';
       ctx.fillRect(item.x - 3, y - 12, 6, 5);
@@ -200,6 +464,15 @@ export function drawCollectibles(
     }
 
     if (item.type === 'ray') {
+      const glow = ctx.createRadialGradient(item.x, y, 1, item.x, y, 18);
+      glow.addColorStop(0, 'rgba(230, 250, 255, 0.82)');
+      glow.addColorStop(0.55, 'rgba(120, 235, 255, 0.2)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(item.x, y, 16, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.strokeStyle = '#d0fbff';
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';

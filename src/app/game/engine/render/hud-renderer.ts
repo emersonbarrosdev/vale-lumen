@@ -31,7 +31,7 @@ export function drawHud(
   const hpBarY = heroPanelY + 40;
   const hpBarWidth = 180;
   const hpBarHeight = 14;
-  const hpPercent = hero.hp / hero.maxHp;
+  const hpPercent = hero.maxHp > 0 ? hero.hp / hero.maxHp : 0;
 
   ctx.fillStyle = '#181b24';
   ctx.fillRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);

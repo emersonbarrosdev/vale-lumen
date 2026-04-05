@@ -11,13 +11,13 @@ export class BossDialogService {
 
   open(dialog: BossDialog): void {
     this.dialogSubject.next(dialog);
-
-    setTimeout(() => {
-      this.close();
-    }, dialog.autoCloseMs);
   }
 
   close(): void {
     this.dialogSubject.next(null);
+  }
+
+  get isOpen(): boolean {
+    return this.dialogSubject.value !== null;
   }
 }

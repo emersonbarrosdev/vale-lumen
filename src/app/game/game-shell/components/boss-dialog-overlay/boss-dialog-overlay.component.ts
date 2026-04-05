@@ -13,4 +13,12 @@ export class BossDialogOverlayComponent {
   readonly dialog$ = this.bossDialogService.dialog$;
 
   constructor(private readonly bossDialogService: BossDialogService) {}
+
+  close(): void {
+    this.bossDialogService.close();
+  }
+
+  continueBattle(): void {
+    this.bossDialogService.close();
+  }
 }

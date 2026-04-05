@@ -1,11 +1,30 @@
 <ng-container *ngIf="dialog$ | async as dialog">
   <div class="boss-dialog-backdrop">
     <div class="boss-dialog-card">
+      <button
+        class="boss-dialog-close"
+        type="button"
+        aria-label="Fechar diálogo"
+        (click)="close()"
+      >
+        ×
+      </button>
+
       <div class="boss-dialog-name">{{ dialog.bossName }}</div>
 
-      <p class="boss-dialog-line" *ngFor="let line of dialog.lines">
-        {{ line }}
-      </p>
+      <div class="boss-dialog-content">
+        <p class="boss-dialog-line" *ngFor="let line of dialog.lines">
+          {{ line }}
+        </p>
+      </div>
+
+      <button
+        class="boss-dialog-action"
+        type="button"
+        (click)="continueBattle()"
+      >
+        SEGUIR
+      </button>
     </div>
   </div>
 </ng-container>
