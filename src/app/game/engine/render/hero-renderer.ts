@@ -1,11 +1,20 @@
 import { Hero } from '../../domain/hero/hero.model';
 
-const COLORS = {
+const BASE_COLORS = {
   body: '#000000',
   glow: '#ff6a00',
   glowSoft: 'rgba(255, 106, 0, 0.28)',
   glowStrong: 'rgba(255, 140, 40, 0.72)',
 };
+
+const SPECIAL_COLORS = {
+  body: '#000000',
+  glow: '#82e8ff',
+  glowSoft: 'rgba(130, 232, 255, 0.28)',
+  glowStrong: 'rgba(255, 234, 128, 0.76)',
+};
+
+type HeroPalette = typeof BASE_COLORS;
 
 export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   if (hero.invulnerabilityTimer > 0 && Math.floor(hero.invulnerabilityTimer * 20) % 2 === 0) {
@@ -19,9 +28,9 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   const isFall = hero.state === 'fall';
   const isCast = hero.state === 'cast';
   const isAir = isJump || isFall;
-
-  // especial = cast mais longo
+  const isUpCast = isCast && hero.castAim === 'up';
   const isSpecialCast = isCast && hero.castDuration >= 0.45;
+  const palette: HeroPalette = isSpecialCast ? SPECIAL_COLORS : BASE_COLORS;
 
   const runCycle = isRun ? t * 12 : 0;
   const castProgress = getCastProgress(hero, isCast);
@@ -35,7 +44,7 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   const lean = isIdle
     ? 0
     : isCast
-      ? 0.04
+      ? (isUpCast ? -0.02 : 0.04)
       : isRun
         ? 0.18
         : isAir
@@ -46,13 +55,26 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.translate(hero.x + hero.width / 2, hero.y + hero.height / 2 + bob + 10);
   ctx.scale(hero.direction * 1.1, 0.98);
 
-  drawLeg(ctx, runCycle + Math.PI, isRun, isAir, isIdle, false);
-  drawArm(ctx, t, runCycle, false, isRun, isIdle, isAir, isCast, isSpecialCast, castProgress);
+  drawLeg(ctx, runCycle + Math.PI, isRun, isAir, isIdle, false, palette);
+  drawArm(
+    ctx,
+    t,
+    runCycle,
+    false,
+    isRun,
+    isIdle,
+    isAir,
+    isCast,
+    isSpecialCast,
+    isUpCast,
+    castProgress,
+    palette,
+  );
 
   ctx.save();
   ctx.rotate(lean);
 
-  ctx.fillStyle = COLORS.body;
+  ctx.fillStyle = palette.body;
   ctx.beginPath();
   ctx.moveTo(-6, -27.5);
   ctx.quadraticCurveTo(0, -29.5, 6, -27.5);
@@ -61,18 +83,16 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.quadraticCurveTo(-11, -14.2, -6, -27.5);
   ctx.fill();
 
-  // ALÇA TRASEIRA
-  ctx.strokeStyle = COLORS.glow;
+  ctx.strokeStyle = palette.glow;
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(-4, -28);
   ctx.quadraticCurveTo(-8, -27, -9, -20);
   ctx.stroke();
 
-  // MOCHILA
   ctx.save();
-  ctx.fillStyle = COLORS.body;
-  ctx.strokeStyle = COLORS.glow;
+  ctx.fillStyle = palette.body;
+  ctx.strokeStyle = palette.glow;
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(-6, -28);
@@ -83,29 +103,27 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.fill();
   ctx.stroke();
 
-  ctx.strokeStyle = COLORS.glow;
+  ctx.strokeStyle = palette.glow;
   ctx.lineWidth = 1.4;
   ctx.beginPath();
   ctx.moveTo(-10.5, -22);
   ctx.quadraticCurveTo(-11, -12, -7, -11);
   ctx.stroke();
 
-  ctx.fillStyle = COLORS.glow;
+  ctx.fillStyle = palette.glow;
   ctx.beginPath();
   ctx.arc(-10.5, -22, 1.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
-  // ALÇA FRONTAL
-  ctx.strokeStyle = COLORS.glow;
+  ctx.strokeStyle = palette.glow;
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(-4, -29);
   ctx.bezierCurveTo(2, -30, 6, -24, 5, -18);
   ctx.stroke();
 
-  // PESCOÇO
-  ctx.fillStyle = COLORS.body;
+  ctx.fillStyle = palette.body;
   ctx.beginPath();
   ctx.moveTo(-3, -27.5);
   ctx.quadraticCurveTo(0, -29.2, 3, -27.5);
@@ -115,30 +133,71 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.fill();
 
   ctx.save();
-  const headTranslateX = isRun || isAir ? 3.8 : isCast ? 1.4 : 0;
-  const headTranslateY = -35.8 + (isAir ? -1.8 : 0);
+  const headTranslateX = isUpCast ? 0 : (isRun || isAir ? 3.8 : isCast ? 1.4 : 0);
+  const headTranslateY = isUpCast ? -38.5 : -35.8 + (isAir ? -1.8 : 0);
 
   ctx.translate(headTranslateX, headTranslateY);
+  if (isUpCast) {
+    ctx.rotate(-0.88);
+  }
 
-  drawMohawk(ctx);
+  drawMohawk(ctx, palette);
 
-  ctx.fillStyle = COLORS.body;
+  ctx.fillStyle = palette.body;
   ctx.beginPath();
   ctx.arc(0, 0, 8.5, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = COLORS.glow;
+  ctx.fillStyle = palette.glow;
+  if (isUpCast) {
+    ctx.beginPath();
+    ctx.arc(-0.4, -4.7, 2.15, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.arc(3.0, -0.8, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  if (isSpecialCast) {
+    drawSpecialAura(ctx, palette);
+  }
+
+  ctx.restore();
+
+  drawLeg(ctx, runCycle, isRun, isAir, isIdle, true, palette);
+  drawArm(
+    ctx,
+    t,
+    runCycle + Math.PI,
+    true,
+    isRun,
+    isIdle,
+    isAir,
+    isCast,
+    isSpecialCast,
+    isUpCast,
+    castProgress,
+    palette,
+  );
+
+  ctx.restore();
+}
+
+function drawSpecialAura(
+  ctx: CanvasRenderingContext2D,
+  palette: HeroPalette,
+): void {
+  const aura = ctx.createRadialGradient(0, -18, 6, 0, -18, 32);
+  aura.addColorStop(0, palette.glowStrong);
+  aura.addColorStop(0.45, palette.glowSoft);
+  aura.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.fillStyle = aura;
   ctx.beginPath();
-  ctx.arc(3.0, -0.8, 2.2, 0, Math.PI * 2);
+  ctx.arc(0, -18, 30, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
-
-  ctx.restore();
-
-  drawLeg(ctx, runCycle, isRun, isAir, isIdle, true);
-  drawArm(ctx, t, runCycle + Math.PI, true, isRun, isIdle, isAir, isCast, isSpecialCast, castProgress);
-
-  ctx.restore();
 }
 
 function getCastProgress(hero: Hero, isCast: boolean): number {
@@ -164,8 +223,8 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-function drawMohawk(ctx: CanvasRenderingContext2D): void {
-  ctx.fillStyle = COLORS.glow;
+function drawMohawk(ctx: CanvasRenderingContext2D, palette: HeroPalette): void {
+  ctx.fillStyle = palette.glow;
 
   const spikes = [
     { x: -7.4, y: 1, h: 6.8, w: 4, rot: -1.8 },
@@ -196,6 +255,7 @@ function drawLeg(
   isAir: boolean,
   isIdle: boolean,
   isFront: boolean,
+  palette: HeroPalette,
 ): void {
   ctx.save();
 
@@ -214,7 +274,7 @@ function drawLeg(
   }
 
   ctx.rotate(hipRot);
-  ctx.fillStyle = COLORS.body;
+  ctx.fillStyle = palette.body;
 
   ctx.beginPath();
   ctx.moveTo(-3, 0);
@@ -247,7 +307,9 @@ function drawArm(
   isAir: boolean,
   isCast: boolean,
   isSpecialCast: boolean,
+  isUpCast: boolean,
   castProgress: number,
+  palette: HeroPalette,
 ): void {
   ctx.save();
 
@@ -267,38 +329,42 @@ function drawArm(
     const microA = Math.sin(t * 8) * 0.008;
     const microB = Math.cos(t * 7) * 0.008;
 
-    if (isSpecialCast) {
+    if (isUpCast) {
+      shoulderY -= 3 + extend * 1.8;
+      shoulderX += isFront ? -0.4 : 0.4;
+
+      // forma do braço aponta para baixo por padrão;
+      // para apontar para o teto precisa girar 180 graus
+      armRot = Math.PI + (isFront ? microA * 0.04 : -microA * 0.04);
+      elbowRot = microB * 0.03;
+
+      handGlow = true;
+      handGlowStrength = isFront ? 1 + extend * 0.88 : 0.82 + extend * 0.56;
+    } else if (isSpecialCast) {
       if (isFront) {
-        // braço da frente: levemente mais alto
         shoulderX += 1.15 + extend * 1.45;
         shoulderY -= 0.5;
         armRot = lerp(-0.78, -1.02, extend) + microA;
         elbowRot = lerp(0.02, -0.05, extend) + microB;
-
         handGlow = true;
         handGlowStrength = 0.82 + extend * 0.88;
       } else {
-        // braço de trás: reto para frente apontando as magias
         shoulderX += 1.05 + extend * 1.35;
         shoulderY += 0.55;
         armRot = lerp(-0.16, -0.28, extend) + microA * 0.35;
         elbowRot = lerp(0.01, -0.02, extend) + microB * 0.25;
-
         handGlow = true;
         handGlowStrength = 0.58 + extend * 0.46;
       }
     } else {
       if (isFront) {
-        // magia normal: só braço da frente mexe
         shoulderX += 1 + extend * 1.25;
         shoulderY -= 0.25;
         armRot = lerp(-0.86, -1.16, extend) + microA;
         elbowRot = lerp(0.05, -0.05, extend) + microB;
-
         handGlow = true;
         handGlowStrength = 0.72 + extend * 0.72;
       } else {
-        // braço de trás fica praticamente parado no tiro normal
         armRot = -0.06;
         elbowRot = 0.03;
       }
@@ -318,7 +384,7 @@ function drawArm(
 
   ctx.translate(shoulderX, shoulderY);
   ctx.rotate(armRot);
-  ctx.fillStyle = COLORS.body;
+  ctx.fillStyle = palette.body;
 
   ctx.beginPath();
   ctx.arc(0, 0, 3, Math.PI, 0);
@@ -343,8 +409,8 @@ function drawArm(
     const outerRadius = 6 + handGlowStrength * 4;
     const handY = 8.4;
     const grad = ctx.createRadialGradient(0, handY, 1.2, 0, handY, outerRadius);
-    grad.addColorStop(0, COLORS.glowStrong);
-    grad.addColorStop(0.45, COLORS.glowSoft);
+    grad.addColorStop(0, palette.glowStrong);
+    grad.addColorStop(0.45, palette.glowSoft);
     grad.addColorStop(1, 'rgba(255, 106, 0, 0)');
 
     ctx.fillStyle = grad;
@@ -352,7 +418,7 @@ function drawArm(
     ctx.arc(0, handY, outerRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = COLORS.glow;
+    ctx.fillStyle = palette.glow;
     ctx.beginPath();
     ctx.arc(0, handY, 1.7 + handGlowStrength * 0.45, 0, Math.PI * 2);
     ctx.fill();

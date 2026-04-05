@@ -14,7 +14,7 @@ export interface EnemyData {
 }
 
 export interface CollectibleData {
-  type: 'coin' | 'heart' | 'ray';
+  type: 'coin' | 'heart' | 'ray' | 'flameVial';
   x: number;
   y: number;
 }

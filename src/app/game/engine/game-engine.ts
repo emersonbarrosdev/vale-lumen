@@ -4,6 +4,7 @@ import { BossProjectile } from '../domain/bosses/boss-projectile.model';
 import { BurstParticle } from '../domain/combat/burst-particle.model';
 import { Bullet } from '../domain/combat/bullet.model';
 import { LightningPoint, SpecialStrike } from '../domain/combat/special-strike.model';
+import { EnemyProjectile } from '../domain/enemies/enemy-projectile.model';
 import { Enemy } from '../domain/enemies/enemy.model';
 import { Hero } from '../domain/hero/hero.model';
 import { BossArenaData } from '../domain/world/boss-arena.model';
@@ -14,7 +15,10 @@ import { Platform } from '../domain/world/platform.model';
 import { GameStateService } from '../services/game-state.service';
 import { InputManager } from './input-manager';
 import { drawBoss, drawBossProjectiles } from './render/boss-renderer';
-import { drawEnemies } from './render/enemy-renderer';
+import {
+  drawEnemies,
+  drawEnemyProjectiles,
+} from './render/enemy-renderer';
 import { drawHero } from './render/hero-renderer';
 import { drawHud } from './render/hud-renderer';
 import {
@@ -39,6 +43,10 @@ export class GameEngine {
 
   private readonly gravity = 2350;
   private readonly fallBoost = 1350;
+  private readonly itemFallGravity = 280;
+  private readonly specialRangeEnemy = 1344;
+  private readonly specialRangeBoss = 1488;
+  private readonly specialVerticalTolerance = 95;
 
   private readonly worldWidth: number;
   private readonly platforms: Platform[];
@@ -71,6 +79,7 @@ export class GameEngine {
     animationTime: 0,
     castTimer: 0,
     castDuration: 0,
+    castAim: 'forward',
     hurtTimer: 0,
     landingTimer: 0,
     name: 'Kael',
@@ -100,6 +109,7 @@ export class GameEngine {
   private cameraX = 0;
   private bullets: Bullet[] = [];
   private bossProjectiles: BossProjectile[] = [];
+  private enemyProjectiles: EnemyProjectile[] = [];
   private specialStrikes: SpecialStrike[] = [];
   private burstParticles: BurstParticle[] = [];
 
@@ -112,6 +122,7 @@ export class GameEngine {
   private specialSequenceActive = false;
   private specialPulseTimer = 0;
   private specialPulsesRemaining = 0;
+  private bossAttackPatternIndex = 0;
 
   private ending: 'game-over' | 'victory' | null = null;
   private endingTimer = 0;
@@ -161,13 +172,21 @@ export class GameEngine {
       active: true,
       hitFlash: 0,
       hoverOffset: Math.random() * Math.PI * 2,
+      baseX: enemy.x,
+      baseY: enemy.y,
+      respawnTimer: 0,
+      respawnDelay: enemy.type === 'vigia' ? 8.5 : 6.5,
+      shootCooldown: enemy.type === 'vigia' ? this.randomRange(1.2, 2.2) : 999,
     }));
 
     this.collectibles = phaseData.collectibles.map((item) => ({
       ...item,
-      width: item.type === 'coin' ? 18 : 22,
-      height: item.type === 'coin' ? 18 : 22,
+      width: item.type === 'coin' ? 18 : item.type === 'flameVial' ? 22 : 22,
+      height: item.type === 'coin' ? 18 : item.type === 'flameVial' ? 30 : 22,
       collected: false,
+      vy: 0,
+      falling: false,
+      settled: false,
     }));
 
     this.chests = phaseData.chests.map((chest) => ({
@@ -228,8 +247,9 @@ export class GameEngine {
     this.updateHero(deltaTime);
     this.updateProgressScore();
     this.updateBullets(deltaTime);
+    this.updateEnemyProjectiles(deltaTime);
     this.updateEnemies(deltaTime);
-    this.updateCollectibles();
+    this.updateCollectibles(deltaTime);
     this.updateChests(deltaTime);
     this.updateBoss(deltaTime);
     this.updateBossProjectiles(deltaTime);
@@ -263,6 +283,8 @@ export class GameEngine {
 
   private updateHero(deltaTime: number): void {
     const wasOnGround = this.hero.onGround;
+    const isLockedInUpCast =
+      this.hero.castTimer > 0 && this.hero.castAim === 'up';
 
     this.hero.animationTime += deltaTime;
     this.hero.shootCooldown = Math.max(0, this.hero.shootCooldown - deltaTime);
@@ -274,12 +296,15 @@ export class GameEngine {
 
     if (this.hero.castTimer <= 0) {
       this.hero.castDuration = 0;
+      this.hero.castAim = 'forward';
     }
 
     const movingLeft =
-      this.input.isPressed('a') || this.input.isPressed('arrowleft');
+      !isLockedInUpCast &&
+      (this.input.isPressed('a') || this.input.isPressed('arrowleft'));
     const movingRight =
-      this.input.isPressed('d') || this.input.isPressed('arrowright');
+      !isLockedInUpCast &&
+      (this.input.isPressed('d') || this.input.isPressed('arrowright'));
 
     if (movingLeft && !movingRight) {
       this.hero.vx = -this.hero.speed;
@@ -287,11 +312,14 @@ export class GameEngine {
     } else if (movingRight && !movingLeft) {
       this.hero.vx = this.hero.speed;
       this.hero.direction = 1;
+    } else if (isLockedInUpCast) {
+      this.hero.vx = 0;
     } else {
       this.hero.vx = 0;
     }
 
     if (
+      !isLockedInUpCast &&
       (this.input.isJustPressed(' ') ||
         this.input.isJustPressed('w') ||
         this.input.isJustPressed('arrowup')) &&
@@ -302,26 +330,38 @@ export class GameEngine {
       this.hero.onGround = false;
     }
 
-    if (this.input.isJustPressed('k') && this.hero.dashCooldown <= 0) {
+    if (!isLockedInUpCast && this.input.isJustPressed('k') && this.hero.dashCooldown <= 0) {
       this.hero.vx = this.hero.direction * 610;
       this.hero.dashCooldown = 0.7;
     }
 
-    if (this.input.isJustPressed('j') && this.hero.shootCooldown <= 0) {
-      this.fireBullet();
+    if (!isLockedInUpCast && this.input.isJustPressed('j') && this.hero.shootCooldown <= 0) {
+      this.fireBullet('forward');
       this.hero.shootCooldown = 0.22;
       this.hero.castTimer = 0.16;
       this.hero.castDuration = 0.16;
+      this.hero.castAim = 'forward';
+    }
+
+    if (!isLockedInUpCast && this.input.isJustPressed('i') && this.hero.shootCooldown <= 0) {
+      this.fireBullet('upward');
+      this.hero.shootCooldown = 0.28;
+      this.hero.castTimer = 0.32;
+      this.hero.castDuration = 0.32;
+      this.hero.castAim = 'up';
+      this.hero.vx = 0;
     }
 
     if (
-      this.input.isJustPressed('l') &&
+      !isLockedInUpCast &&
+      this.input.isJustPressed('u') &&
       this.specialCharge >= 100 &&
       !this.specialSequenceActive
     ) {
       this.activateSpecial();
       this.hero.castTimer = 2.1;
       this.hero.castDuration = 2.1;
+      this.hero.castAim = 'forward';
     }
 
     const gravityThisFrame =
@@ -407,7 +447,21 @@ export class GameEngine {
     }
   }
 
-  private fireBullet(): void {
+  private fireBullet(kind: 'forward' | 'upward'): void {
+    if (kind === 'upward') {
+      this.bullets.push({
+        x: this.hero.x + this.hero.width / 2 - 5,
+        y: this.hero.y + 4,
+        width: 10,
+        height: 20,
+        vx: 0,
+        vy: -720,
+        active: true,
+        kind: 'upward',
+      });
+      return;
+    }
+
     this.bullets.push({
       x:
         this.hero.direction === 1
@@ -417,7 +471,9 @@ export class GameEngine {
       width: 18,
       height: 10,
       vx: this.hero.direction * 610,
+      vy: 0,
       active: true,
+      kind: 'forward',
     });
   }
 
@@ -449,7 +505,6 @@ export class GameEngine {
       return;
     }
 
-    // mais tempo entre cada rajada
     this.specialPulseTimer = 0.18;
   }
 
@@ -457,7 +512,6 @@ export class GameEngine {
     const originX = this.hero.x + this.hero.width / 2;
     const originY = this.hero.y + this.hero.height * 0.56;
     const direction = this.hero.direction;
-
     const localOffsets = [-16, 0, 16];
 
     for (let index = 0; index < localOffsets.length; index += 1) {
@@ -469,6 +523,7 @@ export class GameEngine {
         life: 0.75,
         maxLife: 0.75,
         width: this.randomRange(12, 17),
+        theme: 'heroSpecial',
       });
     }
 
@@ -483,20 +538,18 @@ export class GameEngine {
         direction === 1
           ? enemyCenterX >= originX - 6
           : enemyCenterX <= originX + 6;
-      const closeEnoughX = Math.abs(enemyCenterX - originX) <= 1680;
-      const closeEnoughY = Math.abs(enemyCenterY - originY) <= 95;
+      const closeEnoughX = Math.abs(enemyCenterX - originX) <= this.specialRangeEnemy;
+      const closeEnoughY = Math.abs(enemyCenterY - originY) <= this.specialVerticalTolerance;
 
       if (inFront && closeEnoughX && closeEnoughY) {
         enemy.hp -= 2;
         enemy.hitFlash = 0.12;
 
         if (enemy.hp <= 0) {
-          enemy.hp = 0;
-          enemy.active = false;
-          this.score += enemy.type === 'vigia' ? 100 : 50;
-          this.spawnBurst(enemyCenterX, enemyCenterY, '#ff6a00', 18);
+          this.killEnemy(enemy, enemy.type === 'vigia' ? 100 : 50, '#82e8ff', 20);
         } else {
-          this.spawnBurst(enemyCenterX, enemyCenterY, '#ff6a00', 8);
+          this.spawnBurst(enemyCenterX, enemyCenterY, '#fff08a', 10);
+          this.spawnBurst(enemyCenterX, enemyCenterY, '#82e8ff', 8);
         }
       }
     }
@@ -512,8 +565,8 @@ export class GameEngine {
         direction === 1
           ? chestCenterX >= originX - 6
           : chestCenterX <= originX + 6;
-      const closeEnoughX = Math.abs(chestCenterX - originX) <= 1680;
-      const closeEnoughY = Math.abs(chestCenterY - originY) <= 95;
+      const closeEnoughX = Math.abs(chestCenterX - originX) <= this.specialRangeEnemy;
+      const closeEnoughY = Math.abs(chestCenterY - originY) <= this.specialVerticalTolerance;
 
       if (inFront && closeEnoughX && closeEnoughY) {
         this.breakChest(chest);
@@ -527,17 +580,19 @@ export class GameEngine {
         direction === 1
           ? bossCenterX >= originX - 6
           : bossCenterX <= originX + 6;
-      const closeEnoughX = Math.abs(bossCenterX - originX) <= 1860;
+      const closeEnoughX = Math.abs(bossCenterX - originX) <= this.specialRangeBoss;
       const closeEnoughY = Math.abs(bossCenterY - originY) <= 115;
 
       if (inFront && closeEnoughX && closeEnoughY) {
         this.boss.hp = Math.max(0, this.boss.hp - 3);
         this.boss.hitFlash = 0.18;
-        this.spawnBurst(bossCenterX, bossCenterY, '#ff6a00', 12);
+        this.spawnBurst(bossCenterX, bossCenterY, '#82e8ff', 14);
+        this.spawnBurst(bossCenterX, bossCenterY, '#fff08a', 10);
       }
     }
 
     this.bossProjectiles = [];
+    this.enemyProjectiles = [];
   }
 
   private buildMagicVolleyPath(
@@ -549,13 +604,11 @@ export class GameEngine {
 
     let x = startX;
     let y = startY;
-
-    // 3x mais distante e com mais pontos para parecer projétil viajando
     const segments = 10;
 
     for (let index = 0; index < segments; index += 1) {
-      x += this.randomRange(52, 78) * direction;
-      y += this.randomRange(-3, 3);
+      x += this.randomRange(42, 62) * direction;
+      y += this.randomRange(-5, 5);
       points.push({ x, y });
     }
 
@@ -579,8 +632,14 @@ export class GameEngine {
       }
 
       bullet.x += bullet.vx * deltaTime;
+      bullet.y += bullet.vy * deltaTime;
 
-      if (bullet.x < -100 || bullet.x > this.worldWidth + 100) {
+      if (
+        bullet.x < -100 ||
+        bullet.x > this.worldWidth + 100 ||
+        bullet.y < -120 ||
+        bullet.y > this.bossArena.groundY + 120
+      ) {
         bullet.active = false;
         continue;
       }
@@ -596,11 +655,9 @@ export class GameEngine {
           enemy.hitFlash = 0.08;
 
           if (enemy.hp <= 0) {
-            enemy.active = false;
-            this.score += enemy.type === 'vigia' ? 100 : 50;
-            this.spawnBurst(
-              enemy.x + enemy.width / 2,
-              enemy.y + enemy.height / 2,
+            this.killEnemy(
+              enemy,
+              enemy.type === 'vigia' ? 100 : 50,
               '#ff8b5e',
               10,
             );
@@ -620,8 +677,10 @@ export class GameEngine {
         }
 
         if (this.rectsOverlap(bullet, chest)) {
-          bullet.active = false;
-          this.breakChest(chest);
+          if (bullet.kind === 'upward') {
+            bullet.active = false;
+            this.breakChest(chest);
+          }
           break;
         }
       }
@@ -647,14 +706,93 @@ export class GameEngine {
     this.bullets = this.bullets.filter((bullet) => bullet.active);
   }
 
+  private updateEnemyProjectiles(deltaTime: number): void {
+    for (const projectile of this.enemyProjectiles) {
+      if (!projectile.active) {
+        continue;
+      }
+
+      projectile.elapsed += deltaTime;
+      projectile.vy += projectile.gravity * deltaTime;
+      projectile.x += projectile.vx * deltaTime;
+      projectile.y += projectile.vy * deltaTime;
+
+      if (
+        projectile.y + projectile.radius >= this.bossArena.groundY ||
+        projectile.x < -80 ||
+        projectile.x > this.worldWidth + 80 ||
+        projectile.y < 40
+      ) {
+        projectile.active = false;
+        this.spawnBurst(
+          projectile.x,
+          Math.min(this.bossArena.groundY - 6, projectile.y),
+          '#45b857',
+          12,
+        );
+
+        if (
+          this.hero.invulnerabilityTimer <= 0 &&
+          Math.abs(this.hero.x + this.hero.width / 2 - projectile.x) <= 44 &&
+          this.hero.y + this.hero.height >= this.bossArena.groundY - 46
+        ) {
+          this.applyHeroDamage(projectile.damage);
+        }
+
+        continue;
+      }
+
+      if (
+        this.hero.invulnerabilityTimer <= 0 &&
+        this.circleRectOverlap(
+          projectile.x,
+          projectile.y,
+          projectile.radius,
+          this.hero,
+        )
+      ) {
+        projectile.active = false;
+        this.applyHeroDamage(projectile.damage);
+      }
+    }
+
+    this.enemyProjectiles = this.enemyProjectiles.filter(
+      (projectile) => projectile.active,
+    );
+  }
+
   private updateEnemies(deltaTime: number): void {
     for (const enemy of this.enemies) {
       if (!enemy.active) {
+        enemy.respawnTimer = Math.max(0, enemy.respawnTimer - deltaTime);
+
+        if (enemy.respawnTimer <= 0 && !this.boss.active) {
+          enemy.active = true;
+          enemy.hp =
+            enemy.type === 'vigia'
+              ? 4 + Math.floor(this.phaseData.definition.difficulty / 2)
+              : 2 + Math.floor(this.phaseData.definition.difficulty / 3);
+          enemy.x = enemy.baseX;
+          enemy.y = enemy.baseY;
+          enemy.direction = -1;
+          enemy.hitFlash = 0;
+          enemy.hoverOffset = Math.random() * Math.PI * 2;
+          enemy.shootCooldown = enemy.type === 'vigia' ? this.randomRange(1.2, 2.2) : 999;
+
+          this.spawnBurst(
+            enemy.x + enemy.width / 2,
+            enemy.y + enemy.height / 2,
+            enemy.type === 'vigia' ? '#7be8ff' : '#7dffb2',
+            10,
+          );
+        }
+
         continue;
       }
 
       enemy.hitFlash = Math.max(0, enemy.hitFlash - deltaTime);
       enemy.hoverOffset += deltaTime * (enemy.type === 'vigia' ? 1.1 : 0.9);
+      enemy.shootCooldown = Math.max(0, enemy.shootCooldown - deltaTime);
 
       enemy.x += enemy.direction * enemy.speed * deltaTime;
 
@@ -668,6 +806,10 @@ export class GameEngine {
         enemy.direction = -1;
       }
 
+      if (enemy.type === 'vigia') {
+        this.tryFireCaptainProjectile(enemy);
+      }
+
       if (
         this.hero.invulnerabilityTimer <= 0 &&
         this.rectsOverlap(this.hero, enemy)
@@ -677,10 +819,72 @@ export class GameEngine {
     }
   }
 
-  private updateCollectibles(): void {
+  private tryFireCaptainProjectile(enemy: Enemy): void {
+    if (enemy.shootCooldown > 0) {
+      return;
+    }
+
+    const enemyCenterX = enemy.x + enemy.width / 2;
+    const enemyCenterY = enemy.y + enemy.height / 2 - 10;
+    const heroCenterX = this.hero.x + this.hero.width / 2;
+
+    if (Math.abs(heroCenterX - enemyCenterX) > 520) {
+      return;
+    }
+
+    const alreadyHasProjectile = this.enemyProjectiles.some(
+      (projectile) => projectile.active && Math.abs(projectile.ownerX - enemyCenterX) < 4,
+    );
+
+    if (alreadyHasProjectile) {
+      return;
+    }
+
+    const targetX = heroCenterX + this.hero.vx * 0.35;
+    const targetY = this.bossArena.groundY - 10;
+    const gravity = 980;
+    const travelTime = this.randomRange(0.9, 1.1);
+    const vx = (targetX - enemyCenterX) / travelTime;
+    const vy = (targetY - enemyCenterY - 0.5 * gravity * travelTime * travelTime) / travelTime;
+
+    this.enemyProjectiles.push({
+      ownerX: enemyCenterX,
+      ownerY: enemyCenterY,
+      x: enemyCenterX,
+      y: enemyCenterY,
+      vx,
+      vy,
+      gravity,
+      radius: 10,
+      active: true,
+      waveOffset: 0,
+      amplitude: 0,
+      frequency: 0,
+      elapsed: 0,
+      damage: 14,
+    });
+
+    enemy.shootCooldown = this.randomRange(2.4, 3.3);
+  }
+
+  private updateCollectibles(deltaTime: number): void {
     for (const item of this.collectibles) {
       if (item.collected) {
         continue;
+      }
+
+      if (item.falling) {
+        item.vy += this.itemFallGravity * deltaTime;
+        item.y += item.vy * deltaTime;
+
+        const landingY = this.getCollectibleLandingY(item);
+
+        if (item.y + item.height >= landingY) {
+          item.y = landingY - item.height;
+          item.vy = 0;
+          item.falling = false;
+          item.settled = true;
+        }
       }
 
       if (this.rectsOverlap(this.hero, item)) {
@@ -699,9 +903,36 @@ export class GameEngine {
             this.score += 15;
             this.spawnBurst(item.x, item.y, '#7de8ff', 12);
             break;
+          case 'flameVial':
+            this.specialCharge = Math.min(100, this.specialCharge + 35);
+            this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 12);
+            this.score += 120;
+            this.spawnBurst(item.x, item.y, '#ffb35b', 14);
+            this.spawnBurst(item.x, item.y, '#d0fbff', 8);
+            break;
         }
       }
     }
+  }
+
+  private getCollectibleLandingY(item: Collectible): number {
+    let landingY = this.bossArena.groundY;
+
+    for (const platform of this.platforms) {
+      const itemLeft = item.x - item.width / 2;
+      const itemRight = item.x + item.width / 2;
+      const overlapsX = itemRight > platform.x && itemLeft < platform.x + platform.width;
+
+      if (!overlapsX) {
+        continue;
+      }
+
+      if (platform.y >= item.y + item.height - 2 && platform.y < landingY) {
+        landingY = platform.y;
+      }
+    }
+
+    return landingY;
   }
 
   private updateChests(deltaTime: number): void {
@@ -723,34 +954,32 @@ export class GameEngine {
     if (!chest.rewardGranted) {
       chest.rewardGranted = true;
 
-      if (chest.rare) {
-        this.specialCharge = Math.min(100, this.specialCharge + 100);
-        this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 25);
-        this.score += 150;
-      } else {
-        this.specialCharge = Math.min(100, this.specialCharge + 100);
-        this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 20);
-        this.score += 80;
-      }
+      this.collectibles.push({
+        type: 'flameVial',
+        x: chest.x + chest.width / 2,
+        y: chest.y + chest.height * 0.2,
+        width: 22,
+        height: 30,
+        collected: false,
+        vy: -35,
+        falling: true,
+        settled: false,
+      });
+
+      this.score += chest.rare ? 90 : 60;
     }
 
     this.spawnBurst(
       chest.x + chest.width / 2,
       chest.y + chest.height / 2,
-      '#ffda7d',
+      '#d6fbff',
       chest.rare ? 20 : 16,
     );
     this.spawnBurst(
       chest.x + chest.width / 2,
       chest.y + chest.height / 2,
-      '#7de8ff',
+      chest.rare ? '#b98cff' : '#ff9e4c',
       chest.rare ? 16 : 12,
-    );
-    this.spawnBurst(
-      chest.x + chest.width / 2,
-      chest.y + chest.height / 2,
-      '#72ff95',
-      chest.rare ? 12 : 8,
     );
   }
 
@@ -804,9 +1033,19 @@ export class GameEngine {
       this.boss.castTimer = 0.9;
       this.boss.secondaryCooldown = 1;
     } else if (this.boss.secondaryCooldown <= 0) {
-      this.fireBossWaveShot();
-      this.boss.secondaryCooldown = bossHpRatio <= 0.3 ? 1.1 : 1.65;
-      this.boss.castTimer = 0.45;
+      const useGooVolley = this.bossAttackPatternIndex % 2 === 1 || bossHpRatio <= 0.55;
+
+      if (useGooVolley) {
+        this.fireBossGooVolley();
+        this.boss.secondaryCooldown = bossHpRatio <= 0.3 ? 1.15 : 1.7;
+        this.boss.castTimer = 0.58;
+      } else {
+        this.fireBossWaveShot();
+        this.boss.secondaryCooldown = bossHpRatio <= 0.3 ? 1.1 : 1.65;
+        this.boss.castTimer = 0.45;
+      }
+
+      this.bossAttackPatternIndex += 1;
     }
 
     if (
@@ -841,7 +1080,7 @@ export class GameEngine {
       this.spawnBurst(
         this.boss.x + this.boss.width / 2,
         this.boss.y + this.boss.height - 4,
-        '#8b3d55',
+        '#1c6f2c',
         10,
       );
     }
@@ -863,6 +1102,39 @@ export class GameEngine {
         elapsed: 0,
         damage: 16,
         kind: 'normal',
+      });
+    }
+  }
+
+  private fireBossGooVolley(): void {
+    const launchX = this.boss.x + 26;
+    const launchY = this.boss.y + 110;
+    const targetX = this.hero.x + this.hero.width / 2 + this.hero.vx * 0.28;
+    const count = this.boss.hp / this.boss.maxHp <= 0.35 ? 3 : 2;
+    const gravity = 960;
+    const middleIndex = (count - 1) / 2;
+
+    for (let index = 0; index < count; index += 1) {
+      const spread = (index - middleIndex) * 34;
+      const landingX = targetX + spread;
+      const timeToLand = this.randomRange(0.8, 1.02);
+      const vx = (landingX - launchX) / timeToLand;
+      const vy = -this.randomRange(420, 520);
+
+      this.bossProjectiles.push({
+        x: launchX,
+        y: launchY,
+        vx,
+        vy,
+        gravity,
+        radius: 11 + index,
+        active: true,
+        waveOffset: Math.random() * Math.PI * 2,
+        amplitude: 0,
+        frequency: 0,
+        elapsed: 0,
+        damage: 18,
+        kind: 'lob',
       });
     }
   }
@@ -890,34 +1162,58 @@ export class GameEngine {
       }
 
       projectile.elapsed += deltaTime;
-      projectile.x += projectile.vx * deltaTime;
-      projectile.y +=
-        Math.sin(
-          projectile.elapsed * projectile.frequency + projectile.waveOffset,
-        ) *
-        projectile.amplitude *
-        deltaTime;
 
-      if (
-        projectile.x + projectile.radius < this.bossArena.startX - 80 ||
-        projectile.y < 420 ||
-        projectile.y > this.bossArena.groundY - 38
-      ) {
-        projectile.active = false;
-        continue;
-      }
+      if (projectile.kind === 'lob') {
+        projectile.vy = (projectile.vy ?? 0) + (projectile.gravity ?? 0) * deltaTime;
+        projectile.x += projectile.vx * deltaTime;
+        projectile.y += (projectile.vy ?? 0) * deltaTime;
 
-      if (
-        this.hero.invulnerabilityTimer <= 0 &&
-        this.circleRectOverlap(
-          projectile.x,
-          projectile.y,
-          projectile.radius,
-          this.hero,
-        )
-      ) {
-        projectile.active = false;
-        this.applyHeroDamage(projectile.damage);
+        this.spawnBurst(projectile.x, projectile.y, '#45b857', 1);
+
+        if (projectile.y + projectile.radius >= this.bossArena.groundY) {
+          projectile.active = false;
+          this.spawnBurst(projectile.x, this.bossArena.groundY - 6, '#45b857', 14);
+
+          if (
+            this.hero.invulnerabilityTimer <= 0 &&
+            Math.abs(this.hero.x + this.hero.width / 2 - projectile.x) <= 46 &&
+            this.hero.y + this.hero.height >= this.bossArena.groundY - 40
+          ) {
+            this.applyHeroDamage(projectile.damage);
+          }
+
+          continue;
+        }
+      } else {
+        projectile.x += projectile.vx * deltaTime;
+        projectile.y +=
+          Math.sin(
+            projectile.elapsed * projectile.frequency + projectile.waveOffset,
+          ) *
+          projectile.amplitude *
+          deltaTime;
+
+        if (
+          projectile.x + projectile.radius < this.bossArena.startX - 80 ||
+          projectile.y < 420 ||
+          projectile.y > this.bossArena.groundY - 38
+        ) {
+          projectile.active = false;
+          continue;
+        }
+
+        if (
+          this.hero.invulnerabilityTimer <= 0 &&
+          this.circleRectOverlap(
+            projectile.x,
+            projectile.y,
+            projectile.radius,
+            this.hero,
+          )
+        ) {
+          projectile.active = false;
+          this.applyHeroDamage(projectile.damage);
+        }
       }
     }
 
@@ -957,6 +1253,32 @@ export class GameEngine {
         color,
       });
     }
+  }
+
+  private killEnemy(
+    enemy: Enemy,
+    scoreValue: number,
+    burstColor: string,
+    burstAmount: number,
+  ): void {
+    enemy.hp = 0;
+    enemy.active = false;
+    enemy.respawnTimer = enemy.respawnDelay;
+    enemy.shootCooldown = enemy.type === 'vigia' ? this.randomRange(1.2, 2.2) : 999;
+    this.score += scoreValue;
+
+    this.enemyProjectiles = this.enemyProjectiles.filter(
+      (projectile) =>
+        Math.abs(projectile.ownerX - (enemy.x + enemy.width / 2)) > 4 ||
+        Math.abs(projectile.ownerY - (enemy.y + enemy.height / 2 - 10)) > 4,
+    );
+
+    this.spawnBurst(
+      enemy.x + enemy.width / 2,
+      enemy.y + enemy.height / 2,
+      burstColor,
+      burstAmount,
+    );
   }
 
   private applyHeroDamage(amount: number): void {
@@ -1034,6 +1356,7 @@ export class GameEngine {
     drawChests(ctx, this.chests);
     drawSpecialStrikes(ctx, this.specialStrikes);
     drawEnemies(ctx, this.enemies);
+    drawEnemyProjectiles(ctx, this.enemyProjectiles);
     this.drawBullets();
     drawBoss(ctx, this.boss);
     drawBossProjectiles(ctx, this.bossProjectiles);
@@ -1057,7 +1380,7 @@ export class GameEngine {
       const pulse = 0.5 + Math.sin(performance.now() * 0.03) * 0.5;
       const alpha = Math.min(this.specialFlashTimer * 0.3, 0.3) * (0.7 + pulse * 0.3);
 
-      ctx.fillStyle = `rgba(255, 106, 0, ${alpha})`;
+      ctx.fillStyle = `rgba(130, 232, 255, ${alpha})`;
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
@@ -1091,6 +1414,42 @@ export class GameEngine {
       const centerX = bullet.x + bullet.width / 2;
       const centerY = bullet.y + bullet.height / 2;
 
+      if (bullet.kind === 'upward') {
+        const glow = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          1,
+          centerX,
+          centerY,
+          16,
+        );
+        glow.addColorStop(0, 'rgba(255, 228, 180, 0.92)');
+        glow.addColorStop(0.35, 'rgba(255, 136, 57, 0.5)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffd7a6';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(centerX, bullet.y + bullet.height);
+        ctx.lineTo(centerX, bullet.y + 4);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ff9b61';
+        ctx.beginPath();
+        ctx.moveTo(centerX, bullet.y);
+        ctx.lineTo(centerX - 5, bullet.y + 8);
+        ctx.lineTo(centerX + 5, bullet.y + 8);
+        ctx.closePath();
+        ctx.fill();
+
+        continue;
+      }
+
       const glow = ctx.createRadialGradient(
         centerX,
         centerY,
@@ -1115,7 +1474,7 @@ export class GameEngine {
       ctx.fillStyle = 'rgba(48, 14, 20, 0.65)';
       ctx.beginPath();
       ctx.ellipse(
-        centerX - Math.sign(bullet.vx) * 5,
+        centerX - Math.sign(bullet.vx || 1) * 5,
         centerY,
         4,
         2,

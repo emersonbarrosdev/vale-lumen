@@ -3,9 +3,12 @@ export interface LightningPoint {
   y: number;
 }
 
+export type SpecialStrikeTheme = 'heroSpecial';
+
 export interface SpecialStrike {
   points: LightningPoint[];
   life: number;
   maxLife: number;
   width: number;
+  theme?: SpecialStrikeTheme;
 }

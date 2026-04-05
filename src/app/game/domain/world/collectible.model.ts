@@ -1,4 +1,4 @@
-export type CollectibleType = 'coin' | 'heart' | 'ray';
+export type CollectibleType = 'coin' | 'heart' | 'ray' | 'flameVial';
 
 export interface CollectibleData {
   type: CollectibleType;
@@ -10,4 +10,7 @@ export interface Collectible extends CollectibleData {
   width: number;
   height: number;
   collected: boolean;
+  vy: number;
+  falling: boolean;
+  settled: boolean;
 }

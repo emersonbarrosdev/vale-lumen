@@ -6,6 +6,8 @@ export type HeroState =
   | 'cast'
   | 'hurt';
 
+export type HeroCastAim = 'forward' | 'up';
+
 export interface Hero {
   x: number;
   y: number;
@@ -28,6 +30,7 @@ export interface Hero {
   animationTime: number;
   castTimer: number;
   castDuration: number;
+  castAim: HeroCastAim;
   hurtTimer: number;
   landingTimer: number;
   name: string;

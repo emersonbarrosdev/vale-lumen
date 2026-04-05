@@ -1,3 +1,4 @@
+import { EnemyProjectile } from '../../domain/enemies/enemy-projectile.model';
 import { Enemy } from '../../domain/enemies/enemy.model';
 
 export function drawEnemies(
@@ -20,67 +21,69 @@ export function drawEnemies(
     ctx.scale(enemy.direction, 1);
 
     if (enemy.type === 'vigia') {
-      const aura = ctx.createRadialGradient(0, -4, 2, 0, -4, 40);
-      aura.addColorStop(0, 'rgba(114, 220, 255, 0.42)');
+      const aura = ctx.createRadialGradient(0, -6, 2, 0, -6, 46);
+      aura.addColorStop(0, 'rgba(143, 255, 162, 0.42)');
       aura.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = aura;
       ctx.beginPath();
-      ctx.arc(0, -4, 40, 0, Math.PI * 2);
+      ctx.arc(0, -6, 46, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = enemy.hitFlash > 0 ? '#efe3d7' : '#0b0f15';
+      ctx.fillStyle = enemy.hitFlash > 0 ? '#dfe9dc' : '#0b0f15';
       ctx.beginPath();
-      ctx.moveTo(-22, -8);
-      ctx.lineTo(-10, -24);
-      ctx.lineTo(14, -24);
-      ctx.lineTo(24, -8);
-      ctx.lineTo(18, 28);
-      ctx.lineTo(-16, 28);
+      ctx.moveTo(-24, -10);
+      ctx.lineTo(-12, -28);
+      ctx.lineTo(18, -28);
+      ctx.lineTo(28, -10);
+      ctx.lineTo(20, 30);
+      ctx.lineTo(-20, 30);
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillStyle = '#182131';
+      ctx.fillStyle = '#152018';
       ctx.beginPath();
-      ctx.moveTo(-10, -4);
-      ctx.lineTo(2, -8);
-      ctx.lineTo(14, -2);
-      ctx.lineTo(12, 14);
-      ctx.lineTo(-8, 14);
+      ctx.moveTo(-12, -4);
+      ctx.lineTo(4, -10);
+      ctx.lineTo(18, -2);
+      ctx.lineTo(14, 16);
+      ctx.lineTo(-10, 16);
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillStyle = '#7be8ff';
+      drawCaptainCrown(ctx, pulse);
+
+      ctx.fillStyle = '#91ffa6';
       ctx.beginPath();
-      ctx.arc(4, -4, 7 + pulse * 1.1, 0, Math.PI * 2);
+      ctx.arc(4, -5, 7.2 + pulse * 1.1, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = 'rgba(114, 220, 255, 0.5)';
+      ctx.strokeStyle = 'rgba(145, 255, 166, 0.52)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(-10, -10);
-      ctx.lineTo(4, -4);
-      ctx.lineTo(14, -12);
-      ctx.moveTo(-6, 10);
-      ctx.lineTo(4, -4);
-      ctx.lineTo(12, 8);
+      ctx.moveTo(-12, -12);
+      ctx.lineTo(4, -5);
+      ctx.lineTo(16, -14);
+      ctx.moveTo(-6, 12);
+      ctx.lineTo(4, -5);
+      ctx.lineTo(14, 10);
       ctx.stroke();
 
-      ctx.fillStyle = '#24121b';
-      ctx.fillRect(-18, -6, 8, 22);
-      ctx.fillRect(18, -6, 8, 22);
+      ctx.fillStyle = '#101713';
+      ctx.fillRect(-18, -4, 8, 22);
+      ctx.fillRect(20, -4, 8, 22);
 
-      ctx.fillStyle = '#2a0c15';
+      ctx.fillStyle = '#17301a';
       ctx.beginPath();
-      ctx.moveTo(-14, -22);
-      ctx.lineTo(-8, -30);
-      ctx.lineTo(-6, -20);
+      ctx.moveTo(-16, -24);
+      ctx.lineTo(-10, -34);
+      ctx.lineTo(-8, -22);
       ctx.closePath();
       ctx.fill();
 
       ctx.beginPath();
-      ctx.moveTo(8, -20);
-      ctx.lineTo(12, -30);
-      ctx.lineTo(16, -22);
+      ctx.moveTo(10, -22);
+      ctx.lineTo(14, -34);
+      ctx.lineTo(18, -24);
       ctx.closePath();
       ctx.fill();
     } else {
@@ -132,5 +135,102 @@ export function drawEnemies(
     }
 
     ctx.restore();
+  }
+}
+
+function drawCaptainCrown(
+  ctx: CanvasRenderingContext2D,
+  pulse: number,
+): void {
+  ctx.save();
+  ctx.translate(2, -34);
+
+  const glow = ctx.createRadialGradient(0, -4, 1, 0, -4, 18 + pulse * 2);
+  glow.addColorStop(0, 'rgba(245, 255, 165, 0.42)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, -4, 16 + pulse * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#d8c45e';
+  ctx.beginPath();
+  ctx.moveTo(-12, 0);
+  ctx.lineTo(-8, -10);
+  ctx.lineTo(-3, -2);
+  ctx.lineTo(0, -14);
+  ctx.lineTo(4, -2);
+  ctx.lineTo(9, -10);
+  ctx.lineTo(13, 0);
+  ctx.lineTo(-12, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#f3e7a0';
+  ctx.fillRect(-12, 0, 25, 4);
+
+  ctx.fillStyle = '#8fffa8';
+  ctx.beginPath();
+  ctx.arc(0, -8, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+export function drawEnemyProjectiles(
+  ctx: CanvasRenderingContext2D,
+  projectiles: EnemyProjectile[],
+): void {
+  for (const projectile of projectiles) {
+    if (!projectile.active) {
+      continue;
+    }
+
+    const glow = ctx.createRadialGradient(
+      projectile.x,
+      projectile.y,
+      1,
+      projectile.x,
+      projectile.y,
+      projectile.radius * 2.8,
+    );
+    glow.addColorStop(0, 'rgba(180, 255, 190, 0.94)');
+    glow.addColorStop(0.32, 'rgba(82, 214, 104, 0.72)');
+    glow.addColorStop(0.7, 'rgba(18, 83, 28, 0.26)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(projectile.x, projectile.y, projectile.radius * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#3ab34f';
+    ctx.beginPath();
+    ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(232, 255, 237, 0.9)';
+    ctx.beginPath();
+    ctx.arc(
+      projectile.x - projectile.radius * 0.25,
+      projectile.y - projectile.radius * 0.28,
+      Math.max(2, projectile.radius * 0.28),
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+
+    const dropletCount = 4;
+    for (let index = 0; index < dropletCount; index += 1) {
+      const angle = -1.9 + index * 0.72;
+      const dist = projectile.radius + 3;
+      const px = projectile.x + Math.cos(angle) * dist;
+      const py = projectile.y + Math.sin(angle) * dist;
+
+      ctx.fillStyle = 'rgba(95, 230, 110, 0.76)';
+      ctx.beginPath();
+      ctx.arc(px, py, 1.8 + (index % 2), 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 }

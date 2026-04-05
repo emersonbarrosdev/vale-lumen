@@ -22,4 +22,9 @@ export interface Enemy {
   active: boolean;
   hitFlash: number;
   hoverOffset: number;
+  baseX: number;
+  baseY: number;
+  respawnTimer: number;
+  respawnDelay: number;
+  shootCooldown: number;
 }
