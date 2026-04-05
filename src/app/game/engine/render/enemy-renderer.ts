@@ -50,7 +50,7 @@ export function drawEnemies(
       ctx.closePath();
       ctx.fill();
 
-      drawCaptainCrown(ctx, pulse);
+      drawCaptainMark(ctx, pulse);
 
       ctx.fillStyle = '#91ffa6';
       ctx.beginPath();
@@ -138,40 +138,34 @@ export function drawEnemies(
   }
 }
 
-function drawCaptainCrown(
+function drawCaptainMark(
   ctx: CanvasRenderingContext2D,
   pulse: number,
 ): void {
   ctx.save();
-  ctx.translate(2, -34);
+  ctx.translate(3, -31);
 
-  const glow = ctx.createRadialGradient(0, -4, 1, 0, -4, 18 + pulse * 2);
-  glow.addColorStop(0, 'rgba(245, 255, 165, 0.42)');
+  const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 16 + pulse * 2);
+  glow.addColorStop(0, 'rgba(150, 255, 228, 0.38)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, -4, 16 + pulse * 2, 0, Math.PI * 2);
+  ctx.arc(0, 0, 14 + pulse * 2, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#d8c45e';
+  ctx.fillStyle = '#78e6d2';
   ctx.beginPath();
-  ctx.moveTo(-12, 0);
-  ctx.lineTo(-8, -10);
-  ctx.lineTo(-3, -2);
-  ctx.lineTo(0, -14);
-  ctx.lineTo(4, -2);
-  ctx.lineTo(9, -10);
-  ctx.lineTo(13, 0);
-  ctx.lineTo(-12, 0);
+  ctx.moveTo(-11, -3);
+  ctx.lineTo(-2, -12);
+  ctx.lineTo(8, -3);
+  ctx.lineTo(2, 8);
+  ctx.lineTo(-7, 8);
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = '#f3e7a0';
-  ctx.fillRect(-12, 0, 25, 4);
-
-  ctx.fillStyle = '#8fffa8';
+  ctx.fillStyle = '#d7fff8';
   ctx.beginPath();
-  ctx.arc(0, -8, 2.2, 0, Math.PI * 2);
+  ctx.arc(-1, -1, 2.3, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
@@ -192,7 +186,7 @@ export function drawEnemyProjectiles(
       1,
       projectile.x,
       projectile.y,
-      projectile.radius * 2.8,
+      projectile.radius * 2.9,
     );
     glow.addColorStop(0, 'rgba(180, 255, 190, 0.94)');
     glow.addColorStop(0.32, 'rgba(82, 214, 104, 0.72)');

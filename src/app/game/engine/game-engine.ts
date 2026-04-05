@@ -47,6 +47,8 @@ export class GameEngine {
   private readonly specialRangeEnemy = 1344;
   private readonly specialRangeBoss = 1488;
   private readonly specialVerticalTolerance = 95;
+  private readonly captainAttackRange = 250;
+  private readonly captainAttackVerticalTolerance = 95;
 
   private readonly worldWidth: number;
   private readonly platforms: Platform[];
@@ -306,16 +308,23 @@ export class GameEngine {
       !isLockedInUpCast &&
       (this.input.isPressed('d') || this.input.isPressed('arrowright'));
 
+    const runBlend = Math.min(1, deltaTime * 11);
+    const targetVx = movingLeft && !movingRight
+      ? -this.hero.speed
+      : movingRight && !movingLeft
+        ? this.hero.speed
+        : 0;
+
+    this.hero.vx += (targetVx - this.hero.vx) * runBlend;
+
+    if (Math.abs(this.hero.vx) < 4) {
+      this.hero.vx = 0;
+    }
+
     if (movingLeft && !movingRight) {
-      this.hero.vx = -this.hero.speed;
       this.hero.direction = -1;
     } else if (movingRight && !movingLeft) {
-      this.hero.vx = this.hero.speed;
       this.hero.direction = 1;
-    } else if (isLockedInUpCast) {
-      this.hero.vx = 0;
-    } else {
-      this.hero.vx = 0;
     }
 
     if (
@@ -827,8 +836,12 @@ export class GameEngine {
     const enemyCenterX = enemy.x + enemy.width / 2;
     const enemyCenterY = enemy.y + enemy.height / 2 - 10;
     const heroCenterX = this.hero.x + this.hero.width / 2;
+    const heroCenterY = this.hero.y + this.hero.height / 2;
 
-    if (Math.abs(heroCenterX - enemyCenterX) > 520) {
+    const deltaX = heroCenterX - enemyCenterX;
+    const deltaY = heroCenterY - enemyCenterY;
+
+    if (Math.abs(deltaX) > this.captainAttackRange || Math.abs(deltaY) > this.captainAttackVerticalTolerance) {
       return;
     }
 
@@ -840,10 +853,10 @@ export class GameEngine {
       return;
     }
 
-    const targetX = heroCenterX + this.hero.vx * 0.35;
+    const targetX = heroCenterX + this.hero.vx * 0.2;
     const targetY = this.bossArena.groundY - 10;
     const gravity = 980;
-    const travelTime = this.randomRange(0.9, 1.1);
+    const travelTime = this.randomRange(0.78, 0.92);
     const vx = (targetX - enemyCenterX) / travelTime;
     const vy = (targetY - enemyCenterY - 0.5 * gravity * travelTime * travelTime) / travelTime;
 
@@ -864,7 +877,7 @@ export class GameEngine {
       damage: 14,
     });
 
-    enemy.shootCooldown = this.randomRange(2.4, 3.3);
+    enemy.shootCooldown = this.randomRange(2.5, 3.4);
   }
 
   private updateCollectibles(deltaTime: number): void {
