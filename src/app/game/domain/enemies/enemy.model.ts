@@ -27,4 +27,5 @@ export interface Enemy {
   respawnTimer: number;
   respawnDelay: number;
   shootCooldown: number;
+  shotDirection: 1 | -1;
 }

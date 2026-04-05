@@ -32,11 +32,11 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   const isSpecialCast = isCast && hero.castDuration >= 0.45;
   const palette: HeroPalette = isSpecialCast ? SPECIAL_COLORS : BASE_COLORS;
 
-  const runCycle = isRun ? t * 12 : 0;
+  const runCycle = isRun ? t * 14 : 0;
   const castProgress = getCastProgress(hero, isCast);
 
   const bob = isRun
-    ? Math.sin(runCycle * 2) * 1.3
+    ? Math.sin(runCycle * 2) * 1.8 + Math.cos(runCycle) * 0.35
     : isCast
       ? Math.sin(t * 9) * 0.05
       : Math.sin(t * 2.5) * 0.4;
@@ -46,7 +46,7 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
     : isCast
       ? (isUpCast ? -0.02 : 0.04)
       : isRun
-        ? 0.18
+        ? 0.24 + Math.sin(runCycle) * 0.03
         : isAir
           ? 0.25
           : 0.05;
@@ -133,12 +133,14 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.fill();
 
   ctx.save();
-  const headTranslateX = isUpCast ? 0 : (isRun || isAir ? 3.8 : isCast ? 1.4 : 0);
-  const headTranslateY = isUpCast ? -38.5 : -35.8 + (isAir ? -1.8 : 0);
+  const headTranslateX = isUpCast ? 0 : (isRun || isAir ? 4.4 : isCast ? 1.4 : 0);
+  const headTranslateY = isUpCast ? -38.5 : -35.8 + (isAir ? -1.8 : 0) + (isRun ? Math.sin(runCycle) * 0.35 : 0);
 
   ctx.translate(headTranslateX, headTranslateY);
   if (isUpCast) {
     ctx.rotate(-0.88);
+  } else if (isRun) {
+    ctx.rotate(Math.sin(runCycle) * 0.04);
   }
 
   drawMohawk(ctx, palette);
@@ -263,8 +265,8 @@ function drawLeg(
   let kneeRot = 0;
 
   if (isRun) {
-    hipRot = Math.sin(cycle) * 0.6;
-    kneeRot = Math.max(0, -Math.cos(cycle)) * 0.95;
+    hipRot = Math.sin(cycle) * 0.78 + (isFront ? 0.06 : -0.06);
+    kneeRot = Math.max(0, -Math.cos(cycle)) * 1.12 + Math.sin(cycle * 2) * 0.06;
   } else if (isIdle) {
     hipRot = isFront ? 0.04 : -0.04;
     kneeRot = 0;
@@ -332,12 +334,8 @@ function drawArm(
     if (isUpCast) {
       shoulderY -= 3 + extend * 1.8;
       shoulderX += isFront ? -0.4 : 0.4;
-
-      // forma do braço aponta para baixo por padrão;
-      // para apontar para o teto precisa girar 180 graus
       armRot = Math.PI + (isFront ? microA * 0.04 : -microA * 0.04);
       elbowRot = microB * 0.03;
-
       handGlow = true;
       handGlowStrength = isFront ? 1 + extend * 0.88 : 0.82 + extend * 0.56;
     } else if (isSpecialCast) {
@@ -371,8 +369,9 @@ function drawArm(
     }
   } else {
     if (isRun) {
-      armRot = Math.sin(cycle) * 0.7 - 0.3;
-      elbowRot = -0.68;
+      armRot = Math.sin(cycle) * 0.92 - 0.38;
+      elbowRot = -0.82 + Math.sin(cycle * 2) * 0.06;
+      shoulderY += Math.cos(cycle) * 0.4;
     } else if (isAir) {
       armRot = isFront ? -0.88 : -0.58;
       elbowRot = -0.32;

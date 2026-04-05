@@ -47,8 +47,7 @@ export class GameEngine {
   private readonly specialRangeEnemy = 1344;
   private readonly specialRangeBoss = 1488;
   private readonly specialVerticalTolerance = 95;
-  private readonly captainAttackRange = 250;
-  private readonly captainAttackVerticalTolerance = 95;
+  private readonly captainAttackRange = 230;
 
   private readonly worldWidth: number;
   private readonly platforms: Platform[];
@@ -177,8 +176,14 @@ export class GameEngine {
       baseX: enemy.x,
       baseY: enemy.y,
       respawnTimer: 0,
-      respawnDelay: enemy.type === 'vigia' ? 8.5 : 6.5,
-      shootCooldown: enemy.type === 'vigia' ? this.randomRange(1.2, 2.2) : 999,
+      // 3x mais lento que antes:
+      // errante = 33s | vigia/capitão = 42s
+      respawnDelay: enemy.type === 'vigia' ? 42 : 33,
+      shootCooldown:
+        enemy.type === 'vigia'
+          ? this.randomRange(0.55, 2.2)
+          : 999,
+      shotDirection: Math.random() > 0.5 ? 1 : -1,
     }));
 
     this.collectibles = phaseData.collectibles.map((item) => ({
@@ -739,15 +744,6 @@ export class GameEngine {
           '#45b857',
           12,
         );
-
-        if (
-          this.hero.invulnerabilityTimer <= 0 &&
-          Math.abs(this.hero.x + this.hero.width / 2 - projectile.x) <= 44 &&
-          this.hero.y + this.hero.height >= this.bossArena.groundY - 46
-        ) {
-          this.applyHeroDamage(projectile.damage);
-        }
-
         continue;
       }
 
@@ -786,7 +782,11 @@ export class GameEngine {
           enemy.direction = -1;
           enemy.hitFlash = 0;
           enemy.hoverOffset = Math.random() * Math.PI * 2;
-          enemy.shootCooldown = enemy.type === 'vigia' ? this.randomRange(1.2, 2.2) : 999;
+          enemy.shootCooldown =
+            enemy.type === 'vigia'
+              ? this.randomRange(0.55, 2.2)
+              : 999;
+          enemy.shotDirection = Math.random() > 0.5 ? 1 : -1;
 
           this.spawnBurst(
             enemy.x + enemy.width / 2,
@@ -835,25 +835,9 @@ export class GameEngine {
 
     const enemyCenterX = enemy.x + enemy.width / 2;
     const enemyCenterY = enemy.y + enemy.height / 2 - 10;
-    const heroCenterX = this.hero.x + this.hero.width / 2;
-    const heroCenterY = this.hero.y + this.hero.height / 2;
-
-    const deltaX = heroCenterX - enemyCenterX;
-    const deltaY = heroCenterY - enemyCenterY;
-
-    if (Math.abs(deltaX) > this.captainAttackRange || Math.abs(deltaY) > this.captainAttackVerticalTolerance) {
-      return;
-    }
-
-    const alreadyHasProjectile = this.enemyProjectiles.some(
-      (projectile) => projectile.active && Math.abs(projectile.ownerX - enemyCenterX) < 4,
-    );
-
-    if (alreadyHasProjectile) {
-      return;
-    }
-
-    const targetX = heroCenterX + this.hero.vx * 0.2;
+    const targetX =
+      enemyCenterX +
+      enemy.shotDirection * this.randomRange(130, this.captainAttackRange);
     const targetY = this.bossArena.groundY - 10;
     const gravity = 980;
     const travelTime = this.randomRange(0.78, 0.92);
@@ -877,7 +861,8 @@ export class GameEngine {
       damage: 14,
     });
 
-    enemy.shootCooldown = this.randomRange(2.5, 3.4);
+    enemy.shotDirection *= -1;
+    enemy.shootCooldown = this.randomRange(1.45, 2.05);
   }
 
   private updateCollectibles(deltaTime: number): void {
@@ -1277,7 +1262,7 @@ export class GameEngine {
     enemy.hp = 0;
     enemy.active = false;
     enemy.respawnTimer = enemy.respawnDelay;
-    enemy.shootCooldown = enemy.type === 'vigia' ? this.randomRange(1.2, 2.2) : 999;
+    enemy.shootCooldown = enemy.type === 'vigia' ? this.randomRange(0.55, 2.2) : 999;
     this.score += scoreValue;
 
     this.enemyProjectiles = this.enemyProjectiles.filter(

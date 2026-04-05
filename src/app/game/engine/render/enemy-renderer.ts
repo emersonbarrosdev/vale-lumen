@@ -1,3 +1,4 @@
+// enemy-renderer.ts
 import { EnemyProjectile } from '../../domain/enemies/enemy-projectile.model';
 import { Enemy } from '../../domain/enemies/enemy.model';
 
@@ -21,12 +22,12 @@ export function drawEnemies(
     ctx.scale(enemy.direction, 1);
 
     if (enemy.type === 'vigia') {
-      const aura = ctx.createRadialGradient(0, -6, 2, 0, -6, 46);
-      aura.addColorStop(0, 'rgba(143, 255, 162, 0.42)');
+      const aura = ctx.createRadialGradient(0, -6, 2, 0, -6, 50);
+      aura.addColorStop(0, 'rgba(143, 255, 162, 0.46)');
       aura.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = aura;
       ctx.beginPath();
-      ctx.arc(0, -6, 46, 0, Math.PI * 2);
+      ctx.arc(0, -6, 50, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = enemy.hitFlash > 0 ? '#dfe9dc' : '#0b0f15';
@@ -50,22 +51,49 @@ export function drawEnemies(
       ctx.closePath();
       ctx.fill();
 
-      drawCaptainMark(ctx, pulse);
-
-      ctx.fillStyle = '#91ffa6';
+      // núcleo maior para diferenciar o capitão
+      const coreGlow = ctx.createRadialGradient(4, -5, 2, 4, -5, 20 + pulse * 3);
+      coreGlow.addColorStop(0, 'rgba(225, 255, 233, 0.95)');
+      coreGlow.addColorStop(0.3, 'rgba(145, 255, 166, 0.8)');
+      coreGlow.addColorStop(0.7, 'rgba(72, 196, 94, 0.34)');
+      coreGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = coreGlow;
       ctx.beginPath();
-      ctx.arc(4, -5, 7.2 + pulse * 1.1, 0, Math.PI * 2);
+      ctx.arc(4, -5, 18 + pulse * 2.2, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = 'rgba(145, 255, 166, 0.52)';
-      ctx.lineWidth = 2;
+      ctx.fillStyle = '#bfffd0';
       ctx.beginPath();
-      ctx.moveTo(-12, -12);
+      ctx.arc(4, -5, 8.8 + pulse * 1.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ebfff0';
+      ctx.beginPath();
+      ctx.arc(1.6, -7.3, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // raios pequenos em volta do núcleo
+      ctx.strokeStyle = `rgba(145, 255, 166, ${0.44 + pulse * 0.18})`;
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-13, -12);
+      ctx.lineTo(-3, -8);
       ctx.lineTo(4, -5);
-      ctx.lineTo(16, -14);
-      ctx.moveTo(-6, 12);
+      ctx.lineTo(12, -11);
+      ctx.lineTo(20, -14);
+
+      ctx.moveTo(-9, 8);
+      ctx.lineTo(-1, 2);
       ctx.lineTo(4, -5);
-      ctx.lineTo(14, 10);
+      ctx.lineTo(10, 1);
+      ctx.lineTo(18, 7);
+
+      ctx.moveTo(-2, -20);
+      ctx.lineTo(2, -12);
+      ctx.lineTo(4, -5);
+      ctx.lineTo(8, -13);
+      ctx.lineTo(12, -21);
       ctx.stroke();
 
       ctx.fillStyle = '#101713';
@@ -136,39 +164,6 @@ export function drawEnemies(
 
     ctx.restore();
   }
-}
-
-function drawCaptainMark(
-  ctx: CanvasRenderingContext2D,
-  pulse: number,
-): void {
-  ctx.save();
-  ctx.translate(3, -31);
-
-  const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 16 + pulse * 2);
-  glow.addColorStop(0, 'rgba(150, 255, 228, 0.38)');
-  glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(0, 0, 14 + pulse * 2, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#78e6d2';
-  ctx.beginPath();
-  ctx.moveTo(-11, -3);
-  ctx.lineTo(-2, -12);
-  ctx.lineTo(8, -3);
-  ctx.lineTo(2, 8);
-  ctx.lineTo(-7, 8);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = '#d7fff8';
-  ctx.beginPath();
-  ctx.arc(-1, -1, 2.3, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.restore();
 }
 
 export function drawEnemyProjectiles(
