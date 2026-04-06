@@ -11,7 +11,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CANVAS_CONFIG } from '../../../../core/config/canvas.config';
-import { buildPlayablePhaseData } from '../../../content/registry/phase-data.factory';
+import { buildPlayablePhaseData } from '../../../content/phases/registry/phase-playable.factory';
 import { GameEngine } from '../../../engine/game-engine';
 import { AudioService } from '../../../services/audio.service';
 import { BossDialogService } from '../../../services/boss-dialog.service';

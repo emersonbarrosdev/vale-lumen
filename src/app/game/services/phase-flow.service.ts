@@ -4,7 +4,7 @@ import { PhaseResult } from '../../core/models/game/phase-result.model';
 import {
   getNextPhaseDefinition,
   PHASE_REGISTRY,
-} from '../content/registry/phase.registry';
+} from '../content/phases/registry/phase-definition.registry';
 import { PhaseDefinition } from '../domain/world/phase-definition.model';
 import { GameStateService } from './game-state.service';
 
@@ -24,7 +24,7 @@ export class PhaseFlowService {
   getCurrentPhaseDefinition(): PhaseDefinition {
     return (
       PHASE_REGISTRY.find(
-        (phase) => phase.id === this.gameState.currentPhaseId,
+        (phase: PhaseDefinition) => phase.id === this.gameState.currentPhaseId,
       ) ?? PHASE_REGISTRY[0]
     );
   }
