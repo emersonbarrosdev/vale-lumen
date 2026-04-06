@@ -10,6 +10,7 @@ import {
 import { Boss } from '../domain/bosses/boss.model';
 import { Enemy } from '../domain/enemies/enemy.model';
 import { Hero } from '../domain/hero/hero.model';
+import { InputAction, InputSourceType } from '../domain/input/input-action.model';
 import { BossArenaData } from '../domain/world/boss-arena.model';
 import { Chest } from '../domain/world/chest.model';
 import { Collectible } from '../domain/world/collectible.model';
@@ -144,10 +145,19 @@ export class GameEngine {
     this.runtime.bossIntroPending = false;
   }
 
+  setVirtualActionState(action: InputAction, pressed: boolean): void {
+    this.input.setVirtualActionState(action, pressed, 'touch');
+  }
+
+  clearVirtualInputs(source: InputSourceType = 'touch'): void {
+    this.input.clearVirtualInputs(source);
+  }
+
   private readonly loop = (time: number): void => {
     const deltaTime = Math.min((time - this.lastTime) / 1000, 0.032);
     this.lastTime = time;
 
+    this.input.beginFrame();
     this.update(deltaTime);
     this.render();
     this.input.endFrame();
@@ -156,6 +166,9 @@ export class GameEngine {
   };
 
   private update(deltaTime: number): void {
+    this.runtime.lastInputSource = this.input.getLastInputSource();
+    this.gameState.saveLastInputDevice(this.runtime.lastInputSource);
+
     if (
       updateEndingTimerSystem({
         runtime: this.runtime,
@@ -166,7 +179,7 @@ export class GameEngine {
       return;
     }
 
-    if (this.input.isJustPressed('escape')) {
+    if (this.input.isActionJustPressed('pause')) {
       this.runtime.paused = !this.runtime.paused;
     }
 

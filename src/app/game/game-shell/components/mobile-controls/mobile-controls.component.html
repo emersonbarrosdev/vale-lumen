@@ -1,0 +1,49 @@
+<div class="mobile-controls" [class.blocked]="blocked">
+  <div class="top-controls">
+    <button
+      *ngFor="let button of topButtons; trackBy: trackByAction"
+      class="control-button control-button--{{ button.size }}"
+      type="button"
+      [attr.aria-label]="button.action"
+      (pointerdown)="pressAction($event, button.action)"
+      (pointerup)="releaseAction($event, button.action)"
+      (pointercancel)="releaseAction($event, button.action)"
+      (pointerleave)="releaseAction($event, button.action)"
+      (contextmenu)="$event.preventDefault()"
+    >
+      {{ button.label }}
+    </button>
+  </div>
+
+  <div class="left-controls">
+    <button
+      *ngFor="let button of leftButtons; trackBy: trackByAction"
+      class="control-button control-button--{{ button.size }}"
+      type="button"
+      [attr.aria-label]="button.action"
+      (pointerdown)="pressAction($event, button.action)"
+      (pointerup)="releaseAction($event, button.action)"
+      (pointercancel)="releaseAction($event, button.action)"
+      (pointerleave)="releaseAction($event, button.action)"
+      (contextmenu)="$event.preventDefault()"
+    >
+      {{ button.label }}
+    </button>
+  </div>
+
+  <div class="right-controls">
+    <button
+      *ngFor="let button of rightButtons; trackBy: trackByAction"
+      class="control-button control-button--{{ button.size }}"
+      type="button"
+      [attr.aria-label]="button.action"
+      (pointerdown)="pressAction($event, button.action)"
+      (pointerup)="releaseAction($event, button.action)"
+      (pointercancel)="releaseAction($event, button.action)"
+      (pointerleave)="releaseAction($event, button.action)"
+      (contextmenu)="$event.preventDefault()"
+    >
+      {{ button.label }}
+    </button>
+  </div>
+</div>

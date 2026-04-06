@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
 import { LoadingState } from '../../core/models/game/loading-state.model';
 
 @Injectable({
@@ -14,6 +14,10 @@ export class LoadingOverlayService {
   });
 
   readonly state$ = this.stateSubject.asObservable();
+  readonly isVisible$ = this.state$.pipe(
+    map((state) => state.visible),
+    distinctUntilChanged(),
+  );
 
   show(title: string, subtitle: string, progressText = 'Carregando...'): void {
     this.stateSubject.next({

@@ -17,6 +17,10 @@
     0 0 0 1px rgba(255, 255, 255, 0.01) inset;
 }
 
+.canvas-shell.touch-mode {
+  touch-action: none;
+}
+
 .canvas-shell::before {
   content: '';
   position: absolute;
@@ -53,4 +57,12 @@
   height: 100%;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  touch-action: none;
+}
+
+@media (max-width: 900px) {
+  .canvas-shell {
+    width: min(100vw, 100%);
+    border-radius: 16px;
+  }
 }

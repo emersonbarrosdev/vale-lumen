@@ -7,21 +7,29 @@ import {
   PLATFORM_ID,
   ViewChild,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 import { CANVAS_CONFIG } from '../../../../core/config/canvas.config';
 import { buildPlayablePhaseData } from '../../../content/phases/registry/phase-playable.factory';
+import { InputAction } from '../../../domain/input/input-action.model';
 import { GameEngine } from '../../../engine/game-engine';
+import {
+  MobileControlsComponent,
+  TouchActionStateChange,
+} from '../mobile-controls/mobile-controls.component';
 import { AudioService } from '../../../services/audio.service';
 import { BossDialogService } from '../../../services/boss-dialog.service';
+import { DeviceInputService } from '../../../services/device-input.service';
 import { GameStateService } from '../../../services/game-state.service';
 import { LoadingOverlayService } from '../../../services/loading-overlay.service';
+import { MobileDetectionService } from '../../../services/mobile-detection.service';
 import { PhaseFlowService } from '../../../services/phase-flow.service';
 
 @Component({
   selector: 'app-game-canvas',
   standalone: true,
+  imports: [CommonModule, MobileControlsComponent],
   templateUrl: './game-canvas.component.html',
   styleUrl: './game-canvas.component.scss',
 })
@@ -33,6 +41,10 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
   private readonly isBrowser: boolean;
   private dialogSubscription?: Subscription;
   private waitingBossDialogClose = false;
+  private uiStateSubscription?: Subscription;
+
+  showMobileControls = false;
+  mobileControlsBlocked = false;
 
   constructor(
     @Inject(PLATFORM_ID) platformId: object,
@@ -42,6 +54,8 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
     private readonly audioService: AudioService,
     private readonly bossDialogService: BossDialogService,
     private readonly loadingOverlayService: LoadingOverlayService,
+    private readonly mobileDetectionService: MobileDetectionService,
+    private readonly deviceInputService: DeviceInputService,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
@@ -50,6 +64,8 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
     if (!this.isBrowser) {
       return;
     }
+
+    this.bindUiState();
 
     const canvas = this.canvasRef.nativeElement;
     const context = canvas.getContext('2d');
@@ -69,6 +85,7 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.loadingOverlayService.hide();
     this.audioService.playMusic(phaseDefinition.audio.explorationMusicId);
+    this.deviceInputService.refresh();
 
     this.engine = new GameEngine(context, canvas, this.gameState, phaseData, {
       onGameOver: (score) => {
@@ -112,6 +129,35 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
     }
 
     this.dialogSubscription?.unsubscribe();
+    this.uiStateSubscription?.unsubscribe();
+    this.engine?.clearVirtualInputs('touch');
     this.engine?.destroy();
+  }
+
+  handleTouchActionStateChange(event: TouchActionStateChange): void {
+    if (this.mobileControlsBlocked) {
+      return;
+    }
+
+    this.engine?.setVirtualActionState(event.action, event.pressed);
+  }
+
+  private bindUiState(): void {
+    this.uiStateSubscription = combineLatest([
+      this.mobileDetectionService.shouldShowTouchControls$,
+      this.loadingOverlayService.isVisible$,
+      this.bossDialogService.isOpen$,
+    ]).subscribe(([shouldShowTouchControls, isLoadingVisible, isBossDialogOpen]) => {
+      const allowTouchControls = this.gameState.settings.showTouchControls;
+      const nextShowMobileControls = shouldShowTouchControls && allowTouchControls;
+      const nextMobileControlsBlocked = isLoadingVisible || isBossDialogOpen;
+
+      if ((!nextShowMobileControls || nextMobileControlsBlocked) && this.engine) {
+        this.engine.clearVirtualInputs('touch');
+      }
+
+      this.showMobileControls = nextShowMobileControls;
+      this.mobileControlsBlocked = nextMobileControlsBlocked;
+    });
   }
 }

@@ -33,5 +33,6 @@ export function createInitialEngineRuntime(): EngineRuntime {
 
     bossIntroShown: false,
     bossIntroPending: false,
+    lastInputSource: 'keyboard',
   };
 }

@@ -52,10 +52,11 @@ export function updateHeroSystem({
 
   const movingLeft =
     !isLockedInUpCast &&
-    (input.isPressed('a') || input.isPressed('arrowleft'));
+    input.isActionPressed('moveLeft');
+
   const movingRight =
     !isLockedInUpCast &&
-    (input.isPressed('d') || input.isPressed('arrowright'));
+    input.isActionPressed('moveRight');
 
   const runBlend = Math.min(1, deltaTime * 11);
   const targetVx = movingLeft && !movingRight
@@ -78,9 +79,7 @@ export function updateHeroSystem({
 
   if (
     !isLockedInUpCast &&
-    (input.isJustPressed(' ') ||
-      input.isJustPressed('w') ||
-      input.isJustPressed('arrowup')) &&
+    input.isActionJustPressed('jump') &&
     hero.jumpsRemaining > 0
   ) {
     hero.vy = -hero.jumpForce;
@@ -88,12 +87,20 @@ export function updateHeroSystem({
     hero.onGround = false;
   }
 
-  if (!isLockedInUpCast && input.isJustPressed('k') && hero.dashCooldown <= 0) {
+  if (
+    !isLockedInUpCast &&
+    input.isActionJustPressed('dash') &&
+    hero.dashCooldown <= 0
+  ) {
     hero.vx = hero.direction * 610;
     hero.dashCooldown = 0.7;
   }
 
-  if (!isLockedInUpCast && input.isJustPressed('j') && hero.shootCooldown <= 0) {
+  if (
+    !isLockedInUpCast &&
+    input.isActionJustPressed('attack') &&
+    hero.shootCooldown <= 0
+  ) {
     fireBullet('forward');
     hero.shootCooldown = 0.22;
     hero.castTimer = 0.16;
@@ -101,7 +108,11 @@ export function updateHeroSystem({
     hero.castAim = 'forward';
   }
 
-  if (!isLockedInUpCast && input.isJustPressed('i') && hero.shootCooldown <= 0) {
+  if (
+    !isLockedInUpCast &&
+    input.isActionJustPressed('upAttack') &&
+    hero.shootCooldown <= 0
+  ) {
     fireBullet('upward');
     hero.shootCooldown = 0.28;
     hero.castTimer = 0.32;
@@ -112,7 +123,7 @@ export function updateHeroSystem({
 
   if (
     !isLockedInUpCast &&
-    input.isJustPressed('l') &&
+    input.isActionJustPressed('special') &&
     runtime.specialCharge >= 100 &&
     !runtime.specialSequenceActive
   ) {

@@ -1,3 +1,9 @@
-<div class="canvas-shell">
+<div class="canvas-shell" [class.touch-mode]="showMobileControls">
   <canvas #gameCanvas class="game-canvas"></canvas>
+
+  <app-mobile-controls
+    *ngIf="showMobileControls"
+    [blocked]="mobileControlsBlocked"
+    (actionStateChange)="handleTouchActionStateChange($event)"
+  ></app-mobile-controls>
 </div>

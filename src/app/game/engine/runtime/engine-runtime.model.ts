@@ -3,6 +3,7 @@ import { BurstParticle } from '../../domain/combat/burst-particle.model';
 import { Bullet } from '../../domain/combat/bullet.model';
 import { SpecialStrike } from '../../domain/combat/special-strike.model';
 import { EnemyProjectile } from '../../domain/enemies/enemy-projectile.model';
+import { InputSourceType } from '../../domain/input/input-action.model';
 
 export interface EngineRuntime {
   cameraX: number;
@@ -36,4 +37,5 @@ export interface EngineRuntime {
 
   bossIntroShown: boolean;
   bossIntroPending: boolean;
+  lastInputSource: InputSourceType;
 }

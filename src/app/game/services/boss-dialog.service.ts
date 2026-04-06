@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
 import { BossDialog } from '../domain/bosses/boss-dialog.model';
 
 @Injectable({
@@ -8,6 +8,10 @@ import { BossDialog } from '../domain/bosses/boss-dialog.model';
 export class BossDialogService {
   private readonly dialogSubject = new BehaviorSubject<BossDialog | null>(null);
   readonly dialog$ = this.dialogSubject.asObservable();
+  readonly isOpen$ = this.dialog$.pipe(
+    map((dialog) => !!dialog),
+    distinctUntilChanged(),
+  );
 
   open(dialog: BossDialog): void {
     this.dialogSubject.next(dialog);

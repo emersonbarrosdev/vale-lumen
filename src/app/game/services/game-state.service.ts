@@ -1,18 +1,29 @@
 import { Injectable } from '@angular/core';
 import { GAME_CONFIG } from '../../core/config/game.config';
+import { INPUT_CONFIG } from '../../core/config/input.config';
 import { HeroProgressState } from '../../core/models/game/hero-progress-state.model';
 import { GameRunState } from '../../core/models/game/game-run-state.model';
-import { GameSettings } from '../../core/models/game/game-settings.model';
+import {
+  GameSettings,
+  LastInputDevice,
+} from '../../core/models/game/game-settings.model';
 import {
   hasBrowserStorage,
+  readStoredBoolean,
   readStoredNumber,
+  readStoredString,
+  removeStoredValue,
+  writeStoredBoolean,
   writeStoredNumber,
+  writeStoredString,
 } from '../../core/utils/storage.util';
 
 export interface GameControlBinding {
   label: string;
   primary: string;
   secondary?: string;
+  gamepad?: string;
+  touch?: string;
   description: string;
 }
 
@@ -29,6 +40,11 @@ export class GameStateService {
   musicVolume: number = GAME_CONFIG.defaultMusicVolume;
   effectsVolume: number = GAME_CONFIG.defaultEffectsVolume;
 
+  showTouchControls = true;
+  touchControlLayout = 'default';
+  gamepadDeadzone = INPUT_CONFIG.gamepadDeadzone;
+  lastInputDevice: LastInputDevice = 'keyboard';
+
   currentPhaseElapsedMs = 0;
   lastPhaseElapsedMs = 0;
   totalRunElapsedMs = 0;
@@ -42,32 +58,51 @@ export class GameStateService {
       label: 'Mover',
       primary: 'A / D',
       secondary: '← / →',
+      gamepad: 'Analógico / Direcional',
+      touch: 'Botões ◀ / ▶',
       description: 'Move o herói para a esquerda e para a direita.',
     },
     {
       label: 'Pular',
       primary: 'Espaço',
       secondary: 'W / ↑',
+      gamepad: 'A / Cross',
+      touch: 'Botão JUMP',
       description: 'Salto principal. Também permite o segundo pulo no ar.',
     },
     {
       label: 'Atirar magia',
       primary: 'J',
-      description: 'Dispara magia para frente ou para cima.',
+      gamepad: 'X / Square',
+      touch: 'Botão ATK',
+      description: 'Dispara magia para frente.',
+    },
+    {
+      label: 'Atirar para cima',
+      primary: 'I',
+      gamepad: 'Y / Triangle',
+      touch: 'Botão UP',
+      description: 'Dispara magia para cima.',
     },
     {
       label: 'Especial',
       primary: 'L',
+      gamepad: 'R1 / RB',
+      touch: 'Botão SP',
       description: 'Ativa o especial quando a carga estiver completa.',
     },
     {
       label: 'Dash',
       primary: 'K',
+      gamepad: 'B / Circle',
+      touch: 'Botão DASH',
       description: 'Avanço rápido para atravessar trechos perigosos.',
     },
     {
       label: 'Pausa',
       primary: 'ESC',
+      gamepad: 'Start / Options',
+      touch: 'Botão II',
       description: 'Pausa e retoma a partida.',
     },
   ];
@@ -102,6 +137,17 @@ export class GameStateService {
       GAME_CONFIG.defaultEffectsVolume,
     );
 
+    this.showTouchControls = readStoredBoolean('showTouchControls', true);
+    this.touchControlLayout = readStoredString('touchControlLayout', 'default');
+    this.gamepadDeadzone = readStoredNumber(
+      'gamepadDeadzone',
+      INPUT_CONFIG.gamepadDeadzone,
+    );
+    this.lastInputDevice = readStoredString(
+      'lastInputDevice',
+      'keyboard',
+    ) as LastInputDevice;
+
     this.lastRunElapsedMs = readStoredNumber('lastRunElapsedMs', 0);
     this.lastPhaseElapsedMs = readStoredNumber('lastPhaseElapsedMs', 0);
   }
@@ -118,6 +164,10 @@ export class GameStateService {
     return {
       musicVolume: this.musicVolume,
       effectsVolume: this.effectsVolume,
+      showTouchControls: this.showTouchControls,
+      touchControlLayout: this.touchControlLayout,
+      gamepadDeadzone: this.gamepadDeadzone,
+      lastInputDevice: this.lastInputDevice,
     };
   }
 
@@ -242,6 +292,30 @@ export class GameStateService {
     writeStoredNumber('effectsVolume', effectsVolume);
   }
 
+  saveTouchControlsPreference(visible: boolean): void {
+    this.showTouchControls = visible;
+    writeStoredBoolean('showTouchControls', visible);
+  }
+
+  saveTouchControlLayout(layoutId: string): void {
+    this.touchControlLayout = layoutId;
+    writeStoredString('touchControlLayout', layoutId);
+  }
+
+  saveGamepadDeadzone(deadzone: number): void {
+    this.gamepadDeadzone = deadzone;
+    writeStoredNumber('gamepadDeadzone', deadzone);
+  }
+
+  saveLastInputDevice(device: LastInputDevice): void {
+    if (this.lastInputDevice === device) {
+      return;
+    }
+
+    this.lastInputDevice = device;
+    writeStoredString('lastInputDevice', device);
+  }
+
   formatTime(ms: number): string {
     const safeMs = Math.max(0, Math.floor(ms));
     const totalSeconds = Math.floor(safeMs / 1000);
@@ -271,7 +345,7 @@ export class GameStateService {
       return;
     }
 
-    window.localStorage.removeItem('lastRunElapsedMs');
-    window.localStorage.removeItem('lastPhaseElapsedMs');
+    removeStoredValue('lastRunElapsedMs');
+    removeStoredValue('lastPhaseElapsedMs');
   }
 }

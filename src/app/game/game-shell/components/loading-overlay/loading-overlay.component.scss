@@ -1,12 +1,14 @@
 .loading-overlay {
   position: absolute;
   inset: 0;
+  z-index: 60;
   display: grid;
   place-items: center;
   background:
     radial-gradient(circle at center, rgba(255, 170, 88, 0.08), transparent 30%),
     rgba(6, 8, 12, 0.72);
   backdrop-filter: blur(6px);
+  pointer-events: auto;
 }
 
 .loading-card {
