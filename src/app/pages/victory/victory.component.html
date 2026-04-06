@@ -1,8 +1,36 @@
 <div class="page-shell">
+  <div class="victory-glow"></div>
+  <div class="victory-particles"></div>
+
   <div class="card">
+    <p class="overline">Chama preservada</p>
     <h1>Vitória</h1>
-    <p>O Arauto das Cinzas foi derrotado.</p>
-    <p><strong>Pontuação:</strong> {{ gameState.lastScore }}</p>
+
+    <p class="lead">
+      O Arauto das Cinzas foi derrotado. Kael atravessou o vale e venceu a escuridão desta jornada.
+    </p>
+
+    <div class="stats-grid">
+      <div class="stat-card highlight">
+        <span class="label">Pontuação final</span>
+        <strong>{{ gameState.lastScore }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span class="label">Tempo total da run</span>
+        <strong>{{ finalRunTime }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span class="label">Tempo da última fase</span>
+        <strong>{{ finalPhaseTime }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span class="label">Fase alcançada</span>
+        <strong>{{ gameState.currentPhase }}</strong>
+      </div>
+    </div>
 
     <div class="actions">
       <a routerLink="/game">Jogar de novo</a>

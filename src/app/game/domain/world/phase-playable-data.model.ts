@@ -5,6 +5,24 @@ import { CollectibleData } from './collectible.model';
 import { PhaseDefinition } from './phase-definition.model';
 import { PlatformData } from './platform.model';
 
+export type HazardType = 'goo' | 'crystal';
+
+export interface HazardData {
+  type: HazardType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  damage: number;
+}
+
+export interface TunnelData {
+  x: number;
+  width: number;
+  ceilingY: number;
+  thickness: number;
+}
+
 export interface PhasePlayableData {
   definition: PhaseDefinition;
   worldWidth: number;
@@ -13,4 +31,6 @@ export interface PhasePlayableData {
   collectibles: CollectibleData[];
   chests: ChestData[];
   bossArena: BossArenaData;
+  hazards: HazardData[];
+  tunnels: TunnelData[];
 }

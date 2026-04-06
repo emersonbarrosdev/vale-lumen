@@ -332,10 +332,12 @@ function drawArm(
     const microB = Math.cos(t * 7) * 0.008;
 
     if (isUpCast) {
-      shoulderY -= 3 + extend * 1.8;
+      shoulderY -= 4 + extend * 2.2;
       shoulderX += isFront ? -0.4 : 0.4;
+
       armRot = Math.PI + (isFront ? microA * 0.04 : -microA * 0.04);
       elbowRot = microB * 0.03;
+
       handGlow = true;
       handGlowStrength = isFront ? 1 + extend * 0.88 : 0.82 + extend * 0.56;
     } else if (isSpecialCast) {

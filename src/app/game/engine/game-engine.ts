@@ -3,15 +3,17 @@ import { Boss } from '../domain/bosses/boss.model';
 import { BossProjectile } from '../domain/bosses/boss-projectile.model';
 import { BurstParticle } from '../domain/combat/burst-particle.model';
 import { Bullet } from '../domain/combat/bullet.model';
-import { LightningPoint, SpecialStrike } from '../domain/combat/special-strike.model';
+import { SpecialStrike } from '../domain/combat/special-strike.model';
 import { EnemyProjectile } from '../domain/enemies/enemy-projectile.model';
 import { Enemy } from '../domain/enemies/enemy.model';
 import { Hero } from '../domain/hero/hero.model';
 import { BossArenaData } from '../domain/world/boss-arena.model';
 import { Chest } from '../domain/world/chest.model';
 import { Collectible } from '../domain/world/collectible.model';
+import { Hazard } from '../domain/world/hazard.model';
 import { PhasePlayableData } from '../domain/world/phase-playable-data.model';
 import { Platform } from '../domain/world/platform.model';
+import { Tunnel } from '../domain/world/tunnel.model';
 import { GameStateService } from '../services/game-state.service';
 import { InputManager } from './input-manager';
 import { drawBoss, drawBossProjectiles } from './render/boss-renderer';
@@ -26,8 +28,10 @@ import {
   drawBurstParticles,
   drawChests,
   drawCollectibles,
+  drawHazards,
   drawPlatforms,
   drawSpecialStrikes,
+  drawTunnels,
 } from './render/world-renderer';
 
 export class GameEngine {
@@ -51,22 +55,24 @@ export class GameEngine {
   private readonly collectibles: Collectible[];
   private readonly chests: Chest[];
   private readonly bossArena: BossArenaData;
+  private readonly hazards: Hazard[];
+  private readonly tunnels: Tunnel[];
 
   private readonly maxLives = 3;
   private lives = 3;
 
   private readonly checkpointXs: number[];
   private checkpointIndex = 0;
-  private respawnX = 120;
-  private respawnY = 500;
+  private respawnX = 48;
+  private respawnY = 0;
   private respawningTimer = 0;
 
   private bossIntroShown = false;
   private bossIntroPending = false;
 
   private readonly hero: Hero = {
-    x: 120,
-    y: 500,
+    x: 48,
+    y: 0,
     width: 48,
     height: 72,
     vx: 0,
@@ -131,6 +137,9 @@ export class GameEngine {
   private ending: 'game-over' | 'victory' | null = null;
   private endingTimer = 0;
 
+  private collectedCoins = 0;
+  private collectedSparks = 0;
+
   constructor(
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
@@ -144,14 +153,24 @@ export class GameEngine {
     this.phaseData = phaseData;
     this.callbacks = callbacks;
     this.worldWidth = phaseData.worldWidth;
-    this.platforms = phaseData.platforms;
+    this.platforms = [...phaseData.platforms].sort((a, b) => a.x - b.x);
     this.bossArena = phaseData.bossArena;
+
+    this.hazards = (phaseData.hazards ?? []).map((hazard) => ({
+      ...hazard,
+      active: true,
+      pulseOffset: Math.random() * Math.PI * 2,
+    }));
+
+    this.tunnels = (phaseData.tunnels ?? []).map((tunnel) => ({ ...tunnel }));
+
+    this.gameState.resetCurrentPhaseTimer();
 
     this.hero.maxHp = this.gameState.heroProgress.maxHp;
     this.hero.hp = this.gameState.heroProgress.currentHp;
 
     this.boss.x = this.bossArena.bossX;
-    this.boss.y = this.bossArena.groundY - this.boss.height;
+    this.boss.y = this.getBossGroundTop();
     this.boss.hp = phaseData.definition.boss.maxHp;
     this.boss.maxHp = phaseData.definition.boss.maxHp;
 
@@ -170,8 +189,8 @@ export class GameEngine {
       patrolRight: enemy.patrolRight,
       hp:
         enemy.type === 'vigia'
-          ? 4 + Math.floor(phaseData.definition.difficulty / 2)
-          : 2 + Math.floor(phaseData.definition.difficulty / 3),
+          ? 4 + Math.floor(this.phaseData.definition.difficulty / 2)
+          : 2 + Math.floor(this.phaseData.definition.difficulty / 3),
       active: true,
       hitFlash: 0,
       hoverOffset: Math.random() * Math.PI * 2,
@@ -204,8 +223,8 @@ export class GameEngine {
     }));
 
     this.checkpointXs = this.buildCheckpointXs();
-    this.setCheckpoint(0);
-    this.placeHeroAtRespawn();
+    this.setCheckpoint(this.checkpointXs[0]);
+    this.placeHeroAtRespawn(true);
   }
 
   start(): void {
@@ -257,7 +276,13 @@ export class GameEngine {
       return;
     }
 
+    this.gameState.addPhaseElapsedTime(deltaTime * 1000);
     this.gameState.setCurrentScore(this.score);
+
+    if (this.gameState.isPhaseTimeExceeded) {
+      this.startEnding('game-over');
+      return;
+    }
 
     if (this.respawningTimer > 0) {
       this.updateRespawnTimer(deltaTime);
@@ -280,6 +305,7 @@ export class GameEngine {
     this.updateSpecialSequence(deltaTime);
     this.updateSpecialStrikes(deltaTime);
     this.updateBurstParticles(deltaTime);
+    this.updateHazards(deltaTime);
     this.updateCamera();
 
     if (this.specialFlashTimer > 0) {
@@ -295,6 +321,7 @@ export class GameEngine {
     }
 
     if (this.boss.active && this.boss.hp <= 0) {
+      this.gameState.finalizeCurrentPhaseTime();
       this.score += 1200;
       this.startEnding('victory');
     }
@@ -321,6 +348,8 @@ export class GameEngine {
 
   private updateHero(deltaTime: number): void {
     const wasOnGround = this.hero.onGround;
+    const isLockedInUpCast =
+      this.hero.castTimer > 0 && this.hero.castAim === 'up';
 
     this.hero.animationTime += deltaTime;
     this.hero.shootCooldown = Math.max(0, this.hero.shootCooldown - deltaTime);
@@ -335,61 +364,86 @@ export class GameEngine {
       this.hero.castAim = 'forward';
     }
 
-    const movingLeft = this.input.isPressed('a') || this.input.isPressed('arrowleft');
-    const movingRight = this.input.isPressed('d') || this.input.isPressed('arrowright');
-    const aimingUp = this.input.isPressed('w') || this.input.isPressed('arrowup');
+    const movingLeft =
+      !isLockedInUpCast &&
+      (this.input.isPressed('a') || this.input.isPressed('arrowleft'));
+    const movingRight =
+      !isLockedInUpCast &&
+      (this.input.isPressed('d') || this.input.isPressed('arrowright'));
 
-    this.hero.castAim = aimingUp ? 'up' : 'forward';
+    const runBlend = Math.min(1, deltaTime * 11);
+    const targetVx = movingLeft && !movingRight
+      ? -this.hero.speed
+      : movingRight && !movingLeft
+        ? this.hero.speed
+        : 0;
 
-    if (movingLeft && !movingRight) {
-      this.hero.vx = -this.hero.speed;
-      this.hero.direction = -1;
-    } else if (movingRight && !movingLeft) {
-      this.hero.vx = this.hero.speed;
-      this.hero.direction = 1;
-    } else {
+    this.hero.vx += (targetVx - this.hero.vx) * runBlend;
+
+    if (Math.abs(this.hero.vx) < 4) {
       this.hero.vx = 0;
     }
 
+    if (movingLeft && !movingRight) {
+      this.hero.direction = -1;
+    } else if (movingRight && !movingLeft) {
+      this.hero.direction = 1;
+    }
+
     if (
-      (this.input.isJustPressed(' ') || this.input.isJustPressed('w') || this.input.isJustPressed('arrowup'))
-      && this.hero.jumpsRemaining > 0
+      !isLockedInUpCast &&
+      (this.input.isJustPressed(' ') ||
+        this.input.isJustPressed('w') ||
+        this.input.isJustPressed('arrowup')) &&
+      this.hero.jumpsRemaining > 0
     ) {
       this.hero.vy = -this.hero.jumpForce;
       this.hero.jumpsRemaining -= 1;
       this.hero.onGround = false;
     }
 
-    if (this.input.isJustPressed('k') && this.hero.dashCooldown <= 0) {
+    if (!isLockedInUpCast && this.input.isJustPressed('k') && this.hero.dashCooldown <= 0) {
       this.hero.vx = this.hero.direction * 610;
       this.hero.dashCooldown = 0.7;
     }
 
-    if (this.input.isJustPressed('j') && this.hero.shootCooldown <= 0) {
-      this.fireBullet();
+    if (!isLockedInUpCast && this.input.isJustPressed('j') && this.hero.shootCooldown <= 0) {
+      this.fireBullet('forward');
       this.hero.shootCooldown = 0.22;
       this.hero.castTimer = 0.16;
       this.hero.castDuration = 0.16;
+      this.hero.castAim = 'forward';
+    }
+
+    if (!isLockedInUpCast && this.input.isJustPressed('i') && this.hero.shootCooldown <= 0) {
+      this.fireBullet('upward');
+      this.hero.shootCooldown = 0.28;
+      this.hero.castTimer = 0.32;
+      this.hero.castDuration = 0.32;
+      this.hero.castAim = 'up';
+      this.hero.vx = 0;
     }
 
     if (
-      this.input.isJustPressed('l')
-      && this.specialCharge >= 100
-      && !this.specialSequenceActive
+      !isLockedInUpCast &&
+      this.input.isJustPressed('l') &&
+      this.specialCharge >= 100 &&
+      !this.specialSequenceActive
     ) {
       this.activateSpecial();
       this.hero.castTimer = 2.1;
       this.hero.castDuration = 2.1;
+      this.hero.castAim = 'forward';
     }
 
-    const gravityThisFrame = this.hero.vy > 0
-      ? this.gravity + this.fallBoost
-      : this.gravity;
+    const gravityThisFrame =
+      this.hero.vy > 0 ? this.gravity + this.fallBoost : this.gravity;
 
     this.hero.vy += gravityThisFrame * deltaTime;
 
     this.moveHeroHorizontally(deltaTime);
     this.moveHeroVertically(deltaTime);
+    this.resolveTunnelCeilingCollision();
 
     if (!wasOnGround && this.hero.onGround) {
       this.hero.landingTimer = 0.16;
@@ -444,6 +498,18 @@ export class GameEngine {
         this.hero.x = platform.x + platform.width;
       }
     }
+
+    for (const hazard of this.hazards) {
+      if (!hazard.active || !this.rectsOverlap(this.hero, hazard)) {
+        continue;
+      }
+
+      if (this.hero.vx > 0) {
+        this.hero.x = hazard.x - this.hero.width;
+      } else if (this.hero.vx < 0) {
+        this.hero.x = hazard.x + hazard.width;
+      }
+    }
   }
 
   private moveHeroVertically(deltaTime: number): void {
@@ -467,18 +533,57 @@ export class GameEngine {
     }
   }
 
-  private fireBullet(): void {
-    const isUpShot = this.hero.castAim === 'up';
+  private resolveTunnelCeilingCollision(): void {
+    if (this.hero.vy >= 0) {
+      return;
+    }
+
+    for (const tunnel of this.tunnels) {
+      const heroRight = this.hero.x + this.hero.width;
+      const heroLeft = this.hero.x;
+      const overlapsX = heroRight > tunnel.x && heroLeft < tunnel.x + tunnel.width;
+
+      if (!overlapsX) {
+        continue;
+      }
+
+      const heroTop = this.hero.y;
+      const roofBottom = tunnel.ceilingY + tunnel.thickness;
+
+      if (heroTop <= roofBottom && heroTop >= tunnel.ceilingY - 18) {
+        this.hero.y = roofBottom;
+        this.hero.vy = 0;
+      }
+    }
+  }
+
+  private fireBullet(kind: 'forward' | 'upward'): void {
+    if (kind === 'upward') {
+      this.bullets.push({
+        x: this.hero.x + this.hero.width / 2 - 5,
+        y: this.hero.y + 4,
+        width: 10,
+        height: 20,
+        vx: 0,
+        vy: -720,
+        active: true,
+        kind: 'upward',
+      });
+      return;
+    }
 
     this.bullets.push({
-      x: this.hero.direction === 1 ? this.hero.x + this.hero.width - 2 : this.hero.x - 18,
-      y: isUpShot ? this.hero.y + 8 : this.hero.y + 26,
+      x:
+        this.hero.direction === 1
+          ? this.hero.x + this.hero.width - 2
+          : this.hero.x - 18,
+      y: this.hero.y + 26,
       width: 18,
       height: 10,
-      vx: isUpShot ? 0 : this.hero.direction * 610,
-      vy: isUpShot ? -610 : 0,
+      vx: this.hero.direction * 610,
+      vy: 0,
       active: true,
-      kind: isUpShot ? 'upward' : 'forward',
+      kind: 'forward',
     });
   }
 
@@ -604,8 +709,8 @@ export class GameEngine {
     startX: number,
     startY: number,
     direction: 1 | -1,
-  ): LightningPoint[] {
-    const points: LightningPoint[] = [{ x: startX, y: startY }];
+  ) {
+    const points = [{ x: startX, y: startY }];
     let x = startX;
     let y = startY;
 
@@ -647,6 +752,24 @@ export class GameEngine {
         continue;
       }
 
+      for (const tunnel of this.tunnels) {
+        const roofRect = {
+          x: tunnel.x,
+          y: tunnel.ceilingY,
+          width: tunnel.width,
+          height: tunnel.thickness,
+        };
+
+        if (this.rectsOverlap(bullet, roofRect)) {
+          bullet.active = false;
+          break;
+        }
+      }
+
+      if (!bullet.active) {
+        continue;
+      }
+
       for (const enemy of this.enemies) {
         if (!enemy.active) {
           continue;
@@ -680,8 +803,31 @@ export class GameEngine {
         }
 
         if (this.rectsOverlap(bullet, chest)) {
+          if (bullet.kind === 'upward') {
+            bullet.active = false;
+            this.breakChest(chest);
+          }
+          break;
+        }
+      }
+
+      if (!bullet.active) {
+        continue;
+      }
+
+      for (const hazard of this.hazards) {
+        if (!hazard.active) {
+          continue;
+        }
+
+        if (this.rectsOverlap(bullet, hazard)) {
           bullet.active = false;
-          this.breakChest(chest);
+          this.spawnBurst(
+            bullet.x + bullet.width / 2,
+            bullet.y + bullet.height / 2,
+            '#7dffb2',
+            6,
+          );
           break;
         }
       }
@@ -853,6 +999,7 @@ export class GameEngine {
 
         switch (item.type) {
           case 'coin':
+            this.collectedCoins += 1;
             this.score += 8;
             break;
 
@@ -862,12 +1009,14 @@ export class GameEngine {
             break;
 
           case 'ray':
+            this.collectedSparks += 1;
             this.specialCharge = Math.min(100, this.specialCharge + 10);
             this.score += 15;
             this.spawnBurst(item.x, item.y, '#7de8ff', 12);
             break;
 
           case 'flameVial':
+            this.collectedSparks += 2;
             this.specialCharge = Math.min(100, this.specialCharge + 25);
             this.score += 25;
             this.spawnBurst(item.x, item.y, '#ffb35c', 14);
@@ -928,9 +1077,10 @@ export class GameEngine {
   }
 
   private updateBoss(deltaTime: number): void {
-    if (!this.boss.active && this.hero.x >= this.bossArena.startX - 240) {
+    if (!this.boss.active && this.hero.x >= this.bossArena.startX - 260) {
       this.boss.active = true;
       this.boss.introPulse = 1.5;
+      this.boss.y = this.getBossGroundTop();
 
       if (!this.bossIntroShown && this.callbacks.onBossIntro) {
         this.bossIntroShown = true;
@@ -953,12 +1103,15 @@ export class GameEngine {
     this.boss.squashTimer = Math.max(0, this.boss.squashTimer - deltaTime);
     this.boss.armSwing += deltaTime * (this.boss.castTimer > 0 ? 8 : 2.8);
 
-    if (this.hero.x > this.bossArena.endX - 80) {
-      this.hero.x = this.bossArena.endX - 80;
+    const heroMinX = this.bossArena.startX - 200;
+    const heroMaxX = this.bossArena.endX - this.hero.width - 24;
+
+    if (this.hero.x > heroMaxX) {
+      this.hero.x = heroMaxX;
     }
 
-    if (this.hero.x < this.bossArena.startX - 120) {
-      this.hero.x = this.bossArena.startX - 120;
+    if (this.hero.x < heroMinX) {
+      this.hero.x = heroMinX;
     }
 
     if (this.boss.jumpCooldown <= 0 && this.boss.onGround) {
@@ -1009,13 +1162,14 @@ export class GameEngine {
 
   private updateBossPhysics(deltaTime: number): void {
     if (this.boss.onGround) {
+      this.boss.y = this.getBossGroundTop();
       return;
     }
 
     this.boss.vy += (this.gravity + 900) * deltaTime;
     this.boss.y += this.boss.vy * deltaTime;
 
-    const bossGround = this.bossArena.groundY - this.boss.height;
+    const bossGround = this.getBossGroundTop();
 
     if (this.boss.y >= bossGround) {
       this.boss.y = bossGround;
@@ -1139,17 +1293,18 @@ export class GameEngine {
           deltaTime;
 
         if (
-          projectile.x + projectile.radius < this.bossArena.startX - 80 ||
-          projectile.y < 420 ||
-          projectile.y > this.bossArena.groundY - 38
+          projectile.x + projectile.radius < this.bossArena.startX - 120 ||
+          projectile.x - projectile.radius > this.bossArena.endX + 120 ||
+          projectile.y < 380 ||
+          projectile.y > this.bossArena.groundY - 28
         ) {
           projectile.active = false;
           continue;
         }
 
         if (
-          this.hero.invulnerabilityTimer <= 0 &&
-          this.circleRectOverlap(
+          this.hero.invulnerabilityTimer <= 0
+          && this.circleRectOverlap(
             projectile.x,
             projectile.y,
             projectile.radius,
@@ -1165,6 +1320,23 @@ export class GameEngine {
     this.bossProjectiles = this.bossProjectiles.filter(
       (projectile) => projectile.active,
     );
+  }
+
+  private updateHazards(deltaTime: number): void {
+    for (const hazard of this.hazards) {
+      hazard.pulseOffset += deltaTime * 1.8;
+
+      if (!hazard.active) {
+        continue;
+      }
+
+      if (
+        this.hero.invulnerabilityTimer <= 0
+        && this.rectsOverlap(this.hero, hazard)
+      ) {
+        this.applyHeroDamage(hazard.damage);
+      }
+    }
   }
 
   private updateBurstParticles(deltaTime: number): void {
@@ -1292,13 +1464,15 @@ export class GameEngine {
   }
 
   private buildCheckpointXs(): number[] {
+    const safeBossCheckpoint = Math.max(320, this.bossArena.startX - 320);
+
     return [
-      120,
-      700,
-      1500,
-      2350,
-      3200,
-      this.bossArena.startX - 140,
+      48,
+      820,
+      1780,
+      2920,
+      4040,
+      safeBossCheckpoint,
     ];
   }
 
@@ -1308,7 +1482,7 @@ export class GameEngine {
     this.respawnY = spawn.y;
   }
 
-  private placeHeroAtRespawn(): void {
+  private placeHeroAtRespawn(isInitialSpawn = false): void {
     this.hero.x = this.respawnX;
     this.hero.y = this.respawnY;
     this.hero.vx = 0;
@@ -1316,7 +1490,7 @@ export class GameEngine {
     this.hero.direction = 1;
     this.hero.onGround = true;
     this.hero.jumpsRemaining = this.hero.maxJumps;
-    this.hero.invulnerabilityTimer = 1.1;
+    this.hero.invulnerabilityTimer = isInitialSpawn ? 0.7 : 1.1;
     this.hero.castTimer = 0;
     this.hero.castDuration = 0;
     this.hero.castAim = 'forward';
@@ -1325,6 +1499,31 @@ export class GameEngine {
   }
 
   private findSpawnPointNear(targetX: number): { x: number; y: number } {
+    const groundSegments = this.platforms
+      .filter((platform) => platform.height >= 70)
+      .sort((a, b) => a.x - b.x);
+
+    const preferredGround =
+      groundSegments.find(
+        (platform) =>
+          targetX >= platform.x - 24 && targetX <= platform.x + platform.width + 24,
+      ) ?? groundSegments[0];
+
+    if (preferredGround) {
+      const safeX = Math.max(
+        preferredGround.x + 26,
+        Math.min(
+          targetX,
+          preferredGround.x + preferredGround.width - this.hero.width - 26,
+        ),
+      );
+
+      return {
+        x: safeX,
+        y: preferredGround.y - this.hero.height,
+      };
+    }
+
     let bestPlatform: Platform | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
 
@@ -1339,13 +1538,17 @@ export class GameEngine {
     }
 
     if (!bestPlatform) {
-      return { x: targetX, y: 500 };
+      return { x: 48, y: 500 };
     }
 
-    const x = bestPlatform.x + 28;
-    const y = bestPlatform.y - this.hero.height;
+    return {
+      x: bestPlatform.x + 28,
+      y: bestPlatform.y - this.hero.height,
+    };
+  }
 
-    return { x, y };
+  private getBossGroundTop(): number {
+    return this.bossArena.groundY - this.boss.height;
   }
 
   private updateCamera(): void {
@@ -1404,7 +1607,9 @@ export class GameEngine {
     ctx.save();
     ctx.translate(-this.cameraX, 0);
 
+    drawTunnels(ctx, this.tunnels);
     drawPlatforms(ctx, this.platforms);
+    drawHazards(ctx, this.hazards);
     drawCollectibles(ctx, this.collectibles);
     drawChests(ctx, this.chests);
     drawSpecialStrikes(ctx, this.specialStrikes);
@@ -1430,6 +1635,10 @@ export class GameEngine {
       this.boss,
       this.phaseData.definition.title,
       this.phaseData.definition.boss.bossName,
+      this.lives,
+      this.maxLives,
+      this.gameState.getFormattedCurrentPhaseTime(),
+      this.gameState.isPhaseTimeInWarning,
     );
 
     if (this.specialFlashTimer > 0) {
@@ -1467,6 +1676,11 @@ export class GameEngine {
         this.canvas.height / 2 + 20,
       );
     }
+
+    if (this.gameState.isPhaseTimeExceeded && !this.ending) {
+      ctx.fillStyle = 'rgba(30, 0, 0, 0.42)';
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
   }
 
   private drawBullets(): void {
@@ -1475,6 +1689,43 @@ export class GameEngine {
     for (const bullet of this.bullets) {
       const centerX = bullet.x + bullet.width / 2;
       const centerY = bullet.y + bullet.height / 2;
+
+      if (bullet.kind === 'upward') {
+        const glow = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          1,
+          centerX,
+          centerY,
+          16,
+        );
+        glow.addColorStop(0, 'rgba(255, 228, 180, 0.92)');
+        glow.addColorStop(0.35, 'rgba(255, 136, 57, 0.5)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffd7a6';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(centerX, bullet.y + bullet.height);
+        ctx.lineTo(centerX, bullet.y + 4);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ff9b61';
+        ctx.beginPath();
+        ctx.moveTo(centerX, bullet.y);
+        ctx.lineTo(centerX - 5, bullet.y + 8);
+        ctx.lineTo(centerX + 5, bullet.y + 8);
+        ctx.closePath();
+        ctx.fill();
+
+        continue;
+      }
+
       const glow = ctx.createRadialGradient(
         centerX,
         centerY,

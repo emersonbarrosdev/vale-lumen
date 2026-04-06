@@ -5,6 +5,7 @@ export interface PhaseResult {
   coins: number;
   sparks: number;
   timeMs: number;
+  formattedTime: string;
   bonusHp: number;
   totalScore: number;
   clearedAt: number;

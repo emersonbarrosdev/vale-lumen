@@ -4,9 +4,17 @@ import { HeroProgressState } from '../../core/models/game/hero-progress-state.mo
 import { GameRunState } from '../../core/models/game/game-run-state.model';
 import { GameSettings } from '../../core/models/game/game-settings.model';
 import {
+  hasBrowserStorage,
   readStoredNumber,
   writeStoredNumber,
 } from '../../core/utils/storage.util';
+
+export interface GameControlBinding {
+  label: string;
+  primary: string;
+  secondary?: string;
+  description: string;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -20,6 +28,49 @@ export class GameStateService {
 
   musicVolume: number = GAME_CONFIG.defaultMusicVolume;
   effectsVolume: number = GAME_CONFIG.defaultEffectsVolume;
+
+  currentPhaseElapsedMs = 0;
+  lastPhaseElapsedMs = 0;
+  totalRunElapsedMs = 0;
+  lastRunElapsedMs = 0;
+
+  readonly phaseTimeLimitMs = 10 * 60 * 1000;
+  readonly phaseTimeWarningMs = 9 * 60 * 1000;
+
+  readonly controls: GameControlBinding[] = [
+    {
+      label: 'Mover',
+      primary: 'A / D',
+      secondary: '← / →',
+      description: 'Move o herói para a esquerda e para a direita.',
+    },
+    {
+      label: 'Pular',
+      primary: 'Espaço',
+      secondary: 'W / ↑',
+      description: 'Salto principal. Também permite o segundo pulo no ar.',
+    },
+    {
+      label: 'Atirar magia',
+      primary: 'J',
+      description: 'Dispara magia para frente ou para cima.',
+    },
+    {
+      label: 'Especial',
+      primary: 'L',
+      description: 'Ativa o especial quando a carga estiver completa.',
+    },
+    {
+      label: 'Dash',
+      primary: 'K',
+      description: 'Avanço rápido para atravessar trechos perigosos.',
+    },
+    {
+      label: 'Pausa',
+      primary: 'ESC',
+      description: 'Pausa e retoma a partida.',
+    },
+  ];
 
   heroProgress: HeroProgressState = {
     level: 1,
@@ -50,6 +101,9 @@ export class GameStateService {
       'effectsVolume',
       GAME_CONFIG.defaultEffectsVolume,
     );
+
+    this.lastRunElapsedMs = readStoredNumber('lastRunElapsedMs', 0);
+    this.lastPhaseElapsedMs = readStoredNumber('lastPhaseElapsedMs', 0);
   }
 
   get runState(): GameRunState {
@@ -67,11 +121,28 @@ export class GameStateService {
     };
   }
 
+  get isPhaseTimeInWarning(): boolean {
+    return this.currentPhaseElapsedMs >= this.phaseTimeWarningMs;
+  }
+
+  get isPhaseTimeExceeded(): boolean {
+    return this.currentPhaseElapsedMs >= this.phaseTimeLimitMs;
+  }
+
+  get remainingPhaseTimeMs(): number {
+    return Math.max(0, this.phaseTimeLimitMs - this.currentPhaseElapsedMs);
+  }
+
   resetRun(): void {
     this.currentScore = 0;
     this.currentPhase = 1;
     this.currentPhaseId = 'phase-01';
     this.continuesUsedInCurrentPhase = 0;
+
+    this.currentPhaseElapsedMs = 0;
+    this.lastPhaseElapsedMs = 0;
+    this.totalRunElapsedMs = 0;
+
     this.heroProgress.currentHp = this.heroProgress.maxHp;
     this.heroProgress.manaCurrent = this.heroProgress.manaMax;
     this.heroProgress.specialGaugeCurrent = 0;
@@ -81,15 +152,37 @@ export class GameStateService {
     this.currentScore = score;
   }
 
+  addPhaseElapsedTime(deltaMs: number): void {
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    this.currentPhaseElapsedMs += deltaMs;
+    this.totalRunElapsedMs += deltaMs;
+  }
+
+  resetCurrentPhaseTimer(): void {
+    this.currentPhaseElapsedMs = 0;
+  }
+
+  finalizeCurrentPhaseTime(): void {
+    this.lastPhaseElapsedMs = this.currentPhaseElapsedMs;
+    writeStoredNumber('lastPhaseElapsedMs', this.lastPhaseElapsedMs);
+  }
+
   finishRun(score: number): void {
     this.currentScore = score;
     this.lastScore = score;
+    this.lastRunElapsedMs = this.totalRunElapsedMs;
+
+    writeStoredNumber('lastRunElapsedMs', this.lastRunElapsedMs);
   }
 
   setCurrentPhase(phaseNumber: number, phaseId: string): void {
     this.currentPhase = phaseNumber;
     this.currentPhaseId = phaseId;
     this.continuesUsedInCurrentPhase = 0;
+    this.currentPhaseElapsedMs = 0;
   }
 
   useContinue(): void {
@@ -147,5 +240,38 @@ export class GameStateService {
 
     writeStoredNumber('musicVolume', musicVolume);
     writeStoredNumber('effectsVolume', effectsVolume);
+  }
+
+  formatTime(ms: number): string {
+    const safeMs = Math.max(0, Math.floor(ms));
+    const totalSeconds = Math.floor(safeMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  getFormattedCurrentPhaseTime(): string {
+    return this.formatTime(this.currentPhaseElapsedMs);
+  }
+
+  getFormattedLastPhaseTime(): string {
+    return this.formatTime(this.lastPhaseElapsedMs);
+  }
+
+  getFormattedLastRunTime(): string {
+    return this.formatTime(this.lastRunElapsedMs);
+  }
+
+  clearStoredProgressTimes(): void {
+    this.lastRunElapsedMs = 0;
+    this.lastPhaseElapsedMs = 0;
+
+    if (!hasBrowserStorage()) {
+      return;
+    }
+
+    window.localStorage.removeItem('lastRunElapsedMs');
+    window.localStorage.removeItem('lastPhaseElapsedMs');
   }
 }

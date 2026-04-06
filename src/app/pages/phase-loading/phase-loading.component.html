@@ -1,9 +1,23 @@
 <div class="loading-page">
+  <div class="storm-glow"></div>
+  <div class="energy-points"></div>
+
   <div class="card">
     <p class="overline">Próxima jornada</p>
     <h1>{{ phase.title }}</h1>
     <p class="subtitle">{{ phase.visualSummary }}</p>
-    <p class="mechanic"><strong>Mecânica:</strong> {{ phase.mainMechanic }}</p>
+
+    <div class="phase-meta">
+      <div class="meta-card">
+        <span class="label">Bioma</span>
+        <strong>{{ phase.biome }}</strong>
+      </div>
+
+      <div class="meta-card">
+        <span class="label">Mecânica</span>
+        <strong>{{ phase.mainMechanic }}</strong>
+      </div>
+    </div>
 
     <div class="spinner"></div>
     <small>Carregando o vale...</small>

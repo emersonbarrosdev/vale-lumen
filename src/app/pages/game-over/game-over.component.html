@@ -1,18 +1,50 @@
 <div class="page-shell">
+  <div class="ashes"></div>
+  <div class="red-glow"></div>
+
   <div class="card">
+    <p class="overline">A chama vacilou</p>
     <h1>Game Over</h1>
-    <p>Kael caiu no vale.</p>
-    <p><strong>Pontuação:</strong> {{ gameState.lastScore }}</p>
+
+    <p class="lead">
+      Kael caiu no vale antes de concluir a travessia. As cinzas avançam outra vez.
+    </p>
+
+    <div class="stats-grid">
+      <div class="stat-card highlight">
+        <span class="label">Pontuação</span>
+        <strong>{{ gameState.lastScore }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span class="label">Tempo da run</span>
+        <strong>{{ lastRunTime }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span class="label">Tempo da fase</span>
+        <strong>{{ lastPhaseTime }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span class="label">Continues usados</span>
+        <strong>{{ gameState.continuesUsedInCurrentPhase }}/2</strong>
+      </div>
+    </div>
 
     @if (canContinue) {
-      <p>Continues usados nesta fase: {{ gameState.continuesUsedInCurrentPhase }}/2</p>
+      <p class="status-message">
+        Você ainda pode continuar desta fase.
+      </p>
 
       <div class="actions">
         <button type="button" (click)="continuePhase()">Continuar da fase</button>
         <button type="button" (click)="goToMenu()">Menu inicial</button>
       </div>
     } @else {
-      <p>Os continues desta fase acabaram. A jornada recomeça desde o início.</p>
+      <p class="status-message danger">
+        Os continues desta fase acabaram. A jornada precisa recomeçar desde o início.
+      </p>
 
       <div class="actions">
         <button type="button" (click)="restartFromBeginning()">Recomeçar</button>

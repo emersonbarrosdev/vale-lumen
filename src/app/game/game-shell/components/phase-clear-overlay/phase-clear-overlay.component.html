@@ -1,31 +1,38 @@
 @if (result) {
   <div class="phase-clear-card">
-    <h2>Fase Concluída</h2>
-    <h3>{{ result.phaseTitle }}</h3>
+    <p class="overline">Fase concluída</p>
+    <h2>{{ result.phaseTitle }}</h2>
 
-    <div class="row">
-      <span>Pontos</span>
-      <strong>{{ result.score }}</strong>
-    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="label">Tempo</span>
+        <strong>{{ result.formattedTime }}</strong>
+      </div>
 
-    <div class="row">
-      <span>Moedas</span>
-      <strong>{{ result.coins }}</strong>
-    </div>
+      <div class="stat-card">
+        <span class="label">Pontos</span>
+        <strong>{{ result.score }}</strong>
+      </div>
 
-    <div class="row">
-      <span>Centelhas</span>
-      <strong>{{ result.sparks }}</strong>
-    </div>
+      <div class="stat-card">
+        <span class="label">Moedas</span>
+        <strong>{{ result.coins }}</strong>
+      </div>
 
-    <div class="row">
-      <span>Bônus de vida</span>
-      <strong>{{ result.bonusHp }}</strong>
-    </div>
+      <div class="stat-card">
+        <span class="label">Centelhas</span>
+        <strong>{{ result.sparks }}</strong>
+      </div>
 
-    <div class="row total">
-      <span>Total</span>
-      <strong>{{ result.totalScore }}</strong>
+      <div class="stat-card">
+        <span class="label">Bônus de vida</span>
+        <strong>{{ result.bonusHp }}</strong>
+      </div>
+
+      <div class="stat-card total">
+        <span class="label">Total</span>
+        <strong>{{ result.totalScore }}</strong>
+      </div>
     </div>
   </div>
 }

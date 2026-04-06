@@ -11,4 +11,12 @@ import { GameStateService } from '../../game/services/game-state.service';
 })
 export class VictoryComponent {
   constructor(public readonly gameState: GameStateService) {}
+
+  get finalRunTime(): string {
+    return this.gameState.getFormattedLastRunTime();
+  }
+
+  get finalPhaseTime(): string {
+    return this.gameState.getFormattedLastPhaseTime();
+  }
 }

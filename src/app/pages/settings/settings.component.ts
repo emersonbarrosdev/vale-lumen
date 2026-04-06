@@ -1,7 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { GameStateService } from '../../game/services/game-state.service';
+import {
+  GameControlBinding,
+  GameStateService,
+} from '../../game/services/game-state.service';
 
 @Component({
   selector: 'app-settings',
@@ -16,7 +19,10 @@ export class SettingsComponent implements OnInit {
     effectsVolume: new FormControl(80, { nonNullable: true }),
   });
 
+  readonly controls: GameControlBinding[] = this.gameState.controls;
+
   saved = false;
+  private saveFeedbackTimeoutId: number | null = null;
 
   constructor(private readonly gameState: GameStateService) {}
 
@@ -30,10 +36,23 @@ export class SettingsComponent implements OnInit {
   save(): void {
     const { musicVolume, effectsVolume } = this.form.getRawValue();
     this.gameState.saveSettings(musicVolume, effectsVolume);
+    this.showSavedFeedback();
+  }
+
+  trackByControlLabel(_: number, item: GameControlBinding): string {
+    return item.label;
+  }
+
+  private showSavedFeedback(): void {
     this.saved = true;
 
-    setTimeout(() => {
+    if (this.saveFeedbackTimeoutId !== null) {
+      window.clearTimeout(this.saveFeedbackTimeoutId);
+    }
+
+    this.saveFeedbackTimeoutId = window.setTimeout(() => {
       this.saved = false;
+      this.saveFeedbackTimeoutId = null;
     }, 1500);
   }
 }

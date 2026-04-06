@@ -1,9 +1,52 @@
 .phase-clear-page {
+  position: relative;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px;
+  overflow: hidden;
   background:
-    radial-gradient(circle at center, rgba(255, 191, 117, 0.12), transparent 24%),
+    radial-gradient(circle at 50% 20%, rgba(255, 191, 117, 0.14), transparent 22%),
+    radial-gradient(circle at 50% 0%, rgba(122, 234, 255, 0.05), transparent 26%),
     linear-gradient(180deg, #0b0d12 0%, #050608 100%);
+}
+
+.phase-clear-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 30% 28%, rgba(255, 204, 122, 0.06), transparent 18%),
+    radial-gradient(circle at 70% 32%, rgba(214, 250, 255, 0.04), transparent 22%);
+}
+
+.phase-clear-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 12% 24%, rgba(255, 204, 122, 0.12) 0 2px, transparent 3px),
+    radial-gradient(circle at 24% 40%, rgba(255, 186, 115, 0.08) 0 2px, transparent 3px),
+    radial-gradient(circle at 42% 18%, rgba(214, 250, 255, 0.08) 0 2px, transparent 3px),
+    radial-gradient(circle at 58% 34%, rgba(255, 204, 122, 0.09) 0 2px, transparent 3px),
+    radial-gradient(circle at 74% 20%, rgba(214, 250, 255, 0.08) 0 2px, transparent 3px),
+    radial-gradient(circle at 88% 30%, rgba(255, 186, 115, 0.08) 0 2px, transparent 3px);
+  animation: phaseClearFloat 12s linear infinite;
+  opacity: 0.9;
+}
+
+@keyframes phaseClearFloat {
+  0% {
+    transform: translateY(0);
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-18px);
+    opacity: 0.82;
+  }
 }

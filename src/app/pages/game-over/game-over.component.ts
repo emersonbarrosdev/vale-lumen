@@ -21,6 +21,14 @@ export class GameOverComponent {
     return this.gameState.canContinue(PHASE_CONFIG.maxContinuesPerPhase);
   }
 
+  get lastRunTime(): string {
+    return this.gameState.getFormattedLastRunTime();
+  }
+
+  get lastPhaseTime(): string {
+    return this.gameState.getFormattedLastPhaseTime();
+  }
+
   continuePhase(): void {
     this.router.navigateByUrl('/phase-loading');
   }

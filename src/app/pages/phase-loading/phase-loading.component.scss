@@ -1,20 +1,54 @@
 .loading-page {
+  position: relative;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px;
+  overflow: hidden;
   background:
-    radial-gradient(circle at top, rgba(255, 167, 88, 0.08), transparent 18%),
+    radial-gradient(circle at 50% 12%, rgba(255, 167, 88, 0.1), transparent 18%),
+    radial-gradient(circle at 50% 0%, rgba(122, 234, 255, 0.04), transparent 24%),
     linear-gradient(180deg, #090b12 0%, #050608 100%);
 }
 
+.storm-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 24% 20%, rgba(255, 120, 88, 0.06), transparent 16%),
+    radial-gradient(circle at 76% 24%, rgba(84, 255, 166, 0.05), transparent 18%),
+    radial-gradient(circle at 50% 18%, rgba(255, 210, 132, 0.06), transparent 20%);
+}
+
+.energy-points {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 12% 26%, rgba(255, 186, 115, 0.16) 0 2px, transparent 3px),
+    radial-gradient(circle at 24% 42%, rgba(122, 234, 255, 0.1) 0 2px, transparent 3px),
+    radial-gradient(circle at 38% 20%, rgba(255, 186, 115, 0.12) 0 2px, transparent 3px),
+    radial-gradient(circle at 56% 34%, rgba(122, 234, 255, 0.1) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 18%, rgba(255, 186, 115, 0.12) 0 2px, transparent 3px),
+    radial-gradient(circle at 84% 30%, rgba(122, 234, 255, 0.1) 0 2px, transparent 3px);
+  animation: loadingFloat 12s linear infinite;
+  opacity: 0.9;
+}
+
 .card {
-  width: min(620px, 100%);
-  padding: 32px;
-  border-radius: 22px;
+  position: relative;
+  z-index: 2;
+  width: min(700px, 100%);
+  padding: 34px;
+  border-radius: 24px;
   text-align: center;
-  background: rgba(18, 21, 31, 0.95);
+  background:
+    linear-gradient(180deg, rgba(18, 21, 31, 0.96) 0%, rgba(8, 10, 16, 0.98) 100%);
   border: 1px solid rgba(244, 231, 199, 0.12);
+  box-shadow:
+    0 28px 68px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .overline {
@@ -28,29 +62,87 @@
 h1 {
   margin: 0 0 12px;
   color: #f4e8cb;
+  font-size: clamp(2rem, 4vw, 3rem);
 }
 
-.subtitle,
-.mechanic {
+.subtitle {
+  max-width: 620px;
+  margin: 0 auto 22px;
   color: #c4c8d2;
+  line-height: 1.6;
+}
+
+.phase-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.meta-card {
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(29, 34, 46, 0.72);
+  border: 1px solid rgba(244, 231, 199, 0.08);
+
+  .label {
+    display: block;
+    margin-bottom: 8px;
+    color: #bfc7d8;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  strong {
+    color: #fff4df;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
 }
 
 .spinner {
-  width: 52px;
-  height: 52px;
-  margin: 24px auto 14px;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
   border-radius: 50%;
   border: 4px solid rgba(255, 255, 255, 0.12);
   border-top-color: #ffbf75;
+  box-shadow: 0 0 18px rgba(255, 191, 117, 0.12);
   animation: spin 0.8s linear infinite;
 }
 
 small {
   color: #d6fbff;
+  font-size: 0.95rem;
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes loadingFloat {
+  0% {
+    transform: translateY(0);
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-16px);
+    opacity: 0.82;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 24px;
+  }
+
+  .phase-meta {
+    grid-template-columns: 1fr;
   }
 }

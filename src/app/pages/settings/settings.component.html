@@ -14,8 +14,35 @@
       </label>
     </form>
 
+    <section class="controls-section">
+      <div class="section-header">
+        <h2>Botões do jogo</h2>
+        <p>Consulte aqui os comandos principais durante a fase.</p>
+      </div>
+
+      <div class="controls-list">
+        @for (control of controls; track trackByControlLabel($index, control)) {
+          <div class="control-card">
+            <div class="control-top">
+              <strong class="control-label">{{ control.label }}</strong>
+
+              <div class="keys">
+                <span class="key">{{ control.primary }}</span>
+
+                @if (control.secondary) {
+                  <span class="key secondary">{{ control.secondary }}</span>
+                }
+              </div>
+            </div>
+
+            <p class="control-description">{{ control.description }}</p>
+          </div>
+        }
+      </div>
+    </section>
+
     <div class="actions">
-      <button (click)="save()">Salvar</button>
+      <button type="button" (click)="save()">Salvar</button>
       <a routerLink="/">Voltar</a>
     </div>
 
