@@ -17,6 +17,26 @@
       </div>
 
       <div class="stat-card">
+        <span class="label">Pontuação base</span>
+        <strong>{{ gameState.lastBaseScore }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span class="label">Bônus de vida</span>
+        <strong>{{ gameState.lastHpBonus }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span class="label">Moedas</span>
+        <strong>x{{ gameState.lastCoinMultiplier }}</strong>
+      </div>
+
+      <div class="stat-card">
+        <span class="label">Antes das moedas</span>
+        <strong>{{ baseTotalBeforeCoins }}</strong>
+      </div>
+
+      <div class="stat-card">
         <span class="label">Tempo total da run</span>
         <strong>{{ finalRunTime }}</strong>
       </div>
@@ -30,6 +50,13 @@
         <span class="label">Fase alcançada</span>
         <strong>{{ gameState.currentPhase }}</strong>
       </div>
+    </div>
+
+    <div class="final-formula">
+      <span>
+        ({{ gameState.lastBaseScore }} + {{ gameState.lastHpBonus }}) x {{ gameState.lastCoinMultiplier }}
+      </span>
+      <strong>= {{ gameState.lastScore }}</strong>
     </div>
 
     <div class="actions">

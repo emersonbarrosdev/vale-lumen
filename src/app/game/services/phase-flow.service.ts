@@ -35,7 +35,12 @@ export class PhaseFlowService {
 
   registerDeath(score: number): boolean {
     this.gameState.finalizeCurrentPhaseTime();
-    this.gameState.finishRun(score);
+    this.gameState.finishRun(score, {
+      coins: this.gameState.currentCoins,
+      baseScore: score,
+      hpBonus: 0,
+      coinMultiplier: 1,
+    });
 
     if (this.gameState.canContinue(PHASE_CONFIG.maxContinuesPerPhase)) {
       this.gameState.useContinue();
@@ -57,6 +62,11 @@ export class PhaseFlowService {
 
     this.gameState.finalizeCurrentPhaseTime();
 
+    const bonusHp = Math.floor(this.gameState.heroProgress.currentHp * 0.5);
+    const baseTotal = score + bonusHp;
+    const coinMultiplier = Math.max(1, coins);
+    const finalTotal = baseTotal * coinMultiplier;
+
     this.lastPhaseResult = {
       phaseId: currentPhase.id,
       phaseTitle: currentPhase.title,
@@ -65,13 +75,18 @@ export class PhaseFlowService {
       sparks,
       timeMs: resolvedTimeMs,
       formattedTime: this.gameState.formatTime(resolvedTimeMs),
-      bonusHp: Math.floor(this.gameState.heroProgress.currentHp * 0.5),
-      totalScore:
-        score + Math.floor(this.gameState.heroProgress.currentHp * 0.5),
+      bonusHp,
+      totalScore: finalTotal,
       clearedAt: Date.now(),
     };
 
-    this.gameState.finishRun(this.lastPhaseResult.totalScore);
+    this.gameState.finishRun(finalTotal, {
+      coins,
+      baseScore: score,
+      hpBonus: bonusHp,
+      coinMultiplier,
+    });
+
     this.gameState.applyPhaseProgression(currentPhase.order);
 
     const nextPhase = getNextPhaseDefinition(currentPhase.id);

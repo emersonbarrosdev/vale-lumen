@@ -84,7 +84,6 @@ export class GameEngine {
   private readonly hazards: Hazard[];
   private readonly tunnels: Tunnel[];
 
-  private readonly maxLives = 3;
   private readonly runtime: EngineRuntime = createInitialEngineRuntime();
 
   private readonly hero: Hero;
@@ -190,6 +189,7 @@ export class GameEngine {
 
     this.gameState.addPhaseElapsedTime(deltaTime * 1000);
     this.gameState.setCurrentScore(this.runtime.score);
+    this.gameState.setCurrentCoins(this.runtime.collectedCoins);
 
     if (this.gameState.isPhaseTimeExceeded) {
       startEnding(this.runtime, 'game-over');
@@ -355,6 +355,9 @@ export class GameEngine {
         this.runtime.specialFlashTimer - deltaTime,
       );
     }
+
+    this.gameState.setCurrentScore(this.runtime.score);
+    this.gameState.setCurrentCoins(this.runtime.collectedCoins);
 
     checkEndingConditionsSystem({
       runtime: this.runtime,
@@ -540,17 +543,10 @@ export class GameEngine {
       return;
     }
 
-    /**
-     * Se estiver na janela de graça após perder o escudo,
-     * ainda não pode perder vida.
-     */
     if (this.hero.shieldGraceTimer > 0) {
       return;
     }
 
-    /**
-     * Se tiver proteção, perde a proteção e entra em 3s de graça.
-     */
     if (this.hero.shieldActive) {
       this.hero.shieldActive = false;
       this.hero.shieldGraceTimer = 3;
@@ -653,7 +649,7 @@ export class GameEngine {
       score: this.runtime.score,
       specialCharge: this.runtime.specialCharge,
       lives: this.runtime.lives,
-      maxLives: this.maxLives,
+      coins: this.runtime.collectedCoins,
 
       paused: this.runtime.paused,
       bossIntroPending: this.runtime.bossIntroPending,

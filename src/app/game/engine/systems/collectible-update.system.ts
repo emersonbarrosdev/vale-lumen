@@ -49,7 +49,7 @@ export function updateCollectiblesSystem({
         break;
 
       case 'heart':
-        runtime.lives = Math.min(3, runtime.lives + 1);
+        runtime.lives += 1;
         runtime.score += 60;
         spawnBurst(centerX, centerY, '#ff7b7b', 12);
         break;

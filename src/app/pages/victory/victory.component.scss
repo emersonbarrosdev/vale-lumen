@@ -39,7 +39,7 @@
 .card {
   position: relative;
   z-index: 2;
-  width: min(760px, 100%);
+  width: min(820px, 100%);
   padding: 34px;
   border-radius: 26px;
   background:
@@ -114,6 +114,27 @@ h1 {
       color: #ffdca8;
       font-size: 1.6rem;
     }
+  }
+}
+
+.final-formula {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(20, 25, 35, 0.72);
+  border: 1px solid rgba(244, 231, 199, 0.1);
+  text-align: center;
+
+  span {
+    display: block;
+    color: #bfc7d8;
+    font-size: 0.96rem;
+    margin-bottom: 6px;
+  }
+
+  strong {
+    color: #ffe1a9;
+    font-size: 1.28rem;
   }
 }
 

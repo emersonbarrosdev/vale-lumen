@@ -37,6 +37,12 @@ export class GameStateService {
   currentPhaseId = 'phase-01';
   continuesUsedInCurrentPhase = 0;
 
+  currentCoins = 0;
+  lastCoins = 0;
+  lastBaseScore = 0;
+  lastHpBonus = 0;
+  lastCoinMultiplier = 1;
+
   musicVolume: number = GAME_CONFIG.defaultMusicVolume;
   effectsVolume: number = GAME_CONFIG.defaultEffectsVolume;
 
@@ -185,6 +191,7 @@ export class GameStateService {
 
   resetRun(): void {
     this.currentScore = 0;
+    this.currentCoins = 0;
     this.currentPhase = 1;
     this.currentPhaseId = 'phase-01';
     this.continuesUsedInCurrentPhase = 0;
@@ -200,6 +207,10 @@ export class GameStateService {
 
   setCurrentScore(score: number): void {
     this.currentScore = score;
+  }
+
+  setCurrentCoins(coins: number): void {
+    this.currentCoins = Math.max(0, Math.floor(coins));
   }
 
   addPhaseElapsedTime(deltaMs: number): void {
@@ -220,10 +231,26 @@ export class GameStateService {
     writeStoredNumber('lastPhaseElapsedMs', this.lastPhaseElapsedMs);
   }
 
-  finishRun(score: number): void {
+  finishRun(
+    score: number,
+    metadata?: {
+      coins?: number;
+      baseScore?: number;
+      hpBonus?: number;
+      coinMultiplier?: number;
+    },
+  ): void {
     this.currentScore = score;
     this.lastScore = score;
     this.lastRunElapsedMs = this.totalRunElapsedMs;
+
+    this.lastCoins = Math.max(0, Math.floor(metadata?.coins ?? this.currentCoins));
+    this.lastBaseScore = Math.max(0, Math.floor(metadata?.baseScore ?? score));
+    this.lastHpBonus = Math.max(0, Math.floor(metadata?.hpBonus ?? 0));
+    this.lastCoinMultiplier = Math.max(
+      1,
+      Math.floor(metadata?.coinMultiplier ?? (this.lastCoins || 1)),
+    );
 
     writeStoredNumber('lastRunElapsedMs', this.lastRunElapsedMs);
   }
@@ -233,6 +260,7 @@ export class GameStateService {
     this.currentPhaseId = phaseId;
     this.continuesUsedInCurrentPhase = 0;
     this.currentPhaseElapsedMs = 0;
+    this.currentCoins = 0;
   }
 
   useContinue(): void {

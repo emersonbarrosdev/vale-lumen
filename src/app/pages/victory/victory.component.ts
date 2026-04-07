@@ -19,4 +19,8 @@ export class VictoryComponent {
   get finalPhaseTime(): string {
     return this.gameState.getFormattedLastPhaseTime();
   }
+
+  get baseTotalBeforeCoins(): number {
+    return this.gameState.lastBaseScore + this.gameState.lastHpBonus;
+  }
 }

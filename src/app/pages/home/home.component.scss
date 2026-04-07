@@ -190,29 +190,32 @@
   position: relative;
   z-index: 2;
   min-height: 100vh;
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   place-items: center;
-  padding: 32px 24px;
+  padding: 28px 22px;
   text-align: center;
 }
 
 .brand-block {
-  margin-bottom: 28px;
+  margin-bottom: 22px;
 }
 
 .overline {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   color: #cfb58a;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-size: 0.75rem;
+  font-size: 0.66rem;
 }
 
 .title {
   margin: 0;
-  font-size: clamp(2.8rem, 7vw, 5.4rem);
-  line-height: 0.95;
-  letter-spacing: 0.08em;
+  font-size: clamp(1rem, 5vw, 3rem);
+  line-height: 1;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #f4e8cb;
   text-shadow:
@@ -221,16 +224,18 @@
 }
 
 .subtitle {
-  max-width: 620px;
-  margin: 18px auto 0;
+  max-width: 540px;
+  margin: 4px auto 0;
   color: #c4c8d2;
-  font-size: 1.05rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .menu-panel {
-  width: min(360px, 100%);
-  padding: 20px;
-  border-radius: 22px;
+  margin-top: 3rem;
+  width: min(320px, 100%);
+  padding: 18px;
+  border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(18, 21, 31, 0.94) 0%, rgba(11, 13, 20, 0.96) 100%);
   border: 1px solid rgba(244, 231, 199, 0.12);
@@ -238,7 +243,7 @@
     0 24px 60px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.02);
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .menu-btn {
@@ -247,7 +252,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 56px;
+  min-height: 50px;
   border: 1px solid rgba(244, 231, 199, 0.14);
   border-radius: 14px;
   background:
@@ -266,7 +271,7 @@
 .menu-btn span:last-child {
   position: relative;
   z-index: 2;
-  font-size: 1rem;
+  font-size: 0.92rem;
   letter-spacing: 0.04em;
 }
 
@@ -335,7 +340,7 @@
 
 @media (max-width: 768px) {
   .subtitle {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .menu-panel {
@@ -343,7 +348,7 @@
   }
 
   .menu-btn {
-    min-height: 52px;
+    min-height: 48px;
   }
 
   .ruins-left,

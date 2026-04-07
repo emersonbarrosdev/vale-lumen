@@ -57,7 +57,7 @@ export interface RenderFrameParams {
   score: number;
   specialCharge: number;
   lives: number;
-  maxLives: number;
+  coins: number;
 
   paused: boolean;
   bossIntroPending: boolean;
@@ -88,7 +88,7 @@ export function renderFrame({
   score,
   specialCharge,
   lives,
-  maxLives,
+  coins,
   paused,
   bossIntroPending,
   respawningTimer,
@@ -128,12 +128,11 @@ export function renderFrame({
     hero,
     specialCharge,
     score,
+    coins,
     boss,
-    phaseData.definition.title,
     phaseData.definition.boss.bossName,
     lives,
-    maxLives,
-    'getFormattedCurrentPhaseTime' in phaseData ? '' : '',
+    '',
     false,
   );
 
@@ -165,7 +164,7 @@ export function renderFrameWithHud({
   score,
   specialCharge,
   lives,
-  maxLives,
+  coins,
   paused,
   bossIntroPending,
   respawningTimer,
@@ -212,11 +211,10 @@ export function renderFrameWithHud({
     hero,
     specialCharge,
     score,
+    coins,
     boss,
-    phaseData.definition.title,
     phaseData.definition.boss.bossName,
     lives,
-    maxLives,
     formattedTime,
     isTimeWarning,
   );
