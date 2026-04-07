@@ -1,3 +1,7 @@
+export type SpecialExplosionTheme =
+  | 'heroSpecial'
+  | 'heroMegaSpecial';
+
 export interface SpecialExplosion {
   x: number;
   y: number;
@@ -7,4 +11,5 @@ export interface SpecialExplosion {
   maxLife: number;
   damage: number;
   appliedDamage: boolean;
+  theme?: SpecialExplosionTheme;
 }

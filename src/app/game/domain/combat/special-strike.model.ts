@@ -3,7 +3,9 @@ export interface LightningPoint {
   y: number;
 }
 
-export type SpecialStrikeTheme = 'heroSpecial';
+export type SpecialStrikeTheme =
+  | 'heroSpecial'
+  | 'heroMegaSpecial';
 
 export interface SpecialStrike {
   points: LightningPoint[];

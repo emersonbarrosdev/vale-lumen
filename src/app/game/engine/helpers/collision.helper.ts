@@ -27,3 +27,16 @@ export function circleRectOverlap(
 
   return dx * dx + dy * dy <= radius * radius;
 }
+
+export function pointInCircle(
+  x: number,
+  y: number,
+  centerX: number,
+  centerY: number,
+  radius: number,
+): boolean {
+  const dx = x - centerX;
+  const dy = y - centerY;
+
+  return dx * dx + dy * dy <= radius * radius;
+}

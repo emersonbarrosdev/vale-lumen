@@ -13,6 +13,7 @@ export function drawHud(
   lives: number,
   formattedTime: string,
   isTimeWarning: boolean,
+  specialHudLabel = 'Especial',
 ): void {
   const leftX = 18;
   const topY = 14;
@@ -22,7 +23,7 @@ export function drawHud(
 
   ctx.save();
 
-  drawLeftBlock(ctx, hero, specialCharge, lives, leftX, topY);
+  drawLeftBlock(ctx, hero, specialCharge, lives, leftX, topY, specialHudLabel);
   drawCenterBlock(ctx, centerX, topY, formattedTime, isTimeWarning);
   drawRightBlock(ctx, rightX, topY, coins, score);
 
@@ -31,7 +32,7 @@ export function drawHud(
   }
 
   if (specialCharge >= 100) {
-    drawSpecialReadyAlert(ctx, leftX, topY + 76);
+    drawSpecialReadyAlert(ctx, leftX, topY + 90, specialHudLabel);
   }
 
   ctx.restore();
@@ -44,6 +45,7 @@ function drawLeftBlock(
   lives: number,
   x: number,
   y: number,
+  specialHudLabel: string,
 ): void {
   ctx.textAlign = 'left';
   ctx.fillStyle = '#f4e7c7';
@@ -51,7 +53,7 @@ function drawLeftBlock(
   ctx.fillText(hero.name, x, y + 12);
 
   drawLivesBlock(ctx, x, y + 32, lives);
-  drawSpecialBlock(ctx, x, y + 52, specialCharge);
+  drawSpecialBlock(ctx, x, y + 66, specialCharge, specialHudLabel);
 }
 
 function drawCenterBlock(
@@ -67,7 +69,7 @@ function drawCenterBlock(
   ctx.fillText('Tempo', centerX, y + 10);
 
   ctx.fillStyle = isTimeWarning ? '#ff9f9f' : '#fff4df';
-  ctx.font = 'bold 16px "Press Start 2P", Arial';
+  ctx.font = 'bold 15px "Press Start 2P", Arial';
   ctx.fillText(formattedTime, centerX, y + 30);
 }
 
@@ -83,11 +85,11 @@ function drawRightBlock(
   ctx.textAlign = 'right';
   ctx.fillStyle = '#fff4df';
   ctx.font = 'bold 14px "Press Start 2P", Arial';
-  ctx.fillText(`${score}`, rightX, y + 34);
+  ctx.fillText(`${score}`, rightX, y + 42);
 
   ctx.fillStyle = 'rgba(217, 222, 234, 0.82)';
   ctx.font = '11px "Press Start 2P", Arial';
-  ctx.fillText('ESC pausa', rightX, y + 54);
+  ctx.fillText('ESC pausa', rightX, y + 62);
 }
 
 function drawLivesBlock(
@@ -149,27 +151,55 @@ function drawSpecialBlock(
   x: number,
   y: number,
   specialCharge: number,
+  specialHudLabel: string,
 ): void {
   const barWidth = 184;
   const barHeight = 12;
   const percent = Math.max(0, Math.min(1, specialCharge / 100));
+  const isSuperSpecial = specialCharge >= 100;
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = isSuperSpecial ? '#ffbb88' : 'rgba(217, 222, 234, 0.88)';
+  ctx.font = '10px "Press Start 2P", Arial';
+  ctx.fillText(specialHudLabel.toUpperCase(), x, y - 6);
 
   ctx.fillStyle = '#121923';
   roundRect(ctx, x, y, barWidth, barHeight, 7);
   ctx.fill();
 
   const specialGradient = ctx.createLinearGradient(x, y, x + barWidth, y);
-  specialGradient.addColorStop(0, '#5ac9ff');
-  specialGradient.addColorStop(0.5, '#8eeaff');
-  specialGradient.addColorStop(1, '#d6fbff');
+
+  if (isSuperSpecial) {
+    specialGradient.addColorStop(0, '#ff6a2a');
+    specialGradient.addColorStop(0.5, '#ff8e3c');
+    specialGradient.addColorStop(1, '#ffd08f');
+  } else {
+    specialGradient.addColorStop(0, '#5ac9ff');
+    specialGradient.addColorStop(0.5, '#8eeaff');
+    specialGradient.addColorStop(1, '#d6fbff');
+  }
 
   ctx.fillStyle = specialGradient;
   roundRect(ctx, x, y, barWidth * percent, barHeight, 7);
   ctx.fill();
 
+  drawSpecialSegments(ctx, x, y, barWidth, barHeight);
+
+  if (isSuperSpecial) {
+    const pulse = Math.sin(performance.now() * 0.012) * 0.5 + 0.5;
+    const glow = ctx.createLinearGradient(x, y, x + barWidth, y);
+    glow.addColorStop(0, `rgba(255, 96, 32, ${0.18 + pulse * 0.18})`);
+    glow.addColorStop(0.5, `rgba(255, 140, 60, ${0.26 + pulse * 0.22})`);
+    glow.addColorStop(1, `rgba(255, 208, 143, ${0.16 + pulse * 0.16})`);
+
+    ctx.fillStyle = glow;
+    roundRect(ctx, x - 2, y - 2, barWidth + 4, barHeight + 4, 9);
+    ctx.fill();
+  }
+
   ctx.strokeStyle =
-    specialCharge >= 100 ? '#d6fbff' : 'rgba(141, 215, 255, 0.35)';
-  ctx.lineWidth = specialCharge >= 100 ? 1.9 : 1;
+    isSuperSpecial ? '#ffb36a' : 'rgba(141, 215, 255, 0.35)';
+  ctx.lineWidth = isSuperSpecial ? 1.9 : 1;
   roundRect(ctx, x, y, barWidth, barHeight, 7);
   ctx.stroke();
 
@@ -177,6 +207,28 @@ function drawSpecialBlock(
   ctx.font = 'bold 11px "Press Start 2P", Arial';
   ctx.textAlign = 'left';
   ctx.fillText(`${Math.round(specialCharge)}%`, x + barWidth + 10, y + 10);
+}
+
+function drawSpecialSegments(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  barWidth: number,
+  barHeight: number,
+): void {
+  const section = barWidth / 3;
+
+  ctx.strokeStyle = 'rgba(12, 18, 28, 0.72)';
+  ctx.lineWidth = 2;
+
+  for (let index = 1; index <= 2; index += 1) {
+    const lineX = x + section * index;
+
+    ctx.beginPath();
+    ctx.moveTo(lineX, y + 1.5);
+    ctx.lineTo(lineX, y + barHeight - 1.5);
+    ctx.stroke();
+  }
 }
 
 function drawCoinsLine(
@@ -286,28 +338,42 @@ function drawSpecialReadyAlert(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
+  specialHudLabel: string,
 ): void {
-  const width = 218;
+  const width = 228;
   const height = 32;
   const pulse = Math.sin(performance.now() * 0.012) * 0.5 + 0.5;
+  const isSuperSpecial = specialHudLabel === 'Super Especial';
 
   const bg = ctx.createLinearGradient(x, y, x, y + height);
-  bg.addColorStop(0, `rgba(32, 77, 95, ${0.8 + pulse * 0.08})`);
-  bg.addColorStop(1, `rgba(10, 38, 48, ${0.8 + pulse * 0.08})`);
+
+  if (isSuperSpecial) {
+    bg.addColorStop(0, `rgba(120, 34, 18, ${0.84 + pulse * 0.08})`);
+    bg.addColorStop(1, `rgba(58, 17, 10, ${0.84 + pulse * 0.08})`);
+  } else {
+    bg.addColorStop(0, `rgba(32, 77, 95, ${0.8 + pulse * 0.08})`);
+    bg.addColorStop(1, `rgba(10, 38, 48, ${0.8 + pulse * 0.08})`);
+  }
 
   ctx.fillStyle = bg;
   roundRect(ctx, x, y, width, height, 10);
   ctx.fill();
 
-  ctx.strokeStyle = `rgba(168, 240, 255, ${0.35 + pulse * 0.25})`;
+  ctx.strokeStyle = isSuperSpecial
+    ? `rgba(255, 183, 106, ${0.35 + pulse * 0.25})`
+    : `rgba(168, 240, 255, ${0.35 + pulse * 0.25})`;
   ctx.lineWidth = 1.2;
   roundRect(ctx, x, y, width, height, 10);
   ctx.stroke();
 
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#d6fbff';
+  ctx.fillStyle = isSuperSpecial ? '#ffd3a3' : '#d6fbff';
   ctx.font = 'bold 13px "Press Start 2P", Arial';
-  ctx.fillText('Especial pronto (L)', x + 12, y + 21);
+  ctx.fillText(
+    isSuperSpecial ? 'Super Especial (J + L)' : 'Especial (L)',
+    x + 12,
+    y + 21,
+  );
 }
 
 function roundRect(

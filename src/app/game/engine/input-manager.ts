@@ -261,20 +261,14 @@ export class InputManager {
         const axisValue = gamepad.axes[axisBinding.axisIndex] ?? 0;
         const threshold = axisBinding.threshold ?? INPUT_CONFIG.gamepadDeadzone;
 
-        if (
-          axisBinding.direction === -1 &&
-          axisValue <= -threshold
-        ) {
+        if (axisBinding.direction === -1 && axisValue <= -threshold) {
           currentTokens.set(
             `gamepad:${gamepad.index}:axis:${axisBinding.axisIndex}:negative`,
             action,
           );
         }
 
-        if (
-          axisBinding.direction === 1 &&
-          axisValue >= threshold
-        ) {
+        if (axisBinding.direction === 1 && axisValue >= threshold) {
           currentTokens.set(
             `gamepad:${gamepad.index}:axis:${axisBinding.axisIndex}:positive`,
             action,

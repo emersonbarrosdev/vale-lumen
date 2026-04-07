@@ -35,5 +35,10 @@ export function createInitialEngineRuntime(): EngineRuntime {
     bossIntroShown: false,
     bossIntroPending: false,
     lastInputSource: 'keyboard',
+
+    specialHudLabel: 'Especial',
+    specialSegmentsReady: 0,
+    ignitionReady: false,
+    megaComboTimer: 0,
   };
 }

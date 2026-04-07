@@ -4,6 +4,9 @@ export interface GameConfig {
   defaultCurrentPhase: number;
   defaultCurrentScore: number;
   defaultLastScore: number;
+  specialSegmentCostPercent: number;
+  megaSpecialCostPercent: number;
+  ignitionLabel: string;
 }
 
 export const GAME_CONFIG: GameConfig = {
@@ -12,4 +15,7 @@ export const GAME_CONFIG: GameConfig = {
   defaultCurrentPhase: 1,
   defaultCurrentScore: 0,
   defaultLastScore: 0,
+  specialSegmentCostPercent: 33.34,
+  megaSpecialCostPercent: 100,
+  ignitionLabel: 'Ignição',
 };

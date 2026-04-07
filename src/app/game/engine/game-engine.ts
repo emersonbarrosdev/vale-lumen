@@ -74,6 +74,7 @@ export class GameEngine {
   private readonly gravity = 2350;
   private readonly fallBoost = 1350;
   private readonly captainAttackRange = 230;
+  private readonly specialSegmentCost = 33.34;
 
   private readonly worldWidth: number;
   private readonly platforms: Platform[];
@@ -228,9 +229,11 @@ export class GameEngine {
       tunnels: this.tunnels,
       fireBullet: this.fireBullet,
       activateSpecial: this.activateSpecial,
+      activateMegaSpecial: this.activateMegaSpecial,
     });
 
     this.updateProgressScore();
+    this.syncSpecialHudState();
 
     updateCheckpointProgressSystem({
       hero: this.hero,
@@ -356,6 +359,8 @@ export class GameEngine {
       );
     }
 
+    this.syncSpecialHudState();
+
     this.gameState.setCurrentScore(this.runtime.score);
     this.gameState.setCurrentCoins(this.runtime.collectedCoins);
 
@@ -412,8 +417,8 @@ export class GameEngine {
   private readonly fireBullet = (kind: 'forward' | 'upward'): void => {
     if (kind === 'upward') {
       this.runtime.bullets.push({
-        x: this.hero.x + this.hero.width / 2 - 5,
-        y: this.hero.y - 10,
+        x: this.hero.x + this.hero.width / 2 + 1,
+        y: this.hero.y - 24,
         width: 10,
         height: 22,
         vx: 0,
@@ -431,9 +436,9 @@ export class GameEngine {
     this.runtime.bullets.push({
       x:
         this.hero.direction === 1
-          ? this.hero.x + this.hero.width - 2
-          : this.hero.x - 20,
-      y: this.hero.y + 24,
+          ? this.hero.x + this.hero.width + 6
+          : this.hero.x - 26,
+      y: this.hero.y + 13,
       width: 20,
       height: 10,
       vx: this.hero.direction * 690,
@@ -448,18 +453,19 @@ export class GameEngine {
   };
 
   private readonly activateSpecial = (): void => {
-    this.runtime.specialCharge = 0;
-    this.runtime.specialSequenceActive = false;
-    this.runtime.specialPulsesRemaining = 0;
-    this.runtime.specialPulseTimer = 0;
-    this.runtime.specialFlashTimer = 0.48;
+    if (this.runtime.specialSegmentsReady < 1) {
+      return;
+    }
+
+    this.consumeSpecialCharge(this.specialSegmentCost);
+    this.runtime.specialFlashTimer = 0.62;
 
     this.runtime.bullets.push({
       x:
         this.hero.direction === 1
-          ? this.hero.x + this.hero.width - 4
-          : this.hero.x - 34,
-      y: this.hero.y + 18,
+          ? this.hero.x + this.hero.width + 2
+          : this.hero.x - 38,
+      y: this.hero.y + 10,
       width: 34,
       height: 18,
       vx: this.hero.direction * 980,
@@ -471,13 +477,113 @@ export class GameEngine {
       ownerWeapon: 'arcaneGun',
       muzzleFlash: true,
       explosionOnImpact: true,
-      explosionRadius: this.canvas.width * 0.3,
+      explosionRadius: this.canvas.width * 0.34,
       explosionDamage: 4,
+      chestCast: true,
+    });
+
+    this.runtime.enemyProjectiles = [];
+    this.runtime.bossProjectiles = [];
+    this.syncSpecialHudState();
+  };
+
+  private readonly activateMegaSpecial = (): void => {
+    if (!this.runtime.ignitionReady || this.runtime.specialCharge < 100) {
+      return;
+    }
+
+    this.runtime.specialCharge = 0;
+    this.runtime.specialSegmentsReady = 0;
+    this.runtime.ignitionReady = false;
+    this.runtime.specialHudLabel = 'Especial';
+    this.runtime.megaComboTimer = 0;
+    this.runtime.specialFlashTimer = 0.86;
+    this.hero.megaVisualTimer = 1.05;
+
+    const originX =
+      this.hero.direction === 1
+        ? this.hero.x + this.hero.width + 2
+        : this.hero.x - 64;
+
+    this.runtime.bullets.push({
+      x: originX,
+      y: this.hero.y + 6,
+      width: 64,
+      height: 34,
+      vx: this.hero.direction * 1240,
+      vy: 0,
+      active: true,
+      kind: 'megaSpecial',
+      spriteType: 'heroMegaSpecialShot',
+      damage: 8,
+      ownerWeapon: 'arcaneGun',
+      muzzleFlash: true,
+      explosionOnImpact: true,
+      explosionRadius: this.canvas.width * 0.5,
+      explosionDamage: 8,
+      pierceEnemies: true,
+      chestCast: true,
+    });
+
+    this.runtime.specialStrikes.push({
+      points: this.buildMegaSpecialStrikePoints(),
+      life: 0.34,
+      maxLife: 0.34,
+      width: 20,
+      theme: 'heroMegaSpecial',
     });
 
     this.runtime.enemyProjectiles = [];
     this.runtime.bossProjectiles = [];
   };
+
+  private buildMegaSpecialStrikePoints(): Array<{ x: number; y: number }> {
+    const originX =
+      this.hero.direction === 1
+        ? this.hero.x + this.hero.width / 2 + 10
+        : this.hero.x + this.hero.width / 2 - 10;
+    const originY = this.hero.y + 18;
+    const endX =
+      this.hero.direction === 1
+        ? this.hero.x + this.canvas.width
+        : this.hero.x - this.canvas.width;
+
+    const points = [];
+    const segments = 8;
+
+    for (let index = 0; index <= segments; index += 1) {
+      const t = index / segments;
+      const x = originX + (endX - originX) * t;
+      const wobble = Math.sin(t * Math.PI * 4 + performance.now() * 0.02) * 18;
+      const y = originY + wobble;
+
+      points.push({ x, y });
+    }
+
+    return points;
+  }
+
+  private consumeSpecialCharge(amount: number): void {
+    this.runtime.specialCharge = Math.max(0, this.runtime.specialCharge - amount);
+  }
+
+  private syncSpecialHudState(): void {
+    this.runtime.specialSegmentsReady = Math.min(
+      3,
+      Math.floor(this.runtime.specialCharge / 33.34),
+    );
+
+    if (this.runtime.specialCharge >= 100) {
+      this.runtime.specialCharge = 100;
+      this.runtime.specialSegmentsReady = 3;
+      this.runtime.ignitionReady = true;
+      this.runtime.specialHudLabel = 'Super Especial';
+      return;
+    }
+
+    this.runtime.ignitionReady = false;
+    this.runtime.specialHudLabel = 'Especial';
+  }
 
   private readonly breakChest = (chest: Chest): void => {
     breakChestSystem({
@@ -606,10 +712,15 @@ export class GameEngine {
     this.hero.invulnerabilityTimer = 0;
     this.hero.shieldActive = false;
     this.hero.shieldGraceTimer = 0;
+    this.hero.specialCasting = false;
+    this.hero.megaCasting = false;
+    this.hero.megaVisualTimer = 0;
     this.runtime.bullets = [];
     this.runtime.bossProjectiles = [];
     this.runtime.enemyProjectiles = [];
     this.runtime.specialExplosions = [];
+    this.runtime.specialStrikes = [];
+    this.runtime.megaComboTimer = 0;
   };
 
   private updateCamera(): void {
@@ -648,6 +759,7 @@ export class GameEngine {
 
       score: this.runtime.score,
       specialCharge: this.runtime.specialCharge,
+      specialHudLabel: this.runtime.specialHudLabel,
       lives: this.runtime.lives,
       coins: this.runtime.collectedCoins,
 

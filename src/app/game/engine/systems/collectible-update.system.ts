@@ -38,12 +38,12 @@ export function updateCollectiblesSystem({
 
       case 'ray':
         runtime.collectedSparks += 1;
-        runtime.specialCharge = Math.min(100, runtime.specialCharge + 10);
+        addSpecialCharge(runtime, 10);
         spawnBurst(centerX, centerY, '#8eeaff', 10);
         break;
 
       case 'flameVial':
-        runtime.specialCharge = Math.min(100, runtime.specialCharge + 25);
+        addSpecialCharge(runtime, 25);
         runtime.score += 40;
         spawnBurst(centerX, centerY, '#ff9b42', 12);
         break;
@@ -64,6 +64,26 @@ export function updateCollectiblesSystem({
         break;
     }
   }
+
+  syncSpecialHudState(runtime);
+}
+
+function addSpecialCharge(runtime: EngineRuntime, amount: number): void {
+  runtime.specialCharge = Math.max(0, Math.min(100, runtime.specialCharge + amount));
+}
+
+function syncSpecialHudState(runtime: EngineRuntime): void {
+  runtime.specialSegmentsReady = Math.min(3, Math.floor(runtime.specialCharge / 33.34));
+
+  if (runtime.specialCharge >= 100) {
+    runtime.ignitionReady = true;
+    runtime.specialHudLabel = 'Ignição';
+    runtime.specialSegmentsReady = 3;
+    return;
+  }
+
+  runtime.ignitionReady = false;
+  runtime.specialHudLabel = 'Especial';
 }
 
 function rectsOverlap(

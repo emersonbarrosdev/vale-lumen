@@ -18,6 +18,7 @@ export interface HeroUpdateParams {
   tunnels: Tunnel[];
   fireBullet: (kind: 'forward' | 'upward') => void;
   activateSpecial: () => void;
+  activateMegaSpecial: () => void;
 }
 
 export function updateHeroSystem({
@@ -33,9 +34,10 @@ export function updateHeroSystem({
   tunnels,
   fireBullet,
   activateSpecial,
+  activateMegaSpecial,
 }: HeroUpdateParams): void {
   const wasOnGround = hero.onGround;
-  const isLockedInUpShot = hero.castTimer > 0 && hero.castAim === 'up';
+  const isLockedInSpecialCast = hero.castTimer > 0 && (hero.specialCasting || hero.megaCasting);
 
   hero.animationTime += deltaTime;
   hero.shootCooldown = Math.max(0, hero.shootCooldown - deltaTime);
@@ -45,18 +47,34 @@ export function updateHeroSystem({
   hero.hurtTimer = Math.max(0, hero.hurtTimer - deltaTime);
   hero.landingTimer = Math.max(0, hero.landingTimer - deltaTime);
   hero.shieldGraceTimer = Math.max(0, hero.shieldGraceTimer - deltaTime);
+  hero.megaVisualTimer = Math.max(0, hero.megaVisualTimer - deltaTime);
+  runtime.megaComboTimer = Math.max(0, runtime.megaComboTimer - deltaTime);
 
   if (hero.castTimer <= 0) {
     hero.castDuration = 0;
     hero.castAim = 'forward';
+    hero.specialCasting = false;
+    hero.megaCasting = false;
   }
 
+  const lookingUp =
+    !isLockedInSpecialCast &&
+    input.isActionPressed('upAttack');
+
+  hero.aimingUp =
+    lookingUp &&
+    hero.hurtTimer <= 0 &&
+    !hero.specialCasting &&
+    !hero.megaCasting;
+
   const movingLeft =
-    !isLockedInUpShot &&
+    !hero.aimingUp &&
+    !isLockedInSpecialCast &&
     input.isActionPressed('moveLeft');
 
   const movingRight =
-    !isLockedInUpShot &&
+    !hero.aimingUp &&
+    !isLockedInSpecialCast &&
     input.isActionPressed('moveRight');
 
   const runBlend = Math.min(1, deltaTime * 11);
@@ -79,7 +97,7 @@ export function updateHeroSystem({
   }
 
   if (
-    !isLockedInUpShot &&
+    !isLockedInSpecialCast &&
     input.isActionJustPressed('jump') &&
     hero.jumpsRemaining > 0
   ) {
@@ -88,51 +106,75 @@ export function updateHeroSystem({
     hero.onGround = false;
   }
 
-  if (
-    !isLockedInUpShot &&
-    input.isActionJustPressed('dash') &&
-    hero.dashCooldown <= 0
-  ) {
-    hero.vx = hero.direction * 610;
-    hero.dashCooldown = 0.7;
-  }
+  const attackJustPressed = input.isActionJustPressed('attack');
+  const specialJustPressed = input.isActionJustPressed('special');
 
   if (
-    !isLockedInUpShot &&
-    input.isActionJustPressed('attack') &&
-    hero.shootCooldown <= 0
+    !isLockedInSpecialCast &&
+    attackJustPressed &&
+    specialJustPressed &&
+    runtime.ignitionReady
   ) {
-    fireBullet('forward');
-    hero.shootCooldown = 0.2;
-    hero.castTimer = 0.14;
-    hero.castDuration = 0.14;
+    activateMegaSpecial();
+    hero.castTimer = 0.54;
+    hero.castDuration = 0.54;
     hero.castAim = 'forward';
-  }
-
-  if (
-    !isLockedInUpShot &&
-    input.isActionJustPressed('upAttack') &&
+    hero.shootCooldown = Math.max(hero.shootCooldown, 0.55);
+    hero.vx = 0;
+    hero.specialCasting = false;
+    hero.megaCasting = true;
+    hero.aimingUp = false;
+  } else if (
+    !isLockedInSpecialCast &&
+    attackJustPressed &&
     hero.shootCooldown <= 0
   ) {
-    fireBullet('upward');
-    hero.shootCooldown = 0.26;
-    hero.castTimer = 0.26;
-    hero.castDuration = 0.26;
-    hero.castAim = 'up';
-    hero.vx = 0;
+    if (hero.aimingUp) {
+      fireBullet('upward');
+      hero.shootCooldown = 0.26;
+      hero.castTimer = 0.26;
+      hero.castDuration = 0.26;
+      hero.castAim = 'up';
+      hero.vx = 0;
+    } else {
+      fireBullet('forward');
+      hero.shootCooldown = 0.2;
+      hero.castTimer = 0.14;
+      hero.castDuration = 0.14;
+      hero.castAim = 'forward';
+      runtime.megaComboTimer = runtime.ignitionReady ? 0.14 : 0;
+    }
   }
 
   if (
-    !isLockedInUpShot &&
-    input.isActionJustPressed('special') &&
-    runtime.specialCharge >= 100 &&
-    !runtime.specialSequenceActive
+    !isLockedInSpecialCast &&
+    specialJustPressed &&
+    runtime.ignitionReady &&
+    runtime.megaComboTimer > 0
+  ) {
+    activateMegaSpecial();
+    hero.castTimer = 0.54;
+    hero.castDuration = 0.54;
+    hero.castAim = 'forward';
+    hero.shootCooldown = Math.max(hero.shootCooldown, 0.55);
+    hero.vx = 0;
+    hero.specialCasting = false;
+    hero.megaCasting = true;
+    hero.aimingUp = false;
+  } else if (
+    !isLockedInSpecialCast &&
+    specialJustPressed &&
+    runtime.specialSegmentsReady >= 1
   ) {
     activateSpecial();
     hero.castTimer = 0.34;
     hero.castDuration = 0.34;
     hero.castAim = 'forward';
     hero.shootCooldown = Math.max(hero.shootCooldown, 0.35);
+    hero.vx = 0;
+    hero.specialCasting = true;
+    hero.megaCasting = false;
+    hero.aimingUp = false;
   }
 
   const gravityThisFrame =

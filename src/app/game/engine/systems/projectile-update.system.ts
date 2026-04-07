@@ -112,13 +112,16 @@ export function updateBulletsSystem({
     bullet.y += bullet.vy * deltaTime;
 
     if (
-      bullet.x < -140 ||
-      bullet.x > worldWidth + 140 ||
-      bullet.y < -160 ||
-      bullet.y > canvasHeight + 160
+      bullet.x < -220 ||
+      bullet.x > worldWidth + 220 ||
+      bullet.y < -220 ||
+      bullet.y > canvasHeight + 220
     ) {
-      if (bullet.kind === 'special' && bullet.explosionOnImpact) {
-        createSpecialExplosion(runtime, bullet, spawnBurst);
+      if (
+        (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
+        bullet.explosionOnImpact
+      ) {
+        createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
       }
 
       bullet.active = false;
@@ -134,8 +137,11 @@ export function updateBulletsSystem({
       };
 
       if (rectsOverlap(bullet, roofRect)) {
-        if (bullet.kind === 'special' && bullet.explosionOnImpact) {
-          createSpecialExplosion(runtime, bullet, spawnBurst);
+        if (
+          (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
+          bullet.explosionOnImpact
+        ) {
+          createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
         }
 
         bullet.active = false;
@@ -152,24 +158,41 @@ export function updateBulletsSystem({
         continue;
       }
 
-      if (rectsOverlap(bullet, enemy)) {
-        if (bullet.kind === 'special' && bullet.explosionOnImpact) {
-          createSpecialExplosion(runtime, bullet, spawnBurst);
+      if (!rectsOverlap(bullet, enemy)) {
+        continue;
+      }
+
+      enemy.hp -= bullet.damage;
+      enemy.hitFlash = bullet.kind === 'megaSpecial' ? 0.18 : 0.1;
+
+      if (enemy.hp <= 0) {
+        killEnemy(
+          enemy,
+          enemy.type === 'vigia' ? 100 : 50,
+          bullet.kind === 'megaSpecial' ? '#ff7b36' : '#ff8b5e',
+          bullet.kind === 'megaSpecial' ? 22 : bullet.kind === 'special' ? 18 : 10,
+        );
+      } else {
+        spawnBurst(
+          enemy.x + enemy.width / 2,
+          enemy.y + enemy.height / 2,
+          bullet.kind === 'megaSpecial' ? '#ffb36a' : '#ff8b5e',
+          bullet.kind === 'megaSpecial' ? 10 : 6,
+        );
+      }
+
+      if (!bullet.pierceEnemies) {
+        if (
+          (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
+          bullet.explosionOnImpact
+        ) {
+          createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
         }
 
         bullet.active = false;
-        enemy.hp -= bullet.damage;
-        enemy.hitFlash = 0.1;
+      }
 
-        if (enemy.hp <= 0) {
-          killEnemy(
-            enemy,
-            enemy.type === 'vigia' ? 100 : 50,
-            '#ff8b5e',
-            bullet.kind === 'special' ? 18 : 10,
-          );
-        }
-
+      if (!bullet.active) {
         break;
       }
     }
@@ -184,12 +207,11 @@ export function updateBulletsSystem({
       }
 
       if (rectsOverlap(bullet, chest)) {
-        /**
-         * CORREÇÃO:
-         * agora qualquer tiro quebra o objeto.
-         */
-        if (bullet.kind === 'special' && bullet.explosionOnImpact) {
-          createSpecialExplosion(runtime, bullet, spawnBurst);
+        if (
+          (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
+          bullet.explosionOnImpact
+        ) {
+          createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
         }
 
         bullet.active = false;
@@ -208,16 +230,19 @@ export function updateBulletsSystem({
       }
 
       if (rectsOverlap(bullet, hazard)) {
-        if (bullet.kind === 'special' && bullet.explosionOnImpact) {
-          createSpecialExplosion(runtime, bullet, spawnBurst);
+        if (
+          (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
+          bullet.explosionOnImpact
+        ) {
+          createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
         }
 
         bullet.active = false;
         spawnBurst(
           bullet.x + bullet.width / 2,
           bullet.y + bullet.height / 2,
-          '#7dffb2',
-          bullet.kind === 'special' ? 12 : 6,
+          bullet.kind === 'megaSpecial' ? '#ff9b42' : '#7dffb2',
+          bullet.kind === 'megaSpecial' ? 16 : bullet.kind === 'special' ? 12 : 6,
         );
         break;
       }
@@ -229,18 +254,21 @@ export function updateBulletsSystem({
       boss.hp > 0 &&
       rectsOverlap(bullet, boss)
     ) {
-      if (bullet.kind === 'special' && bullet.explosionOnImpact) {
-        createSpecialExplosion(runtime, bullet, spawnBurst);
+      if (
+        (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
+        bullet.explosionOnImpact
+      ) {
+        createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
       }
 
       bullet.active = false;
       boss.hp -= bullet.damage;
-      boss.hitFlash = 0.12;
+      boss.hitFlash = bullet.kind === 'megaSpecial' ? 0.22 : 0.12;
       spawnBurst(
         boss.x + boss.width / 2,
         boss.y + 74,
-        '#ff8b5e',
-        bullet.kind === 'special' ? 16 : 8,
+        bullet.kind === 'megaSpecial' ? '#ff7b36' : '#ff8b5e',
+        bullet.kind === 'megaSpecial' ? 24 : bullet.kind === 'special' ? 16 : 8,
       );
     }
   }
@@ -279,6 +307,8 @@ export function updateSpecialExplosionsSystem({
     const progress = 1 - explosion.life / explosion.maxLife;
     explosion.radius = explosion.maxRadius * Math.min(1, progress * 1.15);
 
+    const isMega = (explosion as SpecialExplosionRuntime).theme === 'heroMegaSpecial';
+
     if (!explosion.appliedDamage && explosion.radius >= explosion.maxRadius * 0.5) {
       explosion.appliedDamage = true;
 
@@ -292,17 +322,22 @@ export function updateSpecialExplosionsSystem({
 
         if (pointInExplosion(enemyCenterX, enemyCenterY, explosion)) {
           enemy.hp -= explosion.damage;
-          enemy.hitFlash = 0.16;
+          enemy.hitFlash = isMega ? 0.2 : 0.16;
 
           if (enemy.hp <= 0) {
             killEnemy(
               enemy,
               enemy.type === 'vigia' ? 100 : 50,
               '#ff6a00',
-              20,
+              isMega ? 34 : 22,
             );
           } else {
-            spawnBurst(enemyCenterX, enemyCenterY, '#ffb36a', 12);
+            spawnBurst(
+              enemyCenterX,
+              enemyCenterY,
+              isMega ? '#ff8c42' : '#ffb36a',
+              isMega ? 24 : 12,
+            );
           }
         }
       }
@@ -329,7 +364,12 @@ export function updateSpecialExplosionsSystem({
         const hazardCenterY = hazard.y + hazard.height / 2;
 
         if (pointInExplosion(hazardCenterX, hazardCenterY, explosion)) {
-          spawnBurst(hazardCenterX, hazardCenterY, '#7dffb2', 10);
+          spawnBurst(
+            hazardCenterX,
+            hazardCenterY,
+            isMega ? '#ff9d52' : '#7dffb2',
+            isMega ? 22 : 10,
+          );
         }
       }
 
@@ -339,8 +379,13 @@ export function updateSpecialExplosionsSystem({
 
         if (pointInExplosion(bossCenterX, bossCenterY, explosion)) {
           boss.hp = Math.max(0, boss.hp - explosion.damage);
-          boss.hitFlash = 0.18;
-          spawnBurst(bossCenterX, bossCenterY, '#ff6a00', 18);
+          boss.hitFlash = isMega ? 0.22 : 0.18;
+          spawnBurst(
+            bossCenterX,
+            bossCenterY,
+            isMega ? '#ff7b36' : '#ff6a00',
+            isMega ? 30 : 18,
+          );
         }
       }
     }
@@ -490,27 +535,52 @@ export function updateBossProjectilesSystem({
   );
 }
 
+type SpecialExplosionRuntime = {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  life: number;
+  maxLife: number;
+  damage: number;
+  appliedDamage: boolean;
+  theme?: 'heroSpecial' | 'heroMegaSpecial';
+};
+
 function createSpecialExplosion(
   runtime: EngineRuntime,
   bullet: Bullet,
   spawnBurst: (x: number, y: number, color: string, amount: number) => void,
+  worldWidth: number,
+  canvasHeight: number,
 ): void {
-  const x = bullet.x + bullet.width / 2;
-  const y = bullet.y + bullet.height / 2;
+  const rawX = bullet.x + bullet.width / 2;
+  const rawY = bullet.y + bullet.height / 2;
+  const x = Math.max(0, Math.min(worldWidth, rawX));
+  const y = Math.max(0, Math.min(canvasHeight, rawY));
+  const isMega = bullet.kind === 'megaSpecial';
 
   runtime.specialExplosions.push({
     x,
     y,
     radius: 0,
-    maxRadius: bullet.explosionRadius ?? 220,
-    life: 0.42,
-    maxLife: 0.42,
-    damage: bullet.explosionDamage ?? 4,
+    maxRadius: bullet.explosionRadius ?? (isMega ? 380 : 240),
+    life: isMega ? 0.72 : 0.56,
+    maxLife: isMega ? 0.72 : 0.56,
+    damage: bullet.explosionDamage ?? (isMega ? 8 : 4),
     appliedDamage: false,
-  });
+    theme: isMega ? 'heroMegaSpecial' : 'heroSpecial',
+  } as SpecialExplosionRuntime);
 
-  spawnBurst(x, y, '#ffb15c', 26);
-  spawnBurst(x, y, '#82e8ff', 12);
+  spawnBurst(x, y, isMega ? '#ff7d2e' : '#ffb15c', isMega ? 64 : 32);
+  spawnBurst(x, y, isMega ? '#ffd6a1' : '#82e8ff', isMega ? 28 : 14);
+  spawnBurst(x, y, isMega ? '#fff1cf' : '#ffdd9f', isMega ? 20 : 10);
+
+  if (rawX <= 0 || rawX >= worldWidth || rawY <= 0 || rawY >= canvasHeight) {
+    spawnBurst(x, y, '#ff6a2a', isMega ? 42 : 18);
+    spawnBurst(x, y, '#ffd89f', isMega ? 24 : 10);
+  }
+
   runtime.enemyProjectiles = [];
   runtime.bossProjectiles = [];
 }

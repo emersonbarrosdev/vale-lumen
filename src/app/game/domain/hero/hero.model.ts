@@ -1,3 +1,4 @@
+// src/app/game/domain/hero/hero.model.ts
 export type HeroState =
   | 'idle'
   | 'run'
@@ -47,4 +48,25 @@ export interface Hero {
    * ele não pode perder vida.
    */
   shieldGraceTimer: number;
+
+  /**
+   * Ativo enquanto o especial comum está sendo executado.
+   */
+  specialCasting: boolean;
+
+  /**
+   * Ativo enquanto o super especial está sendo executado.
+   */
+  megaCasting: boolean;
+
+  /**
+   * Tempo visual do brilho/mudança do cabelo durante o super.
+   */
+  megaVisualTimer: number;
+
+  /**
+   * Mantém o herói olhando e apontando a arma para cima
+   * enquanto o jogador segura W.
+   */
+  aimingUp: boolean;
 }

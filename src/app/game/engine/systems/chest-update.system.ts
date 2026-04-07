@@ -42,14 +42,16 @@ export function breakChestSystem({
     chest.rewardGranted = true;
 
     if (chest.rare) {
-      runtime.specialCharge = Math.min(100, runtime.specialCharge + 100);
+      addSpecialCharge(runtime, 100);
       hero.hp = Math.min(hero.maxHp, hero.hp + 25);
       runtime.score += 150;
     } else {
-      runtime.specialCharge = Math.min(100, runtime.specialCharge + 50);
+      addSpecialCharge(runtime, 50);
       hero.hp = Math.min(hero.maxHp, hero.hp + 20);
       runtime.score += 80;
     }
+
+    syncSpecialHudState(runtime);
   }
 
   const centerX = chest.x + chest.width / 2;
@@ -58,4 +60,22 @@ export function breakChestSystem({
   spawnBurst(centerX, centerY, '#ffda7d', chest.rare ? 20 : 16);
   spawnBurst(centerX, centerY, '#7de8ff', chest.rare ? 16 : 12);
   spawnBurst(centerX, centerY, '#72ff95', chest.rare ? 12 : 8);
+}
+
+function addSpecialCharge(runtime: EngineRuntime, amount: number): void {
+  runtime.specialCharge = Math.max(0, Math.min(100, runtime.specialCharge + amount));
+}
+
+function syncSpecialHudState(runtime: EngineRuntime): void {
+  runtime.specialSegmentsReady = Math.min(3, Math.floor(runtime.specialCharge / 33.34));
+
+  if (runtime.specialCharge >= 100) {
+    runtime.ignitionReady = true;
+    runtime.specialHudLabel = 'Ignição';
+    runtime.specialSegmentsReady = 3;
+    return;
+  }
+
+  runtime.ignitionReady = false;
+  runtime.specialHudLabel = 'Especial';
 }

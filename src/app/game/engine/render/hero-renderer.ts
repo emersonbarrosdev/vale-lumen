@@ -9,6 +9,7 @@ const BASE_COLORS = {
   weaponMid: '#2a303a',
   weaponLight: '#4a5668',
   weaponGlow: '#ffb15c',
+  hair: '#ff7b24',
 };
 
 const SPECIAL_COLORS = {
@@ -20,6 +21,19 @@ const SPECIAL_COLORS = {
   weaponMid: '#2c3a48',
   weaponLight: '#58708f',
   weaponGlow: '#d6fbff',
+  hair: '#82e8ff',
+};
+
+const MEGA_COLORS = {
+  body: '#000000',
+  glow: '#ff6e2e',
+  glowSoft: 'rgba(255, 110, 46, 0.28)',
+  glowStrong: 'rgba(255, 194, 110, 0.82)',
+  weaponDark: '#24150f',
+  weaponMid: '#5f2e1d',
+  weaponLight: '#b05b32',
+  weaponGlow: '#ffd29c',
+  hair: '#ff8b3d',
 };
 
 type HeroPalette = typeof BASE_COLORS;
@@ -43,22 +57,28 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   const isFall = hero.state === 'fall';
   const isCast = hero.state === 'cast';
   const isAir = isJump || isFall;
-  const isUpShot = isCast && hero.castAim === 'up';
-  const isSpecialShot = isCast && hero.castDuration >= 0.3;
-  const palette: HeroPalette = isSpecialShot ? SPECIAL_COLORS : BASE_COLORS;
+  const isAimingUp = hero.aimingUp && !isCast;
+  const isUpShot = (isCast && hero.castAim === 'up') || isAimingUp;
+  const isSpecialShot = hero.specialCasting;
+  const isMegaShot = hero.megaCasting || hero.megaVisualTimer > 0;
+  const palette: HeroPalette = isMegaShot
+    ? MEGA_COLORS
+    : isSpecialShot
+      ? SPECIAL_COLORS
+      : BASE_COLORS;
 
   const runCycle = isRun ? t * 14 : 0;
 
   const bob = isRun
     ? Math.sin(runCycle * 2) * 1.8 + Math.cos(runCycle) * 0.35
-    : isCast
+    : isCast || isAimingUp
       ? Math.sin(t * 10) * 0.04
       : Math.sin(t * 2.5) * 0.4;
 
   const lean = isIdle
-    ? 0
-    : isCast
-      ? (isUpShot ? -0.04 : -0.06)
+    ? (isAimingUp ? -0.02 : 0)
+    : isCast || isAimingUp
+      ? (isUpShot ? -0.04 : isMegaShot ? 0 : -0.06)
       : isRun
         ? 0.22 + Math.sin(runCycle) * 0.03
         : isAir
@@ -74,7 +94,7 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.save();
   ctx.rotate(lean);
 
-  drawArmBack(ctx, runCycle, isRun, isIdle, isAir, isCast, isUpShot, palette);
+  drawArmBack(ctx, runCycle, isRun, isIdle, isAir, isCast || isAimingUp, isUpShot, isMegaShot, palette);
 
   ctx.fillStyle = palette.body;
   ctx.beginPath();
@@ -169,11 +189,16 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   }
 
   if (isSpecialShot) {
-    drawSpecialAura(ctx, palette);
+    drawSpecialAura(ctx, palette, false);
   }
 
-  drawWeapon(ctx, isRun, isAir, isCast, isUpShot, isSpecialShot, runCycle, palette);
-  drawArmFront(ctx, runCycle + Math.PI, isRun, isIdle, isAir, isCast, isUpShot, palette);
+  if (isMegaShot) {
+    drawSpecialAura(ctx, palette, true);
+    drawChestAura(ctx, palette);
+  }
+
+  drawWeapon(ctx, isRun, isAir, isCast || isAimingUp, isUpShot, isSpecialShot || isMegaShot, runCycle, palette);
+  drawArmFront(ctx, runCycle + Math.PI, isRun, isIdle, isAir, isCast || isAimingUp, isUpShot, isMegaShot, palette);
 
   ctx.restore();
 
@@ -272,20 +297,53 @@ function drawSpark(
 function drawSpecialAura(
   ctx: CanvasRenderingContext2D,
   palette: HeroPalette,
+  isMega: boolean,
 ): void {
-  const aura = ctx.createRadialGradient(0, -18, 6, 0, -18, 32);
+  const aura = ctx.createRadialGradient(0, -18, 6, 0, -18, isMega ? 40 : 32);
   aura.addColorStop(0, palette.glowStrong);
   aura.addColorStop(0.45, palette.glowSoft);
   aura.addColorStop(1, 'rgba(0,0,0,0)');
 
   ctx.fillStyle = aura;
   ctx.beginPath();
-  ctx.arc(0, -18, 30, 0, Math.PI * 2);
+  ctx.arc(0, -18, isMega ? 36 : 30, 0, Math.PI * 2);
   ctx.fill();
 }
 
+function drawChestAura(
+  ctx: CanvasRenderingContext2D,
+  palette: HeroPalette,
+): void {
+  const aura = ctx.createRadialGradient(0, -14, 4, 0, -6, 30);
+  aura.addColorStop(0, palette.glowStrong);
+  aura.addColorStop(0.34, palette.glowSoft);
+  aura.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.fillStyle = aura;
+  ctx.beginPath();
+  ctx.arc(0, -8, 28, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = palette.glow;
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-11, -7);
+  ctx.lineTo(-4, -10);
+  ctx.lineTo(0, -15);
+  ctx.lineTo(4, -10);
+  ctx.lineTo(11, -7);
+
+  ctx.moveTo(-8, 0);
+  ctx.lineTo(-2, -3);
+  ctx.lineTo(0, -8);
+  ctx.lineTo(2, -3);
+  ctx.lineTo(8, 0);
+  ctx.stroke();
+}
+
 function drawMohawk(ctx: CanvasRenderingContext2D, palette: HeroPalette): void {
-  ctx.fillStyle = palette.glow;
+  ctx.fillStyle = palette.hair;
 
   const spikes = [
     { x: -7.4, y: 1, h: 6.8, w: 4, rot: -1.8 },
@@ -366,6 +424,7 @@ function drawArmBack(
   isAir: boolean,
   isCast: boolean,
   isUpShot: boolean,
+  isMegaShot: boolean,
   palette: HeroPalette,
 ): void {
   ctx.save();
@@ -381,6 +440,11 @@ function drawArmBack(
       shoulderY = -24.6;
       armRot = -1.8;
       elbowRot = -0.05;
+    } else if (isMegaShot) {
+      shoulderX = -5.4;
+      shoulderY = -21.2;
+      armRot = -2.02;
+      elbowRot = 0.14;
     } else {
       shoulderX = -0.5;
       shoulderY = -20.2;
@@ -410,6 +474,7 @@ function drawArmFront(
   isAir: boolean,
   isCast: boolean,
   isUpShot: boolean,
+  isMegaShot: boolean,
   palette: HeroPalette,
 ): void {
   ctx.save();
@@ -425,6 +490,11 @@ function drawArmFront(
       shoulderY = -26.2;
       armRot = -1.98;
       elbowRot = 0.04;
+    } else if (isMegaShot) {
+      shoulderX = 6.2;
+      shoulderY = -21.2;
+      armRot = -1.18;
+      elbowRot = -0.12;
     } else {
       shoulderX = 5.1;
       shoulderY = -20.0;

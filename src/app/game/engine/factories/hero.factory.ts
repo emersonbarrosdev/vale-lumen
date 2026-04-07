@@ -1,3 +1,4 @@
+// src/app/game/engine/factories/hero.factory.ts
 import { Hero } from '../../domain/hero/hero.model';
 import { GameStateService } from '../../services/game-state.service';
 
@@ -38,5 +39,10 @@ export function createHero(gameState: GameStateService): Hero {
 
     shieldActive: false,
     shieldGraceTimer: 0,
+
+    specialCasting: false,
+    megaCasting: false,
+    megaVisualTimer: 0,
+    aimingUp: false,
   };
 }

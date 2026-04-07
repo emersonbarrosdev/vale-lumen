@@ -50,7 +50,6 @@ export function drawEnemies(
       ctx.closePath();
       ctx.fill();
 
-      // núcleo maior para diferenciar o capitão
       const coreGlow = ctx.createRadialGradient(4, -5, 2, 4, -5, 20 + pulse * 3);
       coreGlow.addColorStop(0, 'rgba(225, 255, 233, 0.95)');
       coreGlow.addColorStop(0.3, 'rgba(145, 255, 166, 0.8)');
@@ -71,7 +70,6 @@ export function drawEnemies(
       ctx.arc(1.6, -7.3, 2.4, 0, Math.PI * 2);
       ctx.fill();
 
-      // raios pequenos em volta do núcleo
       ctx.strokeStyle = `rgba(145, 255, 166, ${0.44 + pulse * 0.18})`;
       ctx.lineWidth = 2.2;
       ctx.lineCap = 'round';
