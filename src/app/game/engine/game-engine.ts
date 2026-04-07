@@ -52,6 +52,7 @@ import {
   updateBulletsSystem,
   updateBurstParticlesSystem,
   updateEnemyProjectilesSystem,
+  updateSpecialExplosionsSystem,
   updateSpecialSequenceSystem,
   updateSpecialStrikesSystem,
 } from './systems/projectile-update.system';
@@ -199,6 +200,17 @@ export class GameEngine {
       this.updateRespawnTimer(deltaTime);
       updateBurstParticlesSystem(this.runtime, deltaTime);
       updateSpecialStrikesSystem(this.runtime, deltaTime);
+      updateSpecialExplosionsSystem({
+        runtime: this.runtime,
+        boss: this.boss,
+        enemies: this.enemies,
+        chests: this.chests,
+        hazards: this.hazards,
+        spawnBurst: this.spawnBurst,
+        breakChest: this.breakChest,
+        killEnemy: this.killEnemy,
+        deltaTime,
+      });
       this.updateCamera();
       return;
     }
@@ -313,6 +325,18 @@ export class GameEngine {
       killEnemy: this.killEnemy,
     });
 
+    updateSpecialExplosionsSystem({
+      runtime: this.runtime,
+      boss: this.boss,
+      enemies: this.enemies,
+      chests: this.chests,
+      hazards: this.hazards,
+      spawnBurst: this.spawnBurst,
+      breakChest: this.breakChest,
+      killEnemy: this.killEnemy,
+      deltaTime,
+    });
+
     updateSpecialStrikesSystem(this.runtime, deltaTime);
     updateBurstParticlesSystem(this.runtime, deltaTime);
 
@@ -386,13 +410,17 @@ export class GameEngine {
     if (kind === 'upward') {
       this.runtime.bullets.push({
         x: this.hero.x + this.hero.width / 2 - 5,
-        y: this.hero.y + 4,
+        y: this.hero.y - 10,
         width: 10,
-        height: 20,
+        height: 22,
         vx: 0,
-        vy: -720,
+        vy: -760,
         active: true,
         kind: 'upward',
+        spriteType: 'heroShotUp',
+        damage: 1,
+        ownerWeapon: 'arcaneGun',
+        muzzleFlash: true,
       });
       return;
     }
@@ -401,23 +429,51 @@ export class GameEngine {
       x:
         this.hero.direction === 1
           ? this.hero.x + this.hero.width - 2
-          : this.hero.x - 18,
-      y: this.hero.y + 26,
-      width: 18,
+          : this.hero.x - 20,
+      y: this.hero.y + 24,
+      width: 20,
       height: 10,
-      vx: this.hero.direction * 610,
+      vx: this.hero.direction * 690,
       vy: 0,
       active: true,
       kind: 'forward',
+      spriteType: 'heroShot',
+      damage: 1,
+      ownerWeapon: 'arcaneGun',
+      muzzleFlash: true,
     });
   };
 
   private readonly activateSpecial = (): void => {
     this.runtime.specialCharge = 0;
-    this.runtime.specialSequenceActive = true;
-    this.runtime.specialPulsesRemaining = 8;
+    this.runtime.specialSequenceActive = false;
+    this.runtime.specialPulsesRemaining = 0;
     this.runtime.specialPulseTimer = 0;
-    this.runtime.specialFlashTimer = 1.6;
+    this.runtime.specialFlashTimer = 0.48;
+
+    this.runtime.bullets.push({
+      x:
+        this.hero.direction === 1
+          ? this.hero.x + this.hero.width - 4
+          : this.hero.x - 34,
+      y: this.hero.y + 18,
+      width: 34,
+      height: 18,
+      vx: this.hero.direction * 980,
+      vy: 0,
+      active: true,
+      kind: 'special',
+      spriteType: 'heroSpecialShot',
+      damage: 4,
+      ownerWeapon: 'arcaneGun',
+      muzzleFlash: true,
+      explosionOnImpact: true,
+      explosionRadius: this.canvas.width * 0.3,
+      explosionDamage: 4,
+    });
+
+    this.runtime.enemyProjectiles = [];
+    this.runtime.bossProjectiles = [];
   };
 
   private readonly breakChest = (chest: Chest): void => {
@@ -476,7 +532,7 @@ export class GameEngine {
     );
   };
 
-  private readonly applyHeroDamage = (damage = 20): void => {
+  private readonly applyHeroDamage = (): void => {
     if (
       this.hero.invulnerabilityTimer > 0 ||
       this.runtime.respawningTimer > 0
@@ -484,16 +540,40 @@ export class GameEngine {
       return;
     }
 
-    this.hero.hp = Math.max(0, this.hero.hp - damage);
+    /**
+     * Se estiver na janela de graça após perder o escudo,
+     * ainda não pode perder vida.
+     */
+    if (this.hero.shieldGraceTimer > 0) {
+      return;
+    }
+
+    /**
+     * Se tiver proteção, perde a proteção e entra em 3s de graça.
+     */
+    if (this.hero.shieldActive) {
+      this.hero.shieldActive = false;
+      this.hero.shieldGraceTimer = 3;
+      this.hero.invulnerabilityTimer = 0;
+      this.hero.hurtTimer = 0.16;
+      this.hero.vx = -this.hero.direction * 120;
+      this.hero.vy = -160;
+
+      this.spawnBurst(
+        this.hero.x + this.hero.width / 2,
+        this.hero.y + this.hero.height / 2,
+        '#82e8ff',
+        18,
+      );
+
+      return;
+    }
+
     this.hero.invulnerabilityTimer = 1;
     this.hero.hurtTimer = 0.24;
     this.hero.vx = -this.hero.direction * 190;
     this.hero.vy = -260;
-    this.gameState.heroProgress.currentHp = this.hero.hp;
-
-    if (this.hero.hp <= 0) {
-      this.loseLife();
-    }
+    this.loseLife();
   };
 
   private readonly loseLife = (): void => {
@@ -528,9 +608,12 @@ export class GameEngine {
     this.hero.castAim = 'forward';
     this.hero.hurtTimer = 0;
     this.hero.invulnerabilityTimer = 0;
+    this.hero.shieldActive = false;
+    this.hero.shieldGraceTimer = 0;
     this.runtime.bullets = [];
     this.runtime.bossProjectiles = [];
     this.runtime.enemyProjectiles = [];
+    this.runtime.specialExplosions = [];
   };
 
   private updateCamera(): void {
@@ -557,6 +640,7 @@ export class GameEngine {
       bossProjectiles: this.runtime.bossProjectiles,
       enemyProjectiles: this.runtime.enemyProjectiles,
       specialStrikes: this.runtime.specialStrikes,
+      specialExplosions: this.runtime.specialExplosions,
       burstParticles: this.runtime.burstParticles,
 
       platforms: this.platforms,

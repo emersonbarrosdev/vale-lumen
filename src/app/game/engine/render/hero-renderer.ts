@@ -5,6 +5,10 @@ const BASE_COLORS = {
   glow: '#ff6a00',
   glowSoft: 'rgba(255, 106, 0, 0.28)',
   glowStrong: 'rgba(255, 140, 40, 0.72)',
+  weaponDark: '#171a21',
+  weaponMid: '#2a303a',
+  weaponLight: '#4a5668',
+  weaponGlow: '#ffb15c',
 };
 
 const SPECIAL_COLORS = {
@@ -12,12 +16,23 @@ const SPECIAL_COLORS = {
   glow: '#82e8ff',
   glowSoft: 'rgba(130, 232, 255, 0.28)',
   glowStrong: 'rgba(255, 234, 128, 0.76)',
+  weaponDark: '#151a24',
+  weaponMid: '#2c3a48',
+  weaponLight: '#58708f',
+  weaponGlow: '#d6fbff',
 };
 
 type HeroPalette = typeof BASE_COLORS;
 
 export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
-  if (hero.invulnerabilityTimer > 0 && Math.floor(hero.invulnerabilityTimer * 20) % 2 === 0) {
+  const shouldBlink =
+    hero.shieldGraceTimer > 0 &&
+    Math.floor(performance.now() / 90) % 2 === 0;
+
+  if (
+    (hero.invulnerabilityTimer > 0 && Math.floor(hero.invulnerabilityTimer * 20) % 2 === 0) ||
+    shouldBlink
+  ) {
     return;
   }
 
@@ -28,51 +43,38 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   const isFall = hero.state === 'fall';
   const isCast = hero.state === 'cast';
   const isAir = isJump || isFall;
-  const isUpCast = isCast && hero.castAim === 'up';
-  const isSpecialCast = isCast && hero.castDuration >= 0.45;
-  const palette: HeroPalette = isSpecialCast ? SPECIAL_COLORS : BASE_COLORS;
+  const isUpShot = isCast && hero.castAim === 'up';
+  const isSpecialShot = isCast && hero.castDuration >= 0.3;
+  const palette: HeroPalette = isSpecialShot ? SPECIAL_COLORS : BASE_COLORS;
 
   const runCycle = isRun ? t * 14 : 0;
-  const castProgress = getCastProgress(hero, isCast);
 
   const bob = isRun
     ? Math.sin(runCycle * 2) * 1.8 + Math.cos(runCycle) * 0.35
     : isCast
-      ? Math.sin(t * 9) * 0.05
+      ? Math.sin(t * 10) * 0.04
       : Math.sin(t * 2.5) * 0.4;
 
   const lean = isIdle
     ? 0
     : isCast
-      ? (isUpCast ? -0.02 : 0.04)
+      ? (isUpShot ? -0.04 : -0.06)
       : isRun
-        ? 0.24 + Math.sin(runCycle) * 0.03
+        ? 0.22 + Math.sin(runCycle) * 0.03
         : isAir
-          ? 0.25
-          : 0.05;
+          ? 0.24
+          : 0.04;
 
   ctx.save();
   ctx.translate(hero.x + hero.width / 2, hero.y + hero.height / 2 + bob + 10);
   ctx.scale(hero.direction * 1.1, 0.98);
 
   drawLeg(ctx, runCycle + Math.PI, isRun, isAir, isIdle, false, palette);
-  drawArm(
-    ctx,
-    t,
-    runCycle,
-    false,
-    isRun,
-    isIdle,
-    isAir,
-    isCast,
-    isSpecialCast,
-    isUpCast,
-    castProgress,
-    palette,
-  );
 
   ctx.save();
   ctx.rotate(lean);
+
+  drawArmBack(ctx, runCycle, isRun, isIdle, isAir, isCast, isUpShot, palette);
 
   ctx.fillStyle = palette.body;
   ctx.beginPath();
@@ -133,12 +135,12 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.fill();
 
   ctx.save();
-  const headTranslateX = isUpCast ? 0 : (isRun || isAir ? 4.4 : isCast ? 1.4 : 0);
-  const headTranslateY = isUpCast ? -38.5 : -35.8 + (isAir ? -1.8 : 0) + (isRun ? Math.sin(runCycle) * 0.35 : 0);
+  const headTranslateX = isUpShot ? -1 : (isRun || isAir ? 4.2 : isCast ? 1.2 : 0);
+  const headTranslateY = isUpShot ? -38.5 : -35.8 + (isAir ? -1.8 : 0) + (isRun ? Math.sin(runCycle) * 0.35 : 0);
 
   ctx.translate(headTranslateX, headTranslateY);
-  if (isUpCast) {
-    ctx.rotate(-0.88);
+  if (isUpShot) {
+    ctx.rotate(-0.72);
   } else if (isRun) {
     ctx.rotate(Math.sin(runCycle) * 0.04);
   }
@@ -151,7 +153,7 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.fill();
 
   ctx.fillStyle = palette.glow;
-  if (isUpCast) {
+  if (isUpShot) {
     ctx.beginPath();
     ctx.arc(-0.4, -4.7, 2.15, 0, Math.PI * 2);
     ctx.fill();
@@ -162,27 +164,107 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   }
   ctx.restore();
 
-  if (isSpecialCast) {
+  if (hero.shieldActive || hero.shieldGraceTimer > 0) {
+    drawProtectionRunes(ctx, hero.shieldGraceTimer > 0);
+  }
+
+  if (isSpecialShot) {
     drawSpecialAura(ctx, palette);
   }
+
+  drawWeapon(ctx, isRun, isAir, isCast, isUpShot, isSpecialShot, runCycle, palette);
+  drawArmFront(ctx, runCycle + Math.PI, isRun, isIdle, isAir, isCast, isUpShot, palette);
 
   ctx.restore();
 
   drawLeg(ctx, runCycle, isRun, isAir, isIdle, true, palette);
-  drawArm(
-    ctx,
-    t,
-    runCycle + Math.PI,
-    true,
-    isRun,
-    isIdle,
-    isAir,
-    isCast,
-    isSpecialCast,
-    isUpCast,
-    castProgress,
-    palette,
-  );
+
+  ctx.restore();
+}
+
+function drawProtectionRunes(
+  ctx: CanvasRenderingContext2D,
+  isGraceState: boolean,
+): void {
+  const now = performance.now() * 0.004;
+  const baseColor = isGraceState ? '#d6fbff' : '#82e8ff';
+  const softColor = isGraceState
+    ? 'rgba(214, 251, 255, 0.18)'
+    : 'rgba(130, 232, 255, 0.16)';
+
+  const aura = ctx.createRadialGradient(0, -18, 8, 0, -18, 28);
+  aura.addColorStop(0, softColor);
+  aura.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = aura;
+  ctx.beginPath();
+  ctx.arc(0, -18, 28, 0, Math.PI * 2);
+  ctx.fill();
+
+  const runePoints = [
+    { angle: now, radius: 20 },
+    { angle: now + Math.PI * 0.66, radius: 18 },
+    { angle: now + Math.PI * 1.33, radius: 19 },
+  ];
+
+  ctx.strokeStyle = baseColor;
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+
+  for (const rune of runePoints) {
+    const x = Math.cos(rune.angle) * rune.radius;
+    const y = -18 + Math.sin(rune.angle) * (rune.radius * 0.55);
+
+    drawRune(ctx, x, y, baseColor);
+  }
+
+  drawSpark(ctx, Math.cos(now * 1.8) * 12, -31 + Math.sin(now * 1.6) * 4, baseColor);
+  drawSpark(ctx, Math.cos(now * 1.4 + 1.4) * 15, -11 + Math.sin(now * 1.7 + 0.8) * 5, baseColor);
+  drawSpark(ctx, Math.cos(now * 1.2 + 2.1) * 10, -24 + Math.sin(now * 1.4 + 1.6) * 3, baseColor);
+}
+
+function drawRune(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.15;
+
+  ctx.beginPath();
+  ctx.moveTo(-3, -4);
+  ctx.lineTo(0, -7);
+  ctx.lineTo(3, -4);
+  ctx.moveTo(-3, 4);
+  ctx.lineTo(0, 7);
+  ctx.lineTo(3, 4);
+  ctx.moveTo(-4, 0);
+  ctx.lineTo(4, 0);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawSpark(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(-1.6, 0);
+  ctx.lineTo(1.6, 0);
+  ctx.moveTo(0, -1.6);
+  ctx.lineTo(0, 1.6);
+  ctx.stroke();
 
   ctx.restore();
 }
@@ -200,29 +282,6 @@ function drawSpecialAura(
   ctx.beginPath();
   ctx.arc(0, -18, 30, 0, Math.PI * 2);
   ctx.fill();
-}
-
-function getCastProgress(hero: Hero, isCast: boolean): number {
-  if (!isCast) return 0;
-
-  if (typeof hero.castTimer === 'number' && typeof hero.castDuration === 'number' && hero.castDuration > 0) {
-    return clamp01(1 - hero.castTimer / hero.castDuration);
-  }
-
-  return 0.65;
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
-
-function smoothStep(edge0: number, edge1: number, x: number): number {
-  const t = clamp01((x - edge0) / (edge1 - edge0));
-  return t * t * (3 - 2 * t);
-}
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
 }
 
 function drawMohawk(ctx: CanvasRenderingContext2D, palette: HeroPalette): void {
@@ -299,90 +358,102 @@ function drawLeg(
   ctx.restore();
 }
 
-function drawArm(
+function drawArmBack(
   ctx: CanvasRenderingContext2D,
-  t: number,
   cycle: number,
-  isFront: boolean,
   isRun: boolean,
   isIdle: boolean,
   isAir: boolean,
   isCast: boolean,
-  isSpecialCast: boolean,
-  isUpCast: boolean,
-  castProgress: number,
+  isUpShot: boolean,
   palette: HeroPalette,
 ): void {
   ctx.save();
 
-  const shoulderBaseY = -21.5;
-  const shoulderBaseX = isFront ? 2 : -2;
-
-  let shoulderX = shoulderBaseX;
-  let shoulderY = shoulderBaseY;
-
+  let shoulderX = -2;
+  let shoulderY = -21.5;
   let armRot = 0;
   let elbowRot = 0;
-  let handGlow = false;
-  let handGlowStrength = 0;
 
   if (isCast) {
-    const extend = smoothStep(0.08, 0.7, castProgress);
-    const microA = Math.sin(t * 8) * 0.008;
-    const microB = Math.cos(t * 7) * 0.008;
-
-    if (isUpCast) {
-      shoulderY -= 4 + extend * 2.2;
-      shoulderX += isFront ? -0.4 : 0.4;
-
-      armRot = Math.PI + (isFront ? microA * 0.04 : -microA * 0.04);
-      elbowRot = microB * 0.03;
-
-      handGlow = true;
-      handGlowStrength = isFront ? 1 + extend * 0.88 : 0.82 + extend * 0.56;
-    } else if (isSpecialCast) {
-      if (isFront) {
-        shoulderX += 1.15 + extend * 1.45;
-        shoulderY -= 0.5;
-        armRot = lerp(-0.78, -1.02, extend) + microA;
-        elbowRot = lerp(0.02, -0.05, extend) + microB;
-        handGlow = true;
-        handGlowStrength = 0.82 + extend * 0.88;
-      } else {
-        shoulderX += 1.05 + extend * 1.35;
-        shoulderY += 0.55;
-        armRot = lerp(-0.16, -0.28, extend) + microA * 0.35;
-        elbowRot = lerp(0.01, -0.02, extend) + microB * 0.25;
-        handGlow = true;
-        handGlowStrength = 0.58 + extend * 0.46;
-      }
+    if (isUpShot) {
+      shoulderX = -2.2;
+      shoulderY = -24.6;
+      armRot = -1.8;
+      elbowRot = -0.05;
     } else {
-      if (isFront) {
-        shoulderX += 1 + extend * 1.25;
-        shoulderY -= 0.25;
-        armRot = lerp(-0.86, -1.16, extend) + microA;
-        elbowRot = lerp(0.05, -0.05, extend) + microB;
-        handGlow = true;
-        handGlowStrength = 0.72 + extend * 0.72;
-      } else {
-        armRot = -0.06;
-        elbowRot = 0.03;
-      }
+      shoulderX = -0.5;
+      shoulderY = -20.2;
+      armRot = -0.5;
+      elbowRot = 0.12;
     }
-  } else {
-    if (isRun) {
-      armRot = Math.sin(cycle) * 0.92 - 0.38;
-      elbowRot = -0.82 + Math.sin(cycle * 2) * 0.06;
-      shoulderY += Math.cos(cycle) * 0.4;
-    } else if (isAir) {
-      armRot = isFront ? -0.88 : -0.58;
-      elbowRot = -0.32;
-    } else if (isIdle) {
-      armRot = isFront ? 0.08 : -0.08;
-      elbowRot = 0.04;
-    }
+  } else if (isRun) {
+    armRot = Math.sin(cycle) * 0.92 - 0.38;
+    elbowRot = -0.82 + Math.sin(cycle * 2) * 0.06;
+  } else if (isAir) {
+    armRot = -0.58;
+    elbowRot = -0.22;
+  } else if (isIdle) {
+    armRot = -0.08;
+    elbowRot = 0.04;
   }
 
+  drawArmShape(ctx, shoulderX, shoulderY, armRot, elbowRot, palette);
+  ctx.restore();
+}
+
+function drawArmFront(
+  ctx: CanvasRenderingContext2D,
+  cycle: number,
+  isRun: boolean,
+  isIdle: boolean,
+  isAir: boolean,
+  isCast: boolean,
+  isUpShot: boolean,
+  palette: HeroPalette,
+): void {
+  ctx.save();
+
+  let shoulderX = 2;
+  let shoulderY = -21.5;
+  let armRot = 0;
+  let elbowRot = 0;
+
+  if (isCast) {
+    if (isUpShot) {
+      shoulderX = 1.4;
+      shoulderY = -26.2;
+      armRot = -1.98;
+      elbowRot = 0.04;
+    } else {
+      shoulderX = 5.1;
+      shoulderY = -20.0;
+      armRot = -1.04;
+      elbowRot = -0.12;
+    }
+  } else if (isRun) {
+    armRot = Math.sin(cycle) * 0.92 - 0.38;
+    elbowRot = -0.82 + Math.sin(cycle * 2) * 0.06;
+  } else if (isAir) {
+    armRot = -0.88;
+    elbowRot = -0.3;
+  } else if (isIdle) {
+    armRot = 0.08;
+    elbowRot = 0.04;
+  }
+
+  drawArmShape(ctx, shoulderX, shoulderY, armRot, elbowRot, palette);
+  ctx.restore();
+}
+
+function drawArmShape(
+  ctx: CanvasRenderingContext2D,
+  shoulderX: number,
+  shoulderY: number,
+  armRot: number,
+  elbowRot: number,
+  palette: HeroPalette,
+): void {
   ctx.translate(shoulderX, shoulderY);
   ctx.rotate(armRot);
   ctx.fillStyle = palette.body;
@@ -403,29 +474,106 @@ function drawArm(
   ctx.lineTo(-2.2, 6.5);
   ctx.arc(0, 8.4, 3.2, 0, Math.PI * 2);
   ctx.fill();
+}
 
-  if (handGlow) {
-    ctx.save();
+function drawWeapon(
+  ctx: CanvasRenderingContext2D,
+  isRun: boolean,
+  isAir: boolean,
+  isCast: boolean,
+  isUpShot: boolean,
+  isSpecialShot: boolean,
+  runCycle: number,
+  palette: HeroPalette,
+): void {
+  ctx.save();
 
-    const outerRadius = 6 + handGlowStrength * 4;
-    const handY = 8.4;
-    const grad = ctx.createRadialGradient(0, handY, 1.2, 0, handY, outerRadius);
-    grad.addColorStop(0, palette.glowStrong);
-    grad.addColorStop(0.45, palette.glowSoft);
-    grad.addColorStop(1, 'rgba(255, 106, 0, 0)');
+  let weaponX = 10.2;
+  let weaponY = -18.8;
+  let weaponRot = -0.06;
 
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, handY, outerRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = palette.glow;
-    ctx.beginPath();
-    ctx.arc(0, handY, 1.7 + handGlowStrength * 0.45, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
+  if (isCast) {
+    if (isUpShot) {
+      weaponX = 1.1;
+      weaponY = -28.4;
+      weaponRot = -1.56;
+    } else {
+      weaponX = 16.6;
+      weaponY = -18.2;
+      weaponRot = isSpecialShot ? -0.12 : -0.08;
+    }
+  } else if (isRun) {
+    weaponX = 10.2;
+    weaponY = -18.8 + Math.sin(runCycle) * 0.26;
+    weaponRot = -0.08 + Math.sin(runCycle) * 0.03;
+  } else if (isAir) {
+    weaponX = 12;
+    weaponY = -18.8;
+    weaponRot = -0.14;
   }
 
+  ctx.translate(weaponX, weaponY);
+  ctx.rotate(weaponRot);
+
+  const muzzleGlow = ctx.createRadialGradient(18, 0, 1, 18, 0, isSpecialShot ? 12 : 8);
+  muzzleGlow.addColorStop(0, palette.glowStrong);
+  muzzleGlow.addColorStop(0.4, palette.glowSoft);
+  muzzleGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = muzzleGlow;
+  ctx.beginPath();
+  ctx.arc(18, 0, isSpecialShot ? 10 : 7, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = palette.weaponDark;
+  roundRect(ctx, -9, -3.5, 24, 7, 2.8);
+  ctx.fill();
+
+  ctx.fillStyle = palette.weaponMid;
+  roundRect(ctx, -1.2, -5.8, 10.5, 4.2, 1.8);
+  ctx.fill();
+
+  ctx.fillStyle = palette.weaponLight;
+  roundRect(ctx, -10.5, -2.1, 4.2, 4.2, 1.4);
+  ctx.fill();
+
+  ctx.fillStyle = palette.weaponLight;
+  roundRect(ctx, 13.5, -1.7, 7, 3.4, 1.4);
+  ctx.fill();
+
+  ctx.fillStyle = palette.weaponGlow;
+  roundRect(ctx, 18.6, -1.4, 4.4, 2.8, 1.2);
+  ctx.fill();
+
+  ctx.fillStyle = palette.weaponMid;
+  ctx.save();
+  ctx.translate(-0.2, 4.4);
+  ctx.rotate(0.5);
+  roundRect(ctx, -1.5, 0, 3.4, 8.4, 1.4);
+  ctx.fill();
   ctx.restore();
+
+  ctx.restore();
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): void {
+  const safeRadius = Math.max(0, Math.min(radius, width / 2, height / 2));
+
+  ctx.beginPath();
+  ctx.moveTo(x + safeRadius, y);
+  ctx.lineTo(x + width - safeRadius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+  ctx.lineTo(x + width, y + height - safeRadius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+  ctx.lineTo(x + safeRadius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+  ctx.lineTo(x, y + safeRadius);
+  ctx.quadraticCurveTo(x, y, x + safeRadius, y);
+  ctx.closePath();
 }

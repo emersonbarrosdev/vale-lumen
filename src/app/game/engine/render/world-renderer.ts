@@ -1,4 +1,5 @@
 import { BurstParticle } from '../../domain/combat/burst-particle.model';
+import { SpecialExplosion } from '../../domain/combat/special-explosion.model';
 import { SpecialStrike } from '../../domain/combat/special-strike.model';
 import { Chest } from '../../domain/world/chest.model';
 import { Collectible } from '../../domain/world/collectible.model';
@@ -10,6 +11,7 @@ import { drawChests as drawWorldChests } from './world/chest-renderer';
 import { drawCollectibles as drawWorldCollectibles } from './world/collectible-renderer';
 import {
   drawBurstParticles as drawWorldBurstParticles,
+  drawSpecialExplosions as drawWorldSpecialExplosions,
   drawSpecialStrikes as drawWorldSpecialStrikes,
 } from './world/effects-renderer';
 import { drawHazards as drawWorldHazards } from './world/hazard-renderer';
@@ -57,6 +59,13 @@ export function drawSpecialStrikes(
   specialStrikes: SpecialStrike[],
 ): void {
   drawWorldSpecialStrikes(ctx, specialStrikes);
+}
+
+export function drawSpecialExplosions(
+  ctx: CanvasRenderingContext2D,
+  specialExplosions: SpecialExplosion[],
+): void {
+  drawWorldSpecialExplosions(ctx, specialExplosions);
 }
 
 export function drawBurstParticles(

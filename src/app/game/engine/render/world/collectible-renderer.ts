@@ -14,7 +14,7 @@ export function drawCollectibles(
     const centerY = item.y + item.height / 2 + bob;
 
     if (item.type === 'coin') {
-      drawCoin(ctx, centerX, centerY);
+      drawCoinMarioStyle(ctx, centerX, centerY);
       continue;
     }
 
@@ -28,31 +28,55 @@ export function drawCollectibles(
       continue;
     }
 
+    if (item.type === 'shieldOrb') {
+      drawShieldOrb(ctx, centerX, centerY);
+      continue;
+    }
+
     drawRay(ctx, centerX, centerY);
   }
 }
 
-function drawCoin(
+function drawCoinMarioStyle(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
 ): void {
-  const glow = ctx.createRadialGradient(x, y, 1, x, y, 16);
-  glow.addColorStop(0, 'rgba(255, 220, 120, 0.38)');
+  const glow = ctx.createRadialGradient(x, y, 1, x, y, 18);
+  glow.addColorStop(0, 'rgba(255, 227, 122, 0.42)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(x, y, 14, 0, Math.PI * 2);
+  ctx.arc(x, y, 16, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#f2c14b';
+  ctx.fillStyle = '#f8c431';
   ctx.beginPath();
-  ctx.ellipse(x, y, 8, 9, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, y, 7, 11, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#fff3b0';
+  ctx.fillStyle = '#ffd95b';
   ctx.beginPath();
-  ctx.ellipse(x - 2, y - 2, 2.5, 3, 0, 0, Math.PI * 2);
+  ctx.ellipse(x - 1.2, y - 0.5, 5.2, 9.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#d79814';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.ellipse(x, y, 7, 11, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#fff2a9';
+  ctx.lineWidth = 1.3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x, y - 6.5);
+  ctx.lineTo(x, y + 6.5);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.beginPath();
+  ctx.ellipse(x - 2.2, y - 4.4, 1.4, 2.2, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -128,4 +152,42 @@ function drawFlameVial(
   ctx.quadraticCurveTo(x + 6, y, x, y + 6);
   ctx.quadraticCurveTo(x - 5, y, x, y - 6);
   ctx.fill();
+}
+
+function drawShieldOrb(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+): void {
+  const glow = ctx.createRadialGradient(x, y, 1, x, y, 24);
+  glow.addColorStop(0, 'rgba(214, 251, 255, 0.6)');
+  glow.addColorStop(0.38, 'rgba(130, 232, 255, 0.46)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, 20, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(130, 232, 255, 0.22)';
+  ctx.beginPath();
+  ctx.arc(x, y, 10.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#d6fbff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 9);
+  ctx.lineTo(x + 7, y - 5);
+  ctx.lineTo(x + 5.5, y + 4);
+  ctx.lineTo(x, y + 9);
+  ctx.lineTo(x - 5.5, y + 4);
+  ctx.lineTo(x - 7, y - 5);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.strokeStyle = '#82e8ff';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(x, y, 13.5, 0, Math.PI * 2);
+  ctx.stroke();
 }

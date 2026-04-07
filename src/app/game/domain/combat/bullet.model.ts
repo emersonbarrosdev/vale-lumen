@@ -1,4 +1,9 @@
-export type BulletKind = 'forward' | 'upward';
+export type BulletKind = 'forward' | 'upward' | 'special';
+
+export type BulletSpriteType =
+  | 'heroShot'
+  | 'heroShotUp'
+  | 'heroSpecialShot';
 
 export interface Bullet {
   x: number;
@@ -8,5 +13,18 @@ export interface Bullet {
   vx: number;
   vy: number;
   active: boolean;
+
   kind: BulletKind;
+  spriteType: BulletSpriteType;
+
+  damage: number;
+  ownerWeapon?: 'arcaneGun';
+  muzzleFlash?: boolean;
+
+  /**
+   * Usado no especial.
+   */
+  explosionOnImpact?: boolean;
+  explosionRadius?: number;
+  explosionDamage?: number;
 }

@@ -2,6 +2,11 @@ import { CollectibleData } from '../../../../domain/world/collectible.model';
 
 export function getPhase01Collectibles(): CollectibleData[] {
   return [
+    /**
+     * Proteção logo no início da fase
+     */
+    { type: 'shieldOrb', x: 150, y: 560 },
+
     { type: 'coin', x: 225, y: 492 },
     { type: 'coin', x: 705, y: 492 },
     { type: 'coin', x: 1210, y: 464 },

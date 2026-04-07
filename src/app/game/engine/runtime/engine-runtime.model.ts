@@ -1,6 +1,7 @@
 import { BossProjectile } from '../../domain/bosses/boss-projectile.model';
 import { BurstParticle } from '../../domain/combat/burst-particle.model';
 import { Bullet } from '../../domain/combat/bullet.model';
+import { SpecialExplosion } from '../../domain/combat/special-explosion.model';
 import { SpecialStrike } from '../../domain/combat/special-strike.model';
 import { EnemyProjectile } from '../../domain/enemies/enemy-projectile.model';
 import { InputSourceType } from '../../domain/input/input-action.model';
@@ -11,6 +12,7 @@ export interface EngineRuntime {
   bossProjectiles: BossProjectile[];
   enemyProjectiles: EnemyProjectile[];
   specialStrikes: SpecialStrike[];
+  specialExplosions: SpecialExplosion[];
   burstParticles: BurstParticle[];
 
   score: number;

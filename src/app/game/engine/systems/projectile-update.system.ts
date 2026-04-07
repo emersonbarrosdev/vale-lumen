@@ -1,7 +1,5 @@
 import { Boss } from '../../domain/bosses/boss.model';
-import { BurstParticle } from '../../domain/combat/burst-particle.model';
 import { Bullet } from '../../domain/combat/bullet.model';
-import { SpecialStrike } from '../../domain/combat/special-strike.model';
 import { Enemy } from '../../domain/enemies/enemy.model';
 import { Hero } from '../../domain/hero/hero.model';
 import { Chest } from '../../domain/world/chest.model';
@@ -36,50 +34,28 @@ export interface ProjectileSystemParams {
 
 export function updateSpecialSequenceSystem({
   runtime,
-  hero,
-  boss,
-  enemies,
-  chests,
-  deltaTime,
-  randomRange,
-  spawnBurst,
-  breakChest,
-  killEnemy,
 }: Pick<
   ProjectileSystemParams,
-  'runtime' | 'hero' | 'boss' | 'enemies' | 'chests' | 'deltaTime' | 'randomRange' | 'spawnBurst' | 'breakChest' | 'killEnemy'
->): void {
-  if (!runtime.specialSequenceActive) {
-    return;
-  }
-
-  runtime.specialPulseTimer -= deltaTime;
-
-  if (runtime.specialPulseTimer > 0) {
-    return;
-  }
-
-  releaseSpecialPulse({
-    runtime,
-    hero,
-    boss,
-    enemies,
-    chests,
-    randomRange,
-    spawnBurst,
-    breakChest,
-    killEnemy,
-  });
-
-  runtime.specialPulsesRemaining -= 1;
-
-  if (runtime.specialPulsesRemaining <= 0) {
-    runtime.specialSequenceActive = false;
-    runtime.specialPulseTimer = 0;
-    return;
-  }
-
-  runtime.specialPulseTimer = 0.18;
+  'runtime'
+> & {
+  deltaTime: number;
+  hero: Hero;
+  boss: Boss;
+  enemies: Enemy[];
+  chests: Chest[];
+  randomRange: (min: number, max: number) => number;
+  spawnBurst: (x: number, y: number, color: string, amount: number) => void;
+  breakChest: (chest: Chest) => void;
+  killEnemy: (
+    enemy: Enemy,
+    scoreValue: number,
+    burstColor: string,
+    burstAmount: number,
+  ) => void;
+}): void {
+  runtime.specialSequenceActive = false;
+  runtime.specialPulseTimer = 0;
+  runtime.specialPulsesRemaining = 0;
 }
 
 export function updateSpecialStrikesSystem(
@@ -136,11 +112,15 @@ export function updateBulletsSystem({
     bullet.y += bullet.vy * deltaTime;
 
     if (
-      bullet.x < -100 ||
-      bullet.x > worldWidth + 100 ||
-      bullet.y < -120 ||
-      bullet.y > canvasHeight + 120
+      bullet.x < -140 ||
+      bullet.x > worldWidth + 140 ||
+      bullet.y < -160 ||
+      bullet.y > canvasHeight + 160
     ) {
+      if (bullet.kind === 'special' && bullet.explosionOnImpact) {
+        createSpecialExplosion(runtime, bullet, spawnBurst);
+      }
+
       bullet.active = false;
       continue;
     }
@@ -154,6 +134,10 @@ export function updateBulletsSystem({
       };
 
       if (rectsOverlap(bullet, roofRect)) {
+        if (bullet.kind === 'special' && bullet.explosionOnImpact) {
+          createSpecialExplosion(runtime, bullet, spawnBurst);
+        }
+
         bullet.active = false;
         break;
       }
@@ -169,16 +153,20 @@ export function updateBulletsSystem({
       }
 
       if (rectsOverlap(bullet, enemy)) {
+        if (bullet.kind === 'special' && bullet.explosionOnImpact) {
+          createSpecialExplosion(runtime, bullet, spawnBurst);
+        }
+
         bullet.active = false;
-        enemy.hp -= 1;
-        enemy.hitFlash = 0.08;
+        enemy.hp -= bullet.damage;
+        enemy.hitFlash = 0.1;
 
         if (enemy.hp <= 0) {
           killEnemy(
             enemy,
             enemy.type === 'vigia' ? 100 : 50,
             '#ff8b5e',
-            10,
+            bullet.kind === 'special' ? 18 : 10,
           );
         }
 
@@ -196,10 +184,16 @@ export function updateBulletsSystem({
       }
 
       if (rectsOverlap(bullet, chest)) {
-        if (bullet.kind === 'upward') {
-          bullet.active = false;
-          breakChest(chest);
+        /**
+         * CORREÇÃO:
+         * agora qualquer tiro quebra o objeto.
+         */
+        if (bullet.kind === 'special' && bullet.explosionOnImpact) {
+          createSpecialExplosion(runtime, bullet, spawnBurst);
         }
+
+        bullet.active = false;
+        breakChest(chest);
         break;
       }
     }
@@ -214,12 +208,16 @@ export function updateBulletsSystem({
       }
 
       if (rectsOverlap(bullet, hazard)) {
+        if (bullet.kind === 'special' && bullet.explosionOnImpact) {
+          createSpecialExplosion(runtime, bullet, spawnBurst);
+        }
+
         bullet.active = false;
         spawnBurst(
           bullet.x + bullet.width / 2,
           bullet.y + bullet.height / 2,
           '#7dffb2',
-          6,
+          bullet.kind === 'special' ? 12 : 6,
         );
         break;
       }
@@ -231,19 +229,126 @@ export function updateBulletsSystem({
       boss.hp > 0 &&
       rectsOverlap(bullet, boss)
     ) {
+      if (bullet.kind === 'special' && bullet.explosionOnImpact) {
+        createSpecialExplosion(runtime, bullet, spawnBurst);
+      }
+
       bullet.active = false;
-      boss.hp -= 1;
-      boss.hitFlash = 0.1;
+      boss.hp -= bullet.damage;
+      boss.hitFlash = 0.12;
       spawnBurst(
         boss.x + boss.width / 2,
         boss.y + 74,
         '#ff8b5e',
-        8,
+        bullet.kind === 'special' ? 16 : 8,
       );
     }
   }
 
   runtime.bullets = runtime.bullets.filter((bullet) => bullet.active);
+}
+
+export function updateSpecialExplosionsSystem({
+  runtime,
+  boss,
+  enemies,
+  chests,
+  hazards,
+  spawnBurst,
+  breakChest,
+  killEnemy,
+  deltaTime,
+}: {
+  runtime: EngineRuntime;
+  boss: Boss;
+  enemies: Enemy[];
+  chests: Chest[];
+  hazards: Hazard[];
+  spawnBurst: (x: number, y: number, color: string, amount: number) => void;
+  breakChest: (chest: Chest) => void;
+  killEnemy: (
+    enemy: Enemy,
+    scoreValue: number,
+    burstColor: string,
+    burstAmount: number,
+  ) => void;
+  deltaTime: number;
+}): void {
+  for (const explosion of runtime.specialExplosions) {
+    explosion.life -= deltaTime;
+    const progress = 1 - explosion.life / explosion.maxLife;
+    explosion.radius = explosion.maxRadius * Math.min(1, progress * 1.15);
+
+    if (!explosion.appliedDamage && explosion.radius >= explosion.maxRadius * 0.5) {
+      explosion.appliedDamage = true;
+
+      for (const enemy of enemies) {
+        if (!enemy.active) {
+          continue;
+        }
+
+        const enemyCenterX = enemy.x + enemy.width / 2;
+        const enemyCenterY = enemy.y + enemy.height / 2;
+
+        if (pointInExplosion(enemyCenterX, enemyCenterY, explosion)) {
+          enemy.hp -= explosion.damage;
+          enemy.hitFlash = 0.16;
+
+          if (enemy.hp <= 0) {
+            killEnemy(
+              enemy,
+              enemy.type === 'vigia' ? 100 : 50,
+              '#ff6a00',
+              20,
+            );
+          } else {
+            spawnBurst(enemyCenterX, enemyCenterY, '#ffb36a', 12);
+          }
+        }
+      }
+
+      for (const chest of chests) {
+        if (!chest.active) {
+          continue;
+        }
+
+        const chestCenterX = chest.x + chest.width / 2;
+        const chestCenterY = chest.y + chest.height / 2;
+
+        if (pointInExplosion(chestCenterX, chestCenterY, explosion)) {
+          breakChest(chest);
+        }
+      }
+
+      for (const hazard of hazards) {
+        if (!hazard.active) {
+          continue;
+        }
+
+        const hazardCenterX = hazard.x + hazard.width / 2;
+        const hazardCenterY = hazard.y + hazard.height / 2;
+
+        if (pointInExplosion(hazardCenterX, hazardCenterY, explosion)) {
+          spawnBurst(hazardCenterX, hazardCenterY, '#7dffb2', 10);
+        }
+      }
+
+      if (boss.active && boss.hp > 0) {
+        const bossCenterX = boss.x + boss.width / 2;
+        const bossCenterY = boss.y + boss.height / 2;
+
+        if (pointInExplosion(bossCenterX, bossCenterY, explosion)) {
+          boss.hp = Math.max(0, boss.hp - explosion.damage);
+          boss.hitFlash = 0.18;
+          spawnBurst(bossCenterX, bossCenterY, '#ff6a00', 18);
+        }
+      }
+    }
+  }
+
+  runtime.specialExplosions = runtime.specialExplosions.filter(
+    (explosion) => explosion.life > 0,
+  );
 }
 
 export function updateEnemyProjectilesSystem({
@@ -385,137 +490,40 @@ export function updateBossProjectilesSystem({
   );
 }
 
-function releaseSpecialPulse({
-  runtime,
-  hero,
-  boss,
-  enemies,
-  chests,
-  randomRange,
-  spawnBurst,
-  breakChest,
-  killEnemy,
-}: {
-  runtime: EngineRuntime;
-  hero: Hero;
-  boss: Boss;
-  enemies: Enemy[];
-  chests: Chest[];
-  randomRange: (min: number, max: number) => number;
-  spawnBurst: (x: number, y: number, color: string, amount: number) => void;
-  breakChest: (chest: Chest) => void;
-  killEnemy: (
-    enemy: Enemy,
-    scoreValue: number,
-    burstColor: string,
-    burstAmount: number,
-  ) => void;
-}): void {
-  const originX = hero.x + hero.width / 2;
-  const originY = hero.y + hero.height * 0.56;
-  const direction = hero.direction;
-  const localOffsets = [-16, 0, 16];
+function createSpecialExplosion(
+  runtime: EngineRuntime,
+  bullet: Bullet,
+  spawnBurst: (x: number, y: number, color: string, amount: number) => void,
+): void {
+  const x = bullet.x + bullet.width / 2;
+  const y = bullet.y + bullet.height / 2;
 
-  for (let index = 0; index < localOffsets.length; index += 1) {
-    const startX = originX + direction * randomRange(2, 10);
-    const startY = originY + localOffsets[index] + randomRange(-5, 5);
+  runtime.specialExplosions.push({
+    x,
+    y,
+    radius: 0,
+    maxRadius: bullet.explosionRadius ?? 220,
+    life: 0.42,
+    maxLife: 0.42,
+    damage: bullet.explosionDamage ?? 4,
+    appliedDamage: false,
+  });
 
-    runtime.specialStrikes.push({
-      points: buildMagicVolleyPath(startX, startY, direction, randomRange),
-      life: 0.75,
-      maxLife: 0.75,
-      width: randomRange(12, 17),
-      theme: 'heroSpecial',
-    });
-  }
-
-  for (const enemy of enemies) {
-    if (!enemy.active) {
-      continue;
-    }
-
-    const enemyCenterX = enemy.x + enemy.width / 2;
-    const enemyCenterY = enemy.y + enemy.height / 2;
-    const inFront = direction === 1
-      ? enemyCenterX >= originX - 6
-      : enemyCenterX <= originX + 6;
-    const closeEnoughX = Math.abs(enemyCenterX - originX) <= 1680;
-    const closeEnoughY = Math.abs(enemyCenterY - originY) <= 95;
-
-    if (inFront && closeEnoughX && closeEnoughY) {
-      enemy.hp -= 2;
-      enemy.hitFlash = 0.12;
-
-      if (enemy.hp <= 0) {
-        killEnemy(
-          enemy,
-          enemy.type === 'vigia' ? 100 : 50,
-          '#ff6a00',
-          18,
-        );
-      } else {
-        spawnBurst(enemyCenterX, enemyCenterY, '#ff6a00', 8);
-      }
-    }
-  }
-
-  for (const chest of chests) {
-    if (!chest.active) {
-      continue;
-    }
-
-    const chestCenterX = chest.x + chest.width / 2;
-    const chestCenterY = chest.y + chest.height / 2;
-    const inFront = direction === 1
-      ? chestCenterX >= originX - 6
-      : chestCenterX <= originX + 6;
-    const closeEnoughX = Math.abs(chestCenterX - originX) <= 1680;
-    const closeEnoughY = Math.abs(chestCenterY - originY) <= 95;
-
-    if (inFront && closeEnoughX && closeEnoughY) {
-      breakChest(chest);
-    }
-  }
-
-  if (boss.active && boss.hp > 0) {
-    const bossCenterX = boss.x + boss.width / 2;
-    const bossCenterY = boss.y + boss.height / 2;
-    const inFront = direction === 1
-      ? bossCenterX >= originX - 6
-      : bossCenterX <= originX + 6;
-    const closeEnoughX = Math.abs(bossCenterX - originX) <= 1860;
-    const closeEnoughY = Math.abs(bossCenterY - originY) <= 115;
-
-    if (inFront && closeEnoughX && closeEnoughY) {
-      boss.hp = Math.max(0, boss.hp - 3);
-      boss.hitFlash = 0.18;
-      spawnBurst(bossCenterX, bossCenterY, '#ff6a00', 12);
-    }
-  }
-
-  runtime.bossProjectiles = [];
+  spawnBurst(x, y, '#ffb15c', 26);
+  spawnBurst(x, y, '#82e8ff', 12);
   runtime.enemyProjectiles = [];
+  runtime.bossProjectiles = [];
 }
 
-function buildMagicVolleyPath(
-  startX: number,
-  startY: number,
-  direction: 1 | -1,
-  randomRange: (min: number, max: number) => number,
-): Array<{ x: number; y: number }> {
-  const points = [{ x: startX, y: startY }];
-  let x = startX;
-  let y = startY;
+function pointInExplosion(
+  x: number,
+  y: number,
+  explosion: { x: number; y: number; radius: number },
+): boolean {
+  const dx = x - explosion.x;
+  const dy = y - explosion.y;
 
-  const segments = 10;
-
-  for (let index = 0; index < segments; index += 1) {
-    x += randomRange(52, 78) * direction;
-    y += randomRange(-3, 3);
-    points.push({ x, y });
-  }
-
-  return points;
+  return dx * dx + dy * dy <= explosion.radius * explosion.radius;
 }
 
 function rectsOverlap(

@@ -19,19 +19,32 @@ export interface Hero {
   jumpForce: number;
   direction: 1 | -1;
   onGround: boolean;
+
   hp: number;
   maxHp: number;
+
   shootCooldown: number;
   dashCooldown: number;
   invulnerabilityTimer: number;
   jumpsRemaining: number;
   maxJumps: number;
+
   state: HeroState;
   animationTime: number;
+
   castTimer: number;
   castDuration: number;
   castAim: HeroCastAim;
+
   hurtTimer: number;
   landingTimer: number;
   name: string;
+
+  shieldActive: boolean;
+
+  /**
+   * Depois de perder o escudo, durante esse tempo
+   * ele não pode perder vida.
+   */
+  shieldGraceTimer: number;
 }

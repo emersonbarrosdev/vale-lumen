@@ -119,6 +119,15 @@ export function buildGenericPlayablePhaseData(
     }
   }
 
+  /**
+   * Proteção logo no começo
+   */
+  collectibles.push({
+    type: 'shieldOrb',
+    x: 120,
+    y: 560,
+  });
+
   collectibles.push({
     type: 'heart',
     x: Math.floor(worldWidth * 0.56),

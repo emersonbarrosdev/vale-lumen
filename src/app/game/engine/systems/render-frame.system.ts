@@ -2,6 +2,7 @@ import { Boss } from '../../domain/bosses/boss.model';
 import { BossProjectile } from '../../domain/bosses/boss-projectile.model';
 import { BurstParticle } from '../../domain/combat/burst-particle.model';
 import { Bullet } from '../../domain/combat/bullet.model';
+import { SpecialExplosion } from '../../domain/combat/special-explosion.model';
 import { SpecialStrike } from '../../domain/combat/special-strike.model';
 import { EnemyProjectile } from '../../domain/enemies/enemy-projectile.model';
 import { Enemy } from '../../domain/enemies/enemy.model';
@@ -26,6 +27,7 @@ import {
   drawCollectibles,
   drawHazards,
   drawPlatforms,
+  drawSpecialExplosions,
   drawSpecialStrikes,
   drawTunnels,
 } from '../render/world-renderer';
@@ -42,6 +44,7 @@ export interface RenderFrameParams {
   bossProjectiles: BossProjectile[];
   enemyProjectiles: EnemyProjectile[];
   specialStrikes: SpecialStrike[];
+  specialExplosions: SpecialExplosion[];
   burstParticles: BurstParticle[];
 
   platforms: Platform[];
@@ -74,6 +77,7 @@ export function renderFrame({
   bossProjectiles,
   enemyProjectiles,
   specialStrikes,
+  specialExplosions,
   burstParticles,
   platforms,
   enemies,
@@ -106,9 +110,10 @@ export function renderFrame({
   drawSpecialStrikes(ctx, specialStrikes);
   drawEnemies(ctx, enemies);
   drawEnemyProjectiles(ctx, enemyProjectiles);
-  drawBullets(ctx, bullets, canvas, phaseData);
+  drawBullets(ctx, bullets);
   drawBoss(ctx, boss);
   drawBossProjectiles(ctx, bossProjectiles);
+  drawSpecialExplosions(ctx, specialExplosions);
   drawBurstParticles(ctx, burstParticles);
 
   if (respawningTimer <= 0) {
@@ -131,6 +136,11 @@ export function renderFrame({
     'getFormattedCurrentPhaseTime' in phaseData ? '' : '',
     false,
   );
+
+  void paused;
+  void bossIntroPending;
+  void specialFlashTimer;
+  void ending;
 }
 
 export function renderFrameWithHud({
@@ -144,6 +154,7 @@ export function renderFrameWithHud({
   bossProjectiles,
   enemyProjectiles,
   specialStrikes,
+  specialExplosions,
   burstParticles,
   platforms,
   enemies,
@@ -183,9 +194,10 @@ export function renderFrameWithHud({
   drawSpecialStrikes(ctx, specialStrikes);
   drawEnemies(ctx, enemies);
   drawEnemyProjectiles(ctx, enemyProjectiles);
-  drawBullets(ctx, bullets, canvas, phaseData);
+  drawBullets(ctx, bullets);
   drawBoss(ctx, boss);
   drawBossProjectiles(ctx, bossProjectiles);
+  drawSpecialExplosions(ctx, specialExplosions);
   drawBurstParticles(ctx, burstParticles);
 
   if (respawningTimer <= 0) {
@@ -211,8 +223,8 @@ export function renderFrameWithHud({
 
   if (specialFlashTimer > 0) {
     const pulse = 0.5 + Math.sin(performance.now() * 0.03) * 0.5;
-    const alpha = Math.min(specialFlashTimer * 0.3, 0.3) * (0.7 + pulse * 0.3);
-    ctx.fillStyle = `rgba(255, 106, 0, ${alpha})`;
+    const alpha = Math.min(specialFlashTimer * 0.5, 0.34) * (0.72 + pulse * 0.28);
+    ctx.fillStyle = `rgba(255, 166, 80, ${alpha})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
@@ -254,15 +266,56 @@ export function renderFrameWithHud({
 function drawBullets(
   ctx: CanvasRenderingContext2D,
   bullets: Bullet[],
-  canvas: HTMLCanvasElement,
-  phaseData: PhasePlayableData,
 ): void {
-  void canvas;
-  void phaseData;
-
   for (const bullet of bullets) {
     const centerX = bullet.x + bullet.width / 2;
     const centerY = bullet.y + bullet.height / 2;
+
+    if (bullet.kind === 'special') {
+      const glow = ctx.createRadialGradient(
+        centerX,
+        centerY,
+        2,
+        centerX,
+        centerY,
+        34,
+      );
+      glow.addColorStop(0, 'rgba(255, 244, 188, 0.96)');
+      glow.addColorStop(0.2, 'rgba(255, 181, 92, 0.92)');
+      glow.addColorStop(0.55, 'rgba(130, 232, 255, 0.54)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffe3a8';
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY, 15, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ff9b61';
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY, 11, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(130, 232, 255, 0.9)';
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(
+        centerX - Math.sign(bullet.vx || 1) * 24,
+        centerY,
+      );
+      ctx.lineTo(
+        centerX - Math.sign(bullet.vx || 1) * 10,
+        centerY,
+      );
+      ctx.stroke();
+
+      continue;
+    }
 
     if (bullet.kind === 'upward') {
       const glow = ctx.createRadialGradient(

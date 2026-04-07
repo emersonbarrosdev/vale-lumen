@@ -6,8 +6,11 @@ export const SFX_CATALOG: SfxTrack[] = [
   { id: 'hero-jump', src: 'assets/audio/sfx/hero-jump.mp3', volume: 0.9 },
   { id: 'hero-land', src: 'assets/audio/sfx/hero-land.mp3', volume: 0.8 },
   { id: 'hero-dash', src: 'assets/audio/sfx/hero-dash.mp3', volume: 0.85 },
+
   { id: 'hero-shot', src: 'assets/audio/sfx/hero-shot.mp3', volume: 0.82 },
-  { id: 'hero-special', src: 'assets/audio/sfx/hero-special.mp3', volume: 0.95 },
+  { id: 'hero-special-shot', src: 'assets/audio/sfx/hero-special.mp3', volume: 0.95 },
+  { id: 'hero-special-explosion', src: 'assets/audio/sfx/hero-special.mp3', volume: 1 },
+
   { id: 'coin-pickup', src: 'assets/audio/sfx/coin-pickup.mp3', volume: 0.78 },
   { id: 'spark-pickup', src: 'assets/audio/sfx/spark-pickup.mp3', volume: 0.8 },
   { id: 'heart-pickup', src: 'assets/audio/sfx/heart-pickup.mp3', volume: 0.8 },

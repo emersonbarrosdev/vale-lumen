@@ -1,4 +1,3 @@
-// enemy-renderer.ts
 import { EnemyProjectile } from '../../domain/enemies/enemy-projectile.model';
 import { Enemy } from '../../domain/enemies/enemy.model';
 

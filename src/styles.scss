@@ -1,3 +1,6 @@
+/* Google Fonts - fonte retro principal do jogo */
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;700&display=swap');
+
 /* You can add global styles to this file, and also import other style files */
 * {
   box-sizing: border-box;
@@ -7,15 +10,21 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Pixelify Sans', Arial, Helvetica, sans-serif;
   background: #0f1117;
   color: #f3f4f6;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeSpeed;
 }
 
 body {
   overflow: hidden;
 }
 
-button {
+button,
+input,
+select,
+textarea {
   font: inherit;
 }

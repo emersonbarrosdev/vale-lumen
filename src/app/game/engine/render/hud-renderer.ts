@@ -17,8 +17,8 @@ export function drawHud(
 ): void {
   const leftPanelX = 20;
   const leftPanelY = 18;
-  const leftPanelWidth = 362;
-  const leftPanelHeight = 114;
+  const leftPanelWidth = 382;
+  const leftPanelHeight = 132;
 
   const rightPanelX = canvas.width - 272;
   const rightPanelY = 18;
@@ -32,15 +32,16 @@ export function drawHud(
 
   ctx.textAlign = 'left';
   ctx.fillStyle = '#f4e7c7';
-  ctx.font = 'bold 20px Arial';
+  ctx.font = 'bold 20px "Pixelify Sans", Arial';
   ctx.fillText(hero.name, leftPanelX + 18, leftPanelY + 28);
 
   drawLivesBlock(ctx, leftPanelX + 18, leftPanelY + 48, lives, maxLives);
   drawSpecialBlock(ctx, leftPanelX + 18, leftPanelY + 82, specialCharge);
+  drawShieldBlock(ctx, leftPanelX + 214, leftPanelY + 82, hero.shieldActive);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#f4e7c7';
-  ctx.font = 'bold 20px Arial';
+  ctx.font = 'bold 20px "Pixelify Sans", Arial';
   ctx.fillText(`Fase ${phaseTitle}`, canvas.width / 2, 42);
 
   drawTimerBlock(
@@ -54,11 +55,11 @@ export function drawHud(
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#d9deea';
-  ctx.font = 'bold 19px Arial';
+  ctx.font = 'bold 19px "Pixelify Sans", Arial';
   ctx.fillText(`Pontos: ${score}`, canvas.width - 38, 86);
 
   ctx.fillStyle = 'rgba(217, 222, 234, 0.82)';
-  ctx.font = '15px Arial';
+  ctx.font = '15px "Pixelify Sans", Arial';
   ctx.fillText('ESC pausa', canvas.width - 38, 108);
 
   if (boss.active && boss.hp > 0) {
@@ -106,7 +107,7 @@ function drawLivesBlock(
 ): void {
   ctx.textAlign = 'left';
   ctx.fillStyle = '#d9deea';
-  ctx.font = '14px Arial';
+  ctx.font = '14px "Pixelify Sans", Arial';
   ctx.fillText('Vidas', x, y);
 
   const iconY = y + 19;
@@ -118,7 +119,7 @@ function drawLivesBlock(
   }
 
   ctx.fillStyle = '#fff4df';
-  ctx.font = 'bold 16px Arial';
+  ctx.font = 'bold 16px "Pixelify Sans", Arial';
   ctx.fillText(`x ${lives}`, x + maxLives * 28 + 12, iconY + 5);
 }
 
@@ -164,13 +165,13 @@ function drawSpecialBlock(
   y: number,
   specialCharge: number,
 ): void {
-  const barWidth = 188;
+  const barWidth = 170;
   const barHeight = 14;
   const percent = Math.max(0, Math.min(1, specialCharge / 100));
 
   ctx.textAlign = 'left';
   ctx.fillStyle = '#d9deea';
-  ctx.font = '14px Arial';
+  ctx.font = '14px "Pixelify Sans", Arial';
   ctx.fillText('Especial', x, y);
 
   const barY = y + 10;
@@ -194,17 +195,54 @@ function drawSpecialBlock(
   roundRect(ctx, x, barY, barWidth, barHeight, 8);
   ctx.stroke();
 
-  if (specialCharge >= 100) {
-    ctx.strokeStyle = 'rgba(168, 240, 255, 0.45)';
-    ctx.lineWidth = 1.2;
-    roundRect(ctx, x - 3, barY - 3, barWidth + 6, barHeight + 6, 10);
-    ctx.stroke();
-  }
-
   ctx.fillStyle = '#fff4df';
-  ctx.font = 'bold 14px Arial';
+  ctx.font = 'bold 14px "Pixelify Sans", Arial';
   ctx.textAlign = 'right';
-  ctx.fillText(`${Math.round(specialCharge)}%`, x + barWidth + 54, barY + 12);
+  ctx.fillText(`${Math.round(specialCharge)}%`, x + barWidth + 50, barY + 12);
+}
+
+function drawShieldBlock(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  shieldActive: boolean,
+): void {
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#d9deea';
+  ctx.font = '14px "Pixelify Sans", Arial';
+  ctx.fillText('Proteção', x, y);
+
+  const boxY = y + 8;
+  const width = 130;
+  const height = 18;
+
+  ctx.fillStyle = 'rgba(18, 25, 35, 0.9)';
+  roundRect(ctx, x, boxY, width, height, 8);
+  ctx.fill();
+
+  if (shieldActive) {
+    const grad = ctx.createLinearGradient(x, boxY, x + width, boxY);
+    grad.addColorStop(0, '#82e8ff');
+    grad.addColorStop(1, '#d6fbff');
+    ctx.fillStyle = grad;
+    roundRect(ctx, x + 2, boxY + 2, width - 4, height - 4, 6);
+    ctx.fill();
+
+    ctx.fillStyle = '#08131c';
+    ctx.font = 'bold 12px "Pixelify Sans", Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('ATIVA', x + width / 2, boxY + 13);
+  } else {
+    ctx.strokeStyle = 'rgba(130, 232, 255, 0.26)';
+    ctx.lineWidth = 1.1;
+    roundRect(ctx, x, boxY, width, height, 8);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(217, 222, 234, 0.66)';
+    ctx.font = 'bold 12px "Pixelify Sans", Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('INATIVA', x + width / 2, boxY + 13);
+  }
 }
 
 function drawTimerBlock(
@@ -217,7 +255,7 @@ function drawTimerBlock(
 ): void {
   ctx.textAlign = 'left';
   ctx.fillStyle = '#d9deea';
-  ctx.font = '14px Arial';
+  ctx.font = '14px "Pixelify Sans", Arial';
   ctx.fillText('Tempo', x, y);
 
   const timerBoxY = y + 8;
@@ -243,20 +281,10 @@ function drawTimerBlock(
   roundRect(ctx, x, timerBoxY, width, timerBoxHeight, 10);
   ctx.stroke();
 
-  if (isTimeWarning) {
-    const blink = Math.floor(performance.now() / 180) % 2 === 0;
-    ctx.shadowBlur = blink ? 18 : 8;
-    ctx.shadowColor = 'rgba(255, 80, 80, 0.55)';
-  } else {
-    ctx.shadowBlur = 0;
-  }
-
   ctx.textAlign = 'center';
   ctx.fillStyle = isTimeWarning ? '#ff8e8e' : '#fff4df';
-  ctx.font = 'bold 24px Arial';
+  ctx.font = 'bold 24px "Pixelify Sans", Arial';
   ctx.fillText(formattedTime, x + width / 2, timerBoxY + 24);
-
-  ctx.shadowBlur = 0;
 }
 
 function drawBossBar(
@@ -276,7 +304,7 @@ function drawBossBar(
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#f3d6c0';
-  ctx.font = 'bold 18px Arial';
+  ctx.font = 'bold 18px "Pixelify Sans", Arial';
   ctx.fillText(bossName, canvas.width / 2, y - 10);
 
   ctx.fillStyle = '#181b24';
@@ -329,7 +357,7 @@ function drawSpecialReadyAlert(
 
   ctx.textAlign = 'left';
   ctx.fillStyle = '#d6fbff';
-  ctx.font = 'bold 18px Arial';
+  ctx.font = 'bold 18px "Pixelify Sans", Arial';
   ctx.fillText('Especial pronto (L)', x + 14, y + 24);
 }
 

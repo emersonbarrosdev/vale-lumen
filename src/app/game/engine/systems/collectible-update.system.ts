@@ -1,8 +1,8 @@
-import { Hero } from '../../domain/hero/hero.model';
 import { Collectible } from '../../domain/world/collectible.model';
+import { Hero } from '../../domain/hero/hero.model';
 import { EngineRuntime } from '../runtime/engine-runtime.model';
 
-export interface CollectibleUpdateSystemParams {
+export interface CollectibleUpdateParams {
   hero: Hero;
   collectibles: Collectible[];
   runtime: EngineRuntime;
@@ -14,7 +14,7 @@ export function updateCollectiblesSystem({
   collectibles,
   runtime,
   spawnBurst,
-}: CollectibleUpdateSystemParams): void {
+}: CollectibleUpdateParams): void {
   for (const item of collectibles) {
     if (item.collected) {
       continue;
@@ -26,29 +26,41 @@ export function updateCollectiblesSystem({
 
     item.collected = true;
 
+    const centerX = item.x + item.width / 2;
+    const centerY = item.y + item.height / 2;
+
     switch (item.type) {
       case 'coin':
         runtime.collectedCoins += 1;
-        runtime.score += 8;
-        break;
-
-      case 'heart':
-        hero.hp = Math.min(hero.maxHp, hero.hp + 20);
-        spawnBurst(item.x, item.y, '#72ff95', 10);
+        runtime.score += 100;
+        spawnBurst(centerX, centerY, '#ffd45a', 10);
         break;
 
       case 'ray':
         runtime.collectedSparks += 1;
         runtime.specialCharge = Math.min(100, runtime.specialCharge + 10);
-        runtime.score += 15;
-        spawnBurst(item.x, item.y, '#7de8ff', 12);
+        spawnBurst(centerX, centerY, '#8eeaff', 10);
         break;
 
       case 'flameVial':
-        runtime.collectedSparks += 2;
         runtime.specialCharge = Math.min(100, runtime.specialCharge + 25);
-        runtime.score += 25;
-        spawnBurst(item.x, item.y, '#ffb35c', 14);
+        runtime.score += 40;
+        spawnBurst(centerX, centerY, '#ff9b42', 12);
+        break;
+
+      case 'heart':
+        runtime.lives = Math.min(3, runtime.lives + 1);
+        runtime.score += 60;
+        spawnBurst(centerX, centerY, '#ff7b7b', 12);
+        break;
+
+      case 'shieldOrb':
+        hero.shieldActive = true;
+        runtime.score += 80;
+        spawnBurst(centerX, centerY, '#82e8ff', 16);
+        break;
+
+      default:
         break;
     }
   }

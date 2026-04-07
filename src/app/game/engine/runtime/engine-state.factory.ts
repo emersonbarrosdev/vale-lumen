@@ -7,6 +7,7 @@ export function createInitialEngineRuntime(): EngineRuntime {
     bossProjectiles: [],
     enemyProjectiles: [],
     specialStrikes: [],
+    specialExplosions: [],
     burstParticles: [],
 
     score: 0,
