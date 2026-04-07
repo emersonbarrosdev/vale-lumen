@@ -10,7 +10,10 @@ import {
 import { Boss } from '../domain/bosses/boss.model';
 import { Enemy } from '../domain/enemies/enemy.model';
 import { Hero } from '../domain/hero/hero.model';
-import { InputAction, InputSourceType } from '../domain/input/input-action.model';
+import {
+  InputAction,
+  InputSourceType,
+} from '../domain/input/input-action.model';
 import { BossArenaData } from '../domain/world/boss-arena.model';
 import { Chest } from '../domain/world/chest.model';
 import { Collectible } from '../domain/world/collectible.model';
@@ -249,7 +252,9 @@ export class GameEngine {
       hazards: this.hazards,
       tunnels: this.tunnels,
       worldWidth: this.worldWidth,
+      canvasWidth: this.canvas.width,
       canvasHeight: this.canvas.height,
+      cameraX: this.runtime.cameraX,
       deltaTime,
       spawnBurst: this.spawnBurst,
       breakChest: this.breakChest,
@@ -373,7 +378,10 @@ export class GameEngine {
       loseLife: this.loseLife,
     });
 
-    if (this.hero.y > this.canvas.height + this.runtimeRules.heroFallDeathOffset) {
+    if (
+      this.hero.y >
+      this.canvas.height + this.runtimeRules.heroFallDeathOffset
+    ) {
       this.loseLife();
     }
 
@@ -417,8 +425,8 @@ export class GameEngine {
   private readonly fireBullet = (kind: 'forward' | 'upward'): void => {
     if (kind === 'upward') {
       this.runtime.bullets.push({
-        x: this.hero.x + this.hero.width / 2 + 1,
-        y: this.hero.y - 24,
+        x: this.hero.x + this.hero.width / 2 - 2,
+        y: this.hero.y - 52,
         width: 10,
         height: 22,
         vx: 0,
@@ -466,8 +474,8 @@ export class GameEngine {
           ? this.hero.x + this.hero.width + 2
           : this.hero.x - 38,
       y: this.hero.y + 10,
-      width: 34,
-      height: 18,
+      width: 38,
+      height: 20,
       vx: this.hero.direction * 980,
       vy: 0,
       active: true,
@@ -477,9 +485,11 @@ export class GameEngine {
       ownerWeapon: 'arcaneGun',
       muzzleFlash: true,
       explosionOnImpact: true,
-      explosionRadius: this.canvas.width * 0.34,
+      explosionRadius: this.canvas.width * 0.22,
       explosionDamage: 4,
       chestCast: true,
+      maxTravelDistance: this.canvas.width * 0.4,
+      distanceTraveled: 0,
     });
 
     this.runtime.enemyProjectiles = [];
@@ -503,13 +513,13 @@ export class GameEngine {
     const originX =
       this.hero.direction === 1
         ? this.hero.x + this.hero.width + 2
-        : this.hero.x - 64;
+        : this.hero.x - 78;
 
     this.runtime.bullets.push({
       x: originX,
-      y: this.hero.y + 6,
-      width: 64,
-      height: 34,
+      y: this.hero.y + 2,
+      width: 82,
+      height: 42,
       vx: this.hero.direction * 1240,
       vy: 0,
       active: true,
@@ -519,10 +529,12 @@ export class GameEngine {
       ownerWeapon: 'arcaneGun',
       muzzleFlash: true,
       explosionOnImpact: true,
-      explosionRadius: this.canvas.width * 0.5,
+      explosionRadius: this.canvas.width * 0.52,
       explosionDamage: 8,
       pierceEnemies: true,
       chestCast: true,
+      maxTravelDistance: this.canvas.width,
+      distanceTraveled: 0,
     });
 
     this.runtime.specialStrikes.push({
@@ -564,7 +576,10 @@ export class GameEngine {
   }
 
   private consumeSpecialCharge(amount: number): void {
-    this.runtime.specialCharge = Math.max(0, this.runtime.specialCharge - amount);
+    this.runtime.specialCharge = Math.max(
+      0,
+      this.runtime.specialCharge - amount,
+    );
   }
 
   private syncSpecialHudState(): void {

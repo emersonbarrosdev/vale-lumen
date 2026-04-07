@@ -76,9 +76,9 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
       : Math.sin(t * 2.5) * 0.4;
 
   const lean = isIdle
-    ? (isAimingUp ? -0.02 : 0)
+    ? (isAimingUp ? -0.015 : 0)
     : isCast || isAimingUp
-      ? (isUpShot ? -0.04 : isMegaShot ? 0 : -0.06)
+      ? (isUpShot ? -0.025 : isMegaShot ? 0 : -0.06)
       : isRun
         ? 0.22 + Math.sin(runCycle) * 0.03
         : isAir
@@ -165,12 +165,14 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.fill();
 
   ctx.save();
-  const headTranslateX = isUpShot ? -1 : (isRun || isAir ? 4.2 : isCast ? 1.2 : 0);
-  const headTranslateY = isUpShot ? -38.5 : -35.8 + (isAir ? -1.8 : 0) + (isRun ? Math.sin(runCycle) * 0.35 : 0);
+  const headTranslateX = isUpShot ? -1.8 : (isRun || isAir ? 4.2 : isCast ? 1.2 : 0);
+  const headTranslateY = isUpShot
+    ? -34.8
+    : -35.8 + (isAir ? -1.8 : 0) + (isRun ? Math.sin(runCycle) * 0.35 : 0);
 
   ctx.translate(headTranslateX, headTranslateY);
   if (isUpShot) {
-    ctx.rotate(-0.72);
+    ctx.rotate(-0.28);
   } else if (isRun) {
     ctx.rotate(Math.sin(runCycle) * 0.04);
   }
@@ -185,7 +187,7 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.fillStyle = palette.glow;
   if (isUpShot) {
     ctx.beginPath();
-    ctx.arc(-0.4, -4.7, 2.15, 0, Math.PI * 2);
+    ctx.arc(0.6, -3.8, 2.05, 0, Math.PI * 2);
     ctx.fill();
   } else {
     ctx.beginPath();
@@ -207,27 +209,51 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
     drawChestAura(ctx, palette);
   }
 
-  drawWeapon(
-    ctx,
-    isRun,
-    isAir,
-    isCast || isAimingUp,
-    isUpShot,
-    isSpecialShot || isMegaShot,
-    runCycle,
-    palette,
-  );
-  drawArmFront(
-    ctx,
-    runCycle + Math.PI,
-    isRun,
-    isIdle,
-    isAir,
-    isCast || isAimingUp,
-    isUpShot,
-    isMegaShot,
-    palette,
-  );
+  if (isUpShot) {
+    drawArmFront(
+      ctx,
+      runCycle + Math.PI,
+      isRun,
+      isIdle,
+      isAir,
+      isCast || isAimingUp,
+      isUpShot,
+      isMegaShot,
+      palette,
+    );
+    drawWeapon(
+      ctx,
+      isRun,
+      isAir,
+      isCast || isAimingUp,
+      isUpShot,
+      isSpecialShot || isMegaShot,
+      runCycle,
+      palette,
+    );
+  } else {
+    drawWeapon(
+      ctx,
+      isRun,
+      isAir,
+      isCast || isAimingUp,
+      isUpShot,
+      isSpecialShot || isMegaShot,
+      runCycle,
+      palette,
+    );
+    drawArmFront(
+      ctx,
+      runCycle + Math.PI,
+      isRun,
+      isIdle,
+      isAir,
+      isCast || isAimingUp,
+      isUpShot,
+      isMegaShot,
+      palette,
+    );
+  }
 
   ctx.restore();
 
@@ -465,9 +491,9 @@ function drawArmBack(
 
   if (isCast) {
     if (isUpShot) {
-      shoulderX = -2.8;
-      shoulderY = -29.8;
-      armRot = -2.42;
+      shoulderX = -4.4;
+      shoulderY = -20.8;
+      armRot = -3.08;
       elbowRot = 0.02;
     } else if (isMegaShot) {
       shoulderX = -5.4;
@@ -515,10 +541,10 @@ function drawArmFront(
 
   if (isCast) {
     if (isUpShot) {
-      shoulderX = 2.3;
-      shoulderY = -30.6;
-      armRot = -2.52;
-      elbowRot = 0.04;
+      shoulderX = 5.0;
+      shoulderY = -21.2;
+      armRot = -3.09;
+      elbowRot = 0.02;
     } else if (isMegaShot) {
       shoulderX = 6.2;
       shoulderY = -21.2;
@@ -593,9 +619,9 @@ function drawWeapon(
 
   if (isCast) {
     if (isUpShot) {
-      weaponX = 2.2;
-      weaponY = -39.8;
-      weaponRot = -1.58;
+      weaponX = 0.2;
+      weaponY = -48.5;
+      weaponRot = -1.57;
     } else {
       weaponX = 16.6;
       weaponY = -18.2;

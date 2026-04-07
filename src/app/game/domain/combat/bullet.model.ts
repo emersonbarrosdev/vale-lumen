@@ -1,8 +1,4 @@
-export type BulletKind =
-  | 'forward'
-  | 'upward'
-  | 'special'
-  | 'megaSpecial';
+export type BulletKind = 'forward' | 'upward' | 'special' | 'megaSpecial';
 
 export type BulletSpriteType =
   | 'heroShot'
@@ -34,13 +30,22 @@ export interface Bullet {
   explosionDamage?: number;
 
   /**
-   * Quando verdadeiro, atravessa inimigos comuns/capitães
-   * até o fim da tela, mas para no boss.
+   * Se verdadeiro, pode atravessar alvos destruídos.
    */
   pierceEnemies?: boolean;
 
   /**
-   * Marca projétil criado a partir do peito do herói.
+   * Especial saindo do peito.
    */
   chestCast?: boolean;
+
+  /**
+   * Alcance máximo do projétil em pixels.
+   */
+  maxTravelDistance?: number;
+
+  /**
+   * Distância acumulada percorrida.
+   */
+  distanceTraveled?: number;
 }

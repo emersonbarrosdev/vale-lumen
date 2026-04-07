@@ -18,7 +18,9 @@ export interface ProjectileSystemParams {
   tunnels: Tunnel[];
   bossArena: BossArenaData;
   worldWidth: number;
+  canvasWidth: number;
   canvasHeight: number;
+  cameraX: number;
   deltaTime: number;
   randomRange: (min: number, max: number) => number;
   spawnBurst: (x: number, y: number, color: string, amount: number) => void;
@@ -91,13 +93,15 @@ export function updateBulletsSystem({
   hazards,
   tunnels,
   worldWidth,
+  canvasWidth,
   canvasHeight,
+  cameraX,
   spawnBurst,
   breakChest,
   killEnemy,
 }: Pick<
   ProjectileSystemParams,
-  'runtime' | 'boss' | 'enemies' | 'chests' | 'hazards' | 'tunnels' | 'worldWidth' | 'canvasHeight' | 'spawnBurst' | 'breakChest' | 'killEnemy'
+  'runtime' | 'boss' | 'enemies' | 'chests' | 'hazards' | 'tunnels' | 'worldWidth' | 'canvasWidth' | 'canvasHeight' | 'cameraX' | 'spawnBurst' | 'breakChest' | 'killEnemy'
 > & {
   deltaTime: number;
 }): void {
@@ -108,14 +112,41 @@ export function updateBulletsSystem({
       continue;
     }
 
+    const previousX = bullet.x;
+    const previousY = bullet.y;
+
     bullet.x += bullet.vx * deltaTime;
     bullet.y += bullet.vy * deltaTime;
 
+    const stepDx = bullet.x - previousX;
+    const stepDy = bullet.y - previousY;
+    bullet.distanceTraveled = (bullet.distanceTraveled ?? 0) + Math.hypot(stepDx, stepDy);
+
+    const viewportLeft = cameraX;
+    const viewportRight = cameraX + canvasWidth;
+
     if (
-      bullet.x < -220 ||
-      bullet.x > worldWidth + 220 ||
-      bullet.y < -220 ||
-      bullet.y > canvasHeight + 220
+      bullet.maxTravelDistance &&
+      bullet.distanceTraveled >= bullet.maxTravelDistance
+    ) {
+      if (
+        (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
+        bullet.explosionOnImpact
+      ) {
+        const edgeX = bullet.vx >= 0 ? viewportRight : viewportLeft;
+        bullet.x = edgeX - bullet.width / 2;
+        createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
+      }
+
+      bullet.active = false;
+      continue;
+    }
+
+    if (
+      bullet.x < -240 ||
+      bullet.x > worldWidth + 240 ||
+      bullet.y < -240 ||
+      bullet.y > canvasHeight + 240
     ) {
       if (
         (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
@@ -165,7 +196,9 @@ export function updateBulletsSystem({
       enemy.hp -= bullet.damage;
       enemy.hitFlash = bullet.kind === 'megaSpecial' ? 0.18 : 0.1;
 
-      if (enemy.hp <= 0) {
+      const enemyWasDestroyed = enemy.hp <= 0;
+
+      if (enemyWasDestroyed) {
         killEnemy(
           enemy,
           enemy.type === 'vigia' ? 100 : 50,
@@ -177,11 +210,16 @@ export function updateBulletsSystem({
           enemy.x + enemy.width / 2,
           enemy.y + enemy.height / 2,
           bullet.kind === 'megaSpecial' ? '#ffb36a' : '#ff8b5e',
-          bullet.kind === 'megaSpecial' ? 10 : 6,
+          bullet.kind === 'megaSpecial' ? 14 : 8,
         );
       }
 
-      if (!bullet.pierceEnemies) {
+      const shouldContinueThroughEnemy =
+        bullet.kind === 'megaSpecial' &&
+        bullet.pierceEnemies === true &&
+        enemyWasDestroyed;
+
+      if (!shouldContinueThroughEnemy) {
         if (
           (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
           bullet.explosionOnImpact
@@ -575,11 +613,6 @@ function createSpecialExplosion(
   spawnBurst(x, y, isMega ? '#ff7d2e' : '#ffb15c', isMega ? 64 : 32);
   spawnBurst(x, y, isMega ? '#ffd6a1' : '#82e8ff', isMega ? 28 : 14);
   spawnBurst(x, y, isMega ? '#fff1cf' : '#ffdd9f', isMega ? 20 : 10);
-
-  if (rawX <= 0 || rawX >= worldWidth || rawY <= 0 || rawY >= canvasHeight) {
-    spawnBurst(x, y, '#ff6a2a', isMega ? 42 : 18);
-    spawnBurst(x, y, '#ffd89f', isMega ? 24 : 10);
-  }
 
   runtime.enemyProjectiles = [];
   runtime.bossProjectiles = [];
