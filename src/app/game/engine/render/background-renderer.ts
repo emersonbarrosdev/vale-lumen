@@ -24,7 +24,7 @@ export function drawBackground(
     canvas.width,
     0.05,
     'rgba(9, 12, 18, 0.98)',
-    [452, 330, 394, 250, 406, 218, 372, 238, 720],
+    [470, 360, 404, 286, 428, 240, 386, 264, 720],
   );
 
   drawMountainLayer(
@@ -33,7 +33,7 @@ export function drawBackground(
     canvas.width,
     0.1,
     'rgba(16, 19, 27, 0.94)',
-    [520, 426, 476, 340, 502, 318, 460, 362, 720],
+    [548, 450, 500, 376, 522, 344, 486, 396, 720],
   );
 
   drawMountainLayer(
@@ -42,7 +42,7 @@ export function drawBackground(
     canvas.width,
     0.16,
     'rgba(24, 20, 30, 0.9)',
-    [572, 496, 544, 444, 560, 416, 536, 466, 720],
+    [594, 528, 562, 466, 580, 432, 552, 486, 720],
   );
 
   drawRuinSilhouettes(ctx, cameraX, canvas.width);
@@ -125,12 +125,12 @@ function drawLightningCuts(
   canvas: HTMLCanvasElement,
   cameraX: number,
 ): void {
-  const time = performance.now() * 0.0018;
+  const time = performance.now() * 0.00095;
 
   const strikes = [
-    { baseX: 240, topY: 36, len: 126, amp: 22, alpha: 0.22, parallax: 0.02 },
-    { baseX: 760, topY: 58, len: 102, amp: 16, alpha: 0.18, parallax: 0.015 },
-    { baseX: 1130, topY: 30, len: 148, amp: 24, alpha: 0.16, parallax: 0.018 },
+    { baseX: 240, topY: 36, len: 126, amp: 22, alpha: 0.18, parallax: 0.02 },
+    { baseX: 760, topY: 58, len: 102, amp: 16, alpha: 0.14, parallax: 0.015 },
+    { baseX: 1130, topY: 30, len: 148, amp: 24, alpha: 0.12, parallax: 0.018 },
   ];
 
   for (let index = 0; index < strikes.length; index += 1) {
@@ -139,7 +139,7 @@ function drawLightningCuts(
     const x = ((strike.baseX - cameraX * strike.parallax) % (canvas.width + 140)) - 70;
 
     ctx.strokeStyle = `rgba(182, 216, 255, ${strike.alpha * (0.35 + pulse * 0.65)})`;
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 2;
     ctx.lineCap = 'round';
 
     ctx.beginPath();
@@ -148,20 +148,12 @@ function drawLightningCuts(
     const segments = 6;
     for (let segment = 1; segment <= segments; segment += 1) {
       const t = segment / segments;
-      const offsetX = Math.sin(time * 1.4 + segment * 0.9 + index) * strike.amp;
+      const offsetX = Math.sin(time * 1.25 + segment * 0.9 + index) * strike.amp;
       const px = x + offsetX * (segment % 2 === 0 ? -1 : 1);
       const py = strike.topY + strike.len * t;
       ctx.lineTo(px, py);
     }
 
-    ctx.stroke();
-
-    ctx.strokeStyle = `rgba(230, 245, 255, ${strike.alpha * 0.45 * (0.4 + pulse * 0.6)})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x + 3, strike.topY + 18);
-    ctx.lineTo(x + 18, strike.topY + 50);
-    ctx.lineTo(x + 6, strike.topY + 74);
     ctx.stroke();
   }
 }
@@ -171,15 +163,15 @@ function drawGreenStormSparks(
   canvas: HTMLCanvasElement,
   cameraX: number,
 ): void {
-  const time = performance.now() * 0.0022;
+  const time = performance.now() * 0.0015;
 
-  for (let index = 0; index < 18; index += 1) {
-    const baseX = ((index * 93) - cameraX * 0.025) % (canvas.width + 90);
+  for (let index = 0; index < 14; index += 1) {
+    const baseX = ((index * 118) - cameraX * 0.025) % (canvas.width + 90);
     const x = baseX < 0 ? baseX + canvas.width + 90 : baseX;
-    const y = 110 + (index % 5) * 42 + Math.sin(time + index) * 8;
+    const y = 120 + (index % 4) * 52 + Math.sin(time + index) * 8;
     const size = 1.2 + (index % 3) * 0.7;
     const alpha =
-      0.14 + (Math.sin(time * 1.6 + index * 2.4) * 0.5 + 0.5) * 0.18;
+      0.1 + (Math.sin(time * 1.4 + index * 2.1) * 0.5 + 0.5) * 0.14;
 
     const glow = ctx.createRadialGradient(x, y, 0.5, x, y, 12);
     glow.addColorStop(0, `rgba(144, 255, 186, ${alpha + 0.15})`);
@@ -191,7 +183,7 @@ function drawGreenStormSparks(
     ctx.arc(x, y, 10, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = `rgba(184, 255, 212, ${alpha + 0.2})`;
+    ctx.fillStyle = `rgba(184, 255, 212, ${alpha + 0.18})`;
     ctx.beginPath();
     ctx.arc(x, y, size, 0, Math.PI * 2);
     ctx.fill();
@@ -235,16 +227,16 @@ function drawRuinSilhouettes(
   cameraX: number,
   canvasWidth: number,
 ): void {
-  for (let index = 0; index < 8; index += 1) {
-    const x = ((index * 246) - cameraX * 0.12) % (canvasWidth + 220);
+  for (let index = 0; index < 6; index += 1) {
+    const x = ((index * 330) - cameraX * 0.12) % (canvasWidth + 260);
 
-    ctx.fillStyle = 'rgba(12, 14, 20, 0.5)';
-    ctx.fillRect(x + 20, 352, 42, 168);
-    ctx.fillRect(x + 74, 400, 86, 120);
+    ctx.fillStyle = 'rgba(12, 14, 20, 0.46)';
+    ctx.fillRect(x + 20, 368, 42, 152);
+    ctx.fillRect(x + 80, 410, 96, 110);
 
-    ctx.fillStyle = 'rgba(28, 34, 40, 0.12)';
-    ctx.fillRect(x + 32, 378, 10, 18);
-    ctx.fillRect(x + 92, 434, 12, 20);
+    ctx.fillStyle = 'rgba(28, 34, 40, 0.1)';
+    ctx.fillRect(x + 32, 388, 10, 18);
+    ctx.fillRect(x + 104, 438, 12, 20);
   }
 }
 
@@ -253,21 +245,21 @@ function drawDeadForest(
   cameraX: number,
   canvasWidth: number,
 ): void {
-  for (let index = 0; index < 16; index += 1) {
-    const x = ((index * 160) - cameraX * 0.21) % (canvasWidth + 220);
+  for (let index = 0; index < 12; index += 1) {
+    const x = ((index * 210) - cameraX * 0.21) % (canvasWidth + 220);
 
-    ctx.fillStyle = 'rgba(17, 14, 18, 0.68)';
-    ctx.fillRect(x + 38, 432, 18, 120);
+    ctx.fillStyle = 'rgba(17, 14, 18, 0.62)';
+    ctx.fillRect(x + 38, 442, 18, 110);
 
-    ctx.strokeStyle = 'rgba(42, 24, 28, 0.48)';
+    ctx.strokeStyle = 'rgba(42, 24, 28, 0.44)';
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(x + 46, 454);
-    ctx.lineTo(x + 24, 418);
-    ctx.moveTo(x + 46, 474);
-    ctx.lineTo(x + 72, 436);
-    ctx.moveTo(x + 48, 494);
-    ctx.lineTo(x + 22, 468);
+    ctx.moveTo(x + 46, 460);
+    ctx.lineTo(x + 24, 428);
+    ctx.moveTo(x + 46, 482);
+    ctx.lineTo(x + 72, 446);
+    ctx.moveTo(x + 48, 502);
+    ctx.lineTo(x + 22, 476);
     ctx.stroke();
   }
 }
@@ -278,19 +270,19 @@ function drawForegroundFog(
 ): void {
   const haze = ctx.createLinearGradient(0, 410, 0, canvas.height);
   haze.addColorStop(0, 'rgba(26, 18, 24, 0)');
-  haze.addColorStop(0.36, 'rgba(36, 18, 22, 0.08)');
-  haze.addColorStop(0.7, 'rgba(20, 16, 18, 0.14)');
-  haze.addColorStop(1, 'rgba(6, 6, 8, 0.3)');
+  haze.addColorStop(0.36, 'rgba(36, 18, 22, 0.06)');
+  haze.addColorStop(0.7, 'rgba(20, 16, 18, 0.12)');
+  haze.addColorStop(1, 'rgba(6, 6, 8, 0.24)');
   ctx.fillStyle = haze;
   ctx.fillRect(0, 390, canvas.width, canvas.height - 390);
 
-  ctx.fillStyle = 'rgba(90, 110, 120, 0.035)';
+  ctx.fillStyle = 'rgba(90, 110, 120, 0.03)';
   ctx.beginPath();
-  ctx.ellipse(canvas.width * 0.28, 594, 250, 44, 0.02, 0, Math.PI * 2);
+  ctx.ellipse(canvas.width * 0.28, 598, 250, 44, 0.02, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.beginPath();
-  ctx.ellipse(canvas.width * 0.72, 620, 300, 54, -0.02, 0, Math.PI * 2);
+  ctx.ellipse(canvas.width * 0.72, 622, 300, 54, -0.02, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -298,12 +290,12 @@ function drawAbyssGlow(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
 ): void {
-  const abyss = ctx.createLinearGradient(0, 590, 0, canvas.height);
+  const abyss = ctx.createLinearGradient(0, 598, 0, canvas.height);
   abyss.addColorStop(0, 'rgba(255, 120, 56, 0)');
-  abyss.addColorStop(0.08, 'rgba(134, 30, 22, 0.16)');
-  abyss.addColorStop(0.22, 'rgba(56, 12, 16, 0.32)');
-  abyss.addColorStop(0.52, 'rgba(10, 4, 8, 0.7)');
-  abyss.addColorStop(1, 'rgba(0, 0, 0, 0.98)');
+  abyss.addColorStop(0.08, 'rgba(134, 30, 22, 0.12)');
+  abyss.addColorStop(0.22, 'rgba(56, 12, 16, 0.24)');
+  abyss.addColorStop(0.52, 'rgba(10, 4, 8, 0.56)');
+  abyss.addColorStop(1, 'rgba(0, 0, 0, 0.92)');
   ctx.fillStyle = abyss;
-  ctx.fillRect(0, 590, canvas.width, canvas.height - 590);
+  ctx.fillRect(0, 598, canvas.width, canvas.height - 598);
 }

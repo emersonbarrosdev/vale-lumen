@@ -39,6 +39,8 @@ export function updateHeroSystem({
   const wasOnGround = hero.onGround;
   const isLockedInSpecialCast = hero.castTimer > 0 && (hero.specialCasting || hero.megaCasting);
 
+  updateFallingPlatforms(platforms, hero, deltaTime);
+
   hero.animationTime += deltaTime;
   hero.shootCooldown = Math.max(0, hero.shootCooldown - deltaTime);
   hero.dashCooldown = Math.max(0, hero.dashCooldown - deltaTime);
@@ -201,6 +203,56 @@ export function updateHeroSystem({
   updateHeroState(hero);
 }
 
+function updateFallingPlatforms(
+  platforms: Platform[],
+  hero: Hero,
+  deltaTime: number,
+): void {
+  for (const platform of platforms) {
+    if (platform.active === false) {
+      continue;
+    }
+
+    if (platform.startY === undefined) {
+      platform.startY = platform.y;
+    }
+
+    if (!platform.fallAway) {
+      continue;
+    }
+
+    if (!platform.triggered) {
+      platform.triggerTimer = platform.fallDelay ?? 0.35;
+      platform.falling = false;
+      platform.active = true;
+      continue;
+    }
+
+    if (!platform.falling) {
+      platform.triggerTimer = Math.max(0, (platform.triggerTimer ?? 0) - deltaTime);
+
+      if ((platform.triggerTimer ?? 0) <= 0) {
+        platform.falling = true;
+      }
+
+      continue;
+    }
+
+    const deltaY = (platform.fallSpeed ?? 360) * deltaTime;
+    platform.y += deltaY;
+
+    if (isHeroStandingOnPlatform(hero, platform)) {
+      hero.y += deltaY;
+      hero.onGround = true;
+      hero.vy = 0;
+    }
+
+    if (platform.y > 900) {
+      platform.active = false;
+    }
+  }
+}
+
 function updateHeroState(hero: Hero): void {
   if (hero.hurtTimer > 0) {
     hero.state = 'hurt';
@@ -234,7 +286,7 @@ function moveHeroHorizontally(
   hero.x += hero.vx * deltaTime;
 
   for (const platform of platforms) {
-    if (!rectsOverlap(hero, platform)) {
+    if (platform.active === false || !rectsOverlap(hero, platform)) {
       continue;
     }
 
@@ -277,7 +329,7 @@ function moveHeroVertically(
   hero.y += hero.vy * deltaTime;
 
   for (const platform of platforms) {
-    if (!rectsOverlap(hero, platform)) {
+    if (platform.active === false || !rectsOverlap(hero, platform)) {
       continue;
     }
 
@@ -286,6 +338,11 @@ function moveHeroVertically(
       hero.vy = 0;
       hero.onGround = true;
       hero.jumpsRemaining = hero.maxJumps;
+
+      if (platform.fallAway && !platform.triggered) {
+        platform.triggered = true;
+        platform.triggerTimer = platform.fallDelay ?? 0.35;
+      }
     } else if (hero.vy < 0) {
       hero.y = platform.y + platform.height;
       hero.vy = 0;
@@ -318,6 +375,18 @@ function resolveTunnelCeilingCollision(
       hero.vy = 0;
     }
   }
+}
+
+function isHeroStandingOnPlatform(hero: Hero, platform: Platform): boolean {
+  const heroBottom = hero.y + hero.height;
+  const platformTop = platform.y;
+  const heroRight = hero.x + hero.width;
+  const platformRight = platform.x + platform.width;
+
+  const overlapsX = heroRight > platform.x + 8 && hero.x < platformRight - 8;
+  const nearTop = Math.abs(heroBottom - platformTop) <= 10;
+
+  return overlapsX && nearTop;
 }
 
 function getSolidHazardHorizontalHitbox(

@@ -3,185 +3,97 @@ import { CollectibleData } from '../../../../domain/world/collectible.model';
 export function getPhase01Collectibles(): CollectibleData[] {
   return [
     /**
-     * Vida escondida no começo da fase:
-     * o jogador precisa voltar um pouco para enxergar/pegar
+     * Vida escondida no início, no estilo Sonic:
+     * a câmera começa um pouco à frente, mas se o jogador voltar,
+     * encontra a recompensa atrás.
      */
-    { type: 'heart', x: 72, y: 548 },
+    { type: 'heart', x: 86, y: 572 },
 
     /**
-     * Proteção inicial um pouco à frente
+     * Proteção inicial visível, mas não imediata
      */
-    { type: 'shieldOrb', x: 188, y: 560 },
+    { type: 'shieldOrb', x: 320, y: 580 },
 
     /**
-     * Bloco 1
+     * Pequena linha de moedas para sugerir a plataforma inicial
      */
-    { type: 'coin', x: 842, y: 458 },
-    { type: 'coin', x: 878, y: 446 },
-    { type: 'coin', x: 914, y: 458 },
-    { type: 'coin', x: 1006, y: 394 },
-    { type: 'coin', x: 1042, y: 382 },
-    { type: 'coin', x: 1078, y: 394 },
+    { type: 'coin', x: 286, y: 462 },
+    { type: 'coin', x: 324, y: 450 },
+    { type: 'coin', x: 362, y: 462 },
 
     /**
-     * Bloco 2
+     * Primeiro trecho com salto moderado
      */
-    { type: 'coin', x: 1382, y: 464 },
-    { type: 'coin', x: 1418, y: 452 },
-    { type: 'coin', x: 1454, y: 464 },
-    { type: 'coin', x: 1564, y: 408 },
-    { type: 'coin', x: 1600, y: 396 },
-    { type: 'coin', x: 1636, y: 408 },
-    { type: 'coin', x: 1478, y: 300 },
-    { type: 'specialCoin', x: 1512, y: 280 },
-    { type: 'coin', x: 1546, y: 300 },
+    { type: 'coin', x: 1850, y: 462 },
+    { type: 'coin', x: 1890, y: 450 },
+    { type: 'coin', x: 1930, y: 462 },
+
+    { type: 'specialCoin', x: 2178, y: 398 },
 
     /**
-     * Bloco 3
+     * Túnel: poucas moedas, só para indicar a rota
      */
-    { type: 'coin', x: 2062, y: 464 },
-    { type: 'coin', x: 2098, y: 452 },
-    { type: 'coin', x: 2134, y: 464 },
+    { type: 'coin', x: 3284, y: 470 },
+    { type: 'coin', x: 3330, y: 458 },
 
     /**
-     * Bloco 4 - trecho do túnel
+     * Trecho linear com recompensa simples
      */
-    { type: 'coin', x: 2620, y: 484 },
-    { type: 'coin', x: 2656, y: 472 },
-    { type: 'coin', x: 2692, y: 484 },
-    { type: 'coin', x: 2786, y: 432 },
-    { type: 'coin', x: 2822, y: 420 },
-    { type: 'coin', x: 2858, y: 432 },
+    { type: 'coin', x: 4300, y: 584 },
+    { type: 'coin', x: 4342, y: 572 },
+    { type: 'coin', x: 4384, y: 584 },
 
     /**
-     * Bloco 5
+     * Sequência do buraco grande com plataformas que caem
+     * moedas guiando a subida
      */
-    { type: 'coin', x: 3312, y: 466 },
-    { type: 'coin', x: 3348, y: 454 },
-    { type: 'coin', x: 3384, y: 466 },
-    { type: 'coin', x: 3480, y: 394 },
-    { type: 'coin', x: 3516, y: 382 },
-    { type: 'coin', x: 3552, y: 394 },
+    { type: 'coin', x: 4748, y: 450 },
+    { type: 'coin', x: 4924, y: 394 },
+    { type: 'coin', x: 5098, y: 336 },
+    { type: 'specialCoin', x: 5128, y: 312 },
 
     /**
-     * Bloco 6
+     * Respiro depois do desafio
      */
-    { type: 'coin', x: 3918, y: 458 },
-    { type: 'coin', x: 3954, y: 446 },
-    { type: 'coin', x: 3990, y: 458 },
-    { type: 'coin', x: 4080, y: 398 },
-    { type: 'coin', x: 4116, y: 386 },
-    { type: 'coin', x: 4152, y: 398 },
-    { type: 'coin', x: 3966, y: 296 },
-    { type: 'ray', x: 3992, y: 292 },
-    { type: 'coin', x: 4018, y: 296 },
+    { type: 'heart', x: 6668, y: 580 },
 
     /**
-     * Bloco 7 - travessia
+     * Trecho linear longo: poucas moedas no chão
      */
-    { type: 'coin', x: 4938, y: 498 },
-    { type: 'coin', x: 4974, y: 486 },
-    { type: 'coin', x: 5118, y: 434 },
-    { type: 'coin', x: 5154, y: 422 },
-    { type: 'coin', x: 5320, y: 370 },
-    { type: 'specialCoin', x: 5370, y: 348 },
+    { type: 'coin', x: 6982, y: 464 },
+    { type: 'coin', x: 7024, y: 452 },
+    { type: 'coin', x: 7066, y: 464 },
+
+    { type: 'coin', x: 7344, y: 402 },
+    { type: 'ray', x: 7380, y: 396 },
 
     /**
-     * Bloco 8
+     * Segundo buraco menor
      */
-    { type: 'coin', x: 5742, y: 464 },
-    { type: 'coin', x: 5778, y: 452 },
-    { type: 'coin', x: 5814, y: 464 },
-    { type: 'coin', x: 5912, y: 404 },
-    { type: 'coin', x: 5948, y: 392 },
-    { type: 'coin', x: 5984, y: 404 },
-    { type: 'heart', x: 5988, y: 574 },
+    { type: 'coin', x: 8500, y: 476 },
+    { type: 'coin', x: 8544, y: 464 },
+    { type: 'coin', x: 8588, y: 476 },
 
     /**
-     * Bloco 9
+     * Trecho mais longo final
      */
-    { type: 'coin', x: 6384, y: 478 },
-    { type: 'coin', x: 6420, y: 466 },
-    { type: 'coin', x: 6456, y: 478 },
+    { type: 'coin', x: 9886, y: 468 },
+    { type: 'coin', x: 9928, y: 456 },
+    { type: 'coin', x: 9970, y: 468 },
+
+    { type: 'specialCoin', x: 10278, y: 392 },
 
     /**
-     * Bloco 10
+     * Último trecho antes do boss
      */
-    { type: 'coin', x: 6994, y: 462 },
-    { type: 'coin', x: 7030, y: 450 },
-    { type: 'coin', x: 7066, y: 462 },
-    { type: 'coin', x: 7162, y: 402 },
-    { type: 'coin', x: 7198, y: 390 },
-    { type: 'coin', x: 7234, y: 402 },
-    { type: 'coin', x: 7044, y: 290 },
-    { type: 'ray', x: 7070, y: 286 },
-    { type: 'coin', x: 7096, y: 290 },
-
-    /**
-     * Bloco 11
-     */
-    { type: 'coin', x: 7954, y: 500 },
-    { type: 'coin', x: 8138, y: 436 },
-    { type: 'coin', x: 8338, y: 378 },
-    { type: 'specialCoin', x: 8390, y: 356 },
-
-    /**
-     * Bloco 12
-     */
-    { type: 'coin', x: 8768, y: 462 },
-    { type: 'coin', x: 8804, y: 450 },
-    { type: 'coin', x: 8840, y: 462 },
-    { type: 'coin', x: 8936, y: 402 },
-    { type: 'coin', x: 8972, y: 390 },
-    { type: 'coin', x: 9008, y: 402 },
-    { type: 'flameVial', x: 8960, y: 574 },
-
-    /**
-     * Bloco 13
-     */
-    { type: 'coin', x: 9348, y: 478 },
-    { type: 'coin', x: 9384, y: 466 },
-    { type: 'coin', x: 9420, y: 478 },
-
-    /**
-     * Bloco 14
-     */
-    { type: 'coin', x: 9864, y: 472 },
-    { type: 'coin', x: 9900, y: 460 },
-    { type: 'coin', x: 9936, y: 472 },
-    { type: 'coin', x: 10034, y: 408 },
-    { type: 'coin', x: 10070, y: 396 },
-    { type: 'coin', x: 10106, y: 408 },
-    { type: 'coin', x: 10204, y: 336 },
-    { type: 'ray', x: 10234, y: 332 },
-    { type: 'coin', x: 10264, y: 336 },
-
-    /**
-     * Bloco 15
-     */
-    { type: 'coin', x: 10598, y: 478 },
-    { type: 'coin', x: 10634, y: 466 },
-    { type: 'coin', x: 10670, y: 478 },
-
-    /**
-     * Bloco 16
-     */
-    { type: 'coin', x: 11142, y: 462 },
-    { type: 'coin', x: 11178, y: 450 },
-    { type: 'coin', x: 11214, y: 462 },
-    { type: 'coin', x: 11312, y: 402 },
-    { type: 'coin', x: 11348, y: 390 },
-    { type: 'coin', x: 11384, y: 402 },
-    { type: 'specialCoin', x: 11350, y: 368 },
+    { type: 'coin', x: 11434, y: 468 },
+    { type: 'flameVial', x: 11500, y: 472 },
 
     /**
      * Pré-boss
      */
-    { type: 'coin', x: 11730, y: 584 },
-    { type: 'coin', x: 11770, y: 572 },
-    { type: 'coin', x: 11810, y: 584 },
-    { type: 'coin', x: 12120, y: 584 },
-    { type: 'coin', x: 12160, y: 572 },
-    { type: 'coin', x: 12200, y: 584 },
+    { type: 'coin', x: 12112, y: 586 },
+    { type: 'coin', x: 12156, y: 574 },
+    { type: 'coin', x: 12200, y: 586 },
   ];
 }

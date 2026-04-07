@@ -6,130 +6,87 @@ export const PHASE_01_GROUND_Y = 620;
 export function getPhase01Platforms(): PlatformData[] {
   return [
     /**
-     * Trecho inicial
-     * chão mais estável para começar e já dar espaço para retorno depois
+     * INÍCIO
+     * começo mais linear, estilo Sonic/Mario World
+     * espaço para o jogador voltar e pegar a vida escondida
      */
-    { x: 0, y: 620, width: 520, height: 100 },
+    { x: 0, y: 620, width: 1380, height: 100 },
 
     /**
-     * Bloco 1
+     * Pequeno trecho alto para recompensa visual, sem exagero
      */
-    { x: 720, y: 620, width: 340, height: 100 },
-    { x: 820, y: 494, width: 120, height: 22 },
-    { x: 980, y: 430, width: 104, height: 20 },
+    { x: 260, y: 500, width: 120, height: 22 },
 
     /**
-     * Bloco 2
+     * PRIMEIRO BURACO MÉDIO
      */
-    { x: 1260, y: 612, width: 420, height: 108 },
-    { x: 1365, y: 500, width: 132, height: 22 },
-    { x: 1545, y: 444, width: 112, height: 20 },
-    { x: 1460, y: 336, width: 104, height: 20 },
+    { x: 1600, y: 620, width: 1180, height: 100 },
 
     /**
-     * Bloco 3
+     * Algumas plataformas, mas poucas
      */
-    { x: 1920, y: 620, width: 360, height: 100 },
-    { x: 2035, y: 500, width: 126, height: 22 },
+    { x: 1830, y: 500, width: 130, height: 22 },
+    { x: 2140, y: 436, width: 118, height: 20 },
 
     /**
-     * Bloco 4 - trecho de túnel baixo estilo Metroid
-     * chão sobe um pouco e há plataformas para guiar
+     * TRECHO DE TÚNEL
+     * chão contínuo com teto baixo depois
      */
-    { x: 2480, y: 604, width: 430, height: 116 },
-    { x: 2595, y: 520, width: 128, height: 22 },
-    { x: 2760, y: 468, width: 110, height: 20 },
+    { x: 2960, y: 620, width: 920, height: 100 },
+    { x: 3260, y: 508, width: 126, height: 22 },
 
     /**
-     * Bloco 5
+     * TRECHO LINEAR LONGO
      */
-    { x: 3180, y: 620, width: 360, height: 100 },
-    { x: 3290, y: 502, width: 132, height: 22 },
-    { x: 3460, y: 430, width: 112, height: 20 },
+    { x: 4040, y: 620, width: 660, height: 100 },
 
     /**
-     * Bloco 6
+     * BURACO GRANDE ~40% DA TELA
+     * com plataformas que caem estilo Sonic
+     * 1280 * 0.4 = 512px aprox
      */
-    { x: 3780, y: 610, width: 420, height: 110 },
-    { x: 3895, y: 494, width: 136, height: 22 },
-    { x: 4055, y: 434, width: 112, height: 20 },
-    { x: 3940, y: 332, width: 104, height: 20 },
+    { x: 5220, y: 620, width: 1080, height: 100 },
+
+    { x: 4720, y: 486, width: 114, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 360 },
+    { x: 4895, y: 430, width: 114, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 380 },
+    { x: 5070, y: 372, width: 114, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 400 },
 
     /**
-     * Bloco 7 - espaço maior com travessia por plataformas
+     * TRECHO LINEAR DE RESPIRO
      */
-    { x: 4480, y: 620, width: 320, height: 100 },
-    { x: 4910, y: 532, width: 110, height: 20 },
-    { x: 5110, y: 468, width: 116, height: 20 },
-    { x: 5315, y: 404, width: 124, height: 20 },
+    { x: 6520, y: 620, width: 1480, height: 100 },
 
     /**
-     * Bloco 8
+     * Pouca verticalidade aqui
      */
-    { x: 5600, y: 612, width: 420, height: 108 },
-    { x: 5715, y: 500, width: 132, height: 22 },
-    { x: 5895, y: 440, width: 112, height: 20 },
+    { x: 6940, y: 500, width: 132, height: 22 },
+    { x: 7320, y: 438, width: 118, height: 20 },
 
     /**
-     * Bloco 9 - novo trecho com túnel curto
+     * SEGUNDO BURACO MENOR
      */
-    { x: 6250, y: 620, width: 380, height: 100 },
-    { x: 6360, y: 514, width: 126, height: 22 },
+    { x: 8240, y: 620, width: 980, height: 100 },
+
+    { x: 8480, y: 512, width: 128, height: 22 },
 
     /**
-     * Bloco 10
+     * TRECHO MAIS LONGO DE CHÃO
      */
-    { x: 6840, y: 606, width: 450, height: 114 },
-    { x: 6970, y: 498, width: 136, height: 22 },
-    { x: 7140, y: 438, width: 112, height: 20 },
-    { x: 7020, y: 326, width: 102, height: 20 },
+    { x: 9440, y: 620, width: 1560, height: 100 },
+
+    { x: 9860, y: 504, width: 128, height: 22 },
+    { x: 10220, y: 436, width: 118, height: 20 },
 
     /**
-     * Bloco 11 - travessia com plataformas entre os vãos
+     * TRECHO FINAL DE EXPLORAÇÃO
      */
-    { x: 7520, y: 620, width: 300, height: 100 },
-    { x: 7930, y: 534, width: 110, height: 20 },
-    { x: 8120, y: 470, width: 116, height: 20 },
-    { x: 8325, y: 412, width: 122, height: 20 },
+    { x: 11240, y: 620, width: 520, height: 100 },
+
+    { x: 11410, y: 504, width: 126, height: 22 },
 
     /**
-     * Bloco 12
+     * PRÉ-BOSS
      */
-    { x: 8610, y: 612, width: 430, height: 108 },
-    { x: 8740, y: 498, width: 132, height: 22 },
-    { x: 8920, y: 438, width: 112, height: 20 },
-
-    /**
-     * Bloco 13
-     */
-    { x: 9210, y: 620, width: 370, height: 100 },
-    { x: 9325, y: 514, width: 126, height: 22 },
-
-    /**
-     * Bloco 14 - mais vertical
-     */
-    { x: 9720, y: 604, width: 440, height: 116 },
-    { x: 9840, y: 508, width: 128, height: 22 },
-    { x: 10010, y: 444, width: 112, height: 20 },
-    { x: 10180, y: 372, width: 108, height: 20 },
-
-    /**
-     * Bloco 15
-     */
-    { x: 10460, y: 620, width: 360, height: 100 },
-    { x: 10575, y: 514, width: 126, height: 22 },
-
-    /**
-     * Bloco 16
-     */
-    { x: 10990, y: 612, width: 430, height: 108 },
-    { x: 11115, y: 498, width: 132, height: 22 },
-    { x: 11295, y: 438, width: 112, height: 20 },
-
-    /**
-     * Pré-arena do boss
-     */
-    { x: 11660, y: 620, width: 340, height: 100 },
     { x: 12010, y: 620, width: 790, height: 100 },
   ];
 }

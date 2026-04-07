@@ -11,7 +11,7 @@ export function drawCollectibles(
       continue;
     }
 
-    const bob = Math.sin(time * 0.004 + item.x * 0.02) * 4;
+    const bob = Math.sin(time * 0.0022 + item.x * 0.015) * 3;
     const centerX = item.x + item.width / 2;
     const centerY = item.y + item.height / 2 + bob;
 
@@ -51,8 +51,8 @@ function drawCoinMarioStyle(
   time: number,
   special: boolean,
 ): void {
-  const spin = Math.sin(time * 0.012 + x * 0.015);
-  const widthFactor = Math.max(0.2, Math.abs(spin));
+  const spin = Math.sin(time * 0.0048 + x * 0.01);
+  const widthFactor = Math.max(0.22, Math.abs(spin));
   const frontFacing = spin >= 0;
 
   const coinWidth = (special ? 10 : 8) * widthFactor;

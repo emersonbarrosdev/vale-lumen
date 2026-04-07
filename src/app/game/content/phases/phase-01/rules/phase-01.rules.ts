@@ -9,8 +9,8 @@ export function getPhase01RuntimeRules(
 
   return {
     worldWidth: PHASE_01_WORLD_WIDTH,
-    checkpointXs: [48, 980, 2140, 3560, 5180, 6940, 8720, 10440, 11690],
-    scoreStepDistance: 220,
+    checkpointXs: [180, 1760, 3220, 5340, 6900, 8600, 10020, 11480, 12110],
+    scoreStepDistance: 240,
     scorePerStep: 15,
     heroFallDeathOffset: 260,
   };
