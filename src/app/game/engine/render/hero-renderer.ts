@@ -94,7 +94,17 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.save();
   ctx.rotate(lean);
 
-  drawArmBack(ctx, runCycle, isRun, isIdle, isAir, isCast || isAimingUp, isUpShot, isMegaShot, palette);
+  drawArmBack(
+    ctx,
+    runCycle,
+    isRun,
+    isIdle,
+    isAir,
+    isCast || isAimingUp,
+    isUpShot,
+    isMegaShot,
+    palette,
+  );
 
   ctx.fillStyle = palette.body;
   ctx.beginPath();
@@ -197,8 +207,27 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
     drawChestAura(ctx, palette);
   }
 
-  drawWeapon(ctx, isRun, isAir, isCast || isAimingUp, isUpShot, isSpecialShot || isMegaShot, runCycle, palette);
-  drawArmFront(ctx, runCycle + Math.PI, isRun, isIdle, isAir, isCast || isAimingUp, isUpShot, isMegaShot, palette);
+  drawWeapon(
+    ctx,
+    isRun,
+    isAir,
+    isCast || isAimingUp,
+    isUpShot,
+    isSpecialShot || isMegaShot,
+    runCycle,
+    palette,
+  );
+  drawArmFront(
+    ctx,
+    runCycle + Math.PI,
+    isRun,
+    isIdle,
+    isAir,
+    isCast || isAimingUp,
+    isUpShot,
+    isMegaShot,
+    palette,
+  );
 
   ctx.restore();
 
@@ -436,10 +465,10 @@ function drawArmBack(
 
   if (isCast) {
     if (isUpShot) {
-      shoulderX = -2.2;
-      shoulderY = -24.6;
-      armRot = -1.8;
-      elbowRot = -0.05;
+      shoulderX = -2.8;
+      shoulderY = -29.8;
+      armRot = -2.42;
+      elbowRot = 0.02;
     } else if (isMegaShot) {
       shoulderX = -5.4;
       shoulderY = -21.2;
@@ -486,9 +515,9 @@ function drawArmFront(
 
   if (isCast) {
     if (isUpShot) {
-      shoulderX = 1.4;
-      shoulderY = -26.2;
-      armRot = -1.98;
+      shoulderX = 2.3;
+      shoulderY = -30.6;
+      armRot = -2.52;
       elbowRot = 0.04;
     } else if (isMegaShot) {
       shoulderX = 6.2;
@@ -564,9 +593,9 @@ function drawWeapon(
 
   if (isCast) {
     if (isUpShot) {
-      weaponX = 1.1;
-      weaponY = -28.4;
-      weaponRot = -1.56;
+      weaponX = 2.2;
+      weaponY = -39.8;
+      weaponRot = -1.58;
     } else {
       weaponX = 16.6;
       weaponY = -18.2;
