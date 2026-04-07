@@ -5,9 +5,9 @@ const BASE_COLORS = {
   glow: '#ff6a00',
   glowSoft: 'rgba(255, 106, 0, 0.28)',
   glowStrong: 'rgba(255, 140, 40, 0.72)',
-  weaponDark: '#171a21',
-  weaponMid: '#2a303a',
-  weaponLight: '#4a5668',
+  weaponDark: '#101216',
+  weaponMid: '#d9dee6',
+  weaponLight: '#f7f9fc',
   weaponGlow: '#ffb15c',
   hair: '#ff7b24',
 };
@@ -17,9 +17,9 @@ const SPECIAL_COLORS = {
   glow: '#82e8ff',
   glowSoft: 'rgba(130, 232, 255, 0.28)',
   glowStrong: 'rgba(255, 234, 128, 0.76)',
-  weaponDark: '#151a24',
-  weaponMid: '#2c3a48',
-  weaponLight: '#58708f',
+  weaponDark: '#0f1218',
+  weaponMid: '#dfe7f1',
+  weaponLight: '#fbfdff',
   weaponGlow: '#d6fbff',
   hair: '#82e8ff',
 };
@@ -29,9 +29,9 @@ const MEGA_COLORS = {
   glow: '#ff6e2e',
   glowSoft: 'rgba(255, 110, 46, 0.28)',
   glowStrong: 'rgba(255, 194, 110, 0.82)',
-  weaponDark: '#24150f',
-  weaponMid: '#5f2e1d',
-  weaponLight: '#b05b32',
+  weaponDark: '#121212',
+  weaponMid: '#eceff4',
+  weaponLight: '#ffffff',
   weaponGlow: '#ffd29c',
   hair: '#ff8b3d',
 };
@@ -613,8 +613,8 @@ function drawWeapon(
 ): void {
   ctx.save();
 
-  let weaponX = 10.2;
-  let weaponY = -18.8;
+  let weaponX = 9.2;
+  let weaponY = -18.2;
   let weaponRot = -0.06;
 
   if (isCast) {
@@ -623,57 +623,57 @@ function drawWeapon(
       weaponY = -48.5;
       weaponRot = -1.57;
     } else {
-      weaponX = 16.6;
-      weaponY = -18.2;
+      weaponX = 15.0;
+      weaponY = -17.6;
       weaponRot = isSpecialShot ? -0.12 : -0.08;
     }
   } else if (isRun) {
-    weaponX = 10.2;
-    weaponY = -18.8 + Math.sin(runCycle) * 0.26;
+    weaponX = 9.2;
+    weaponY = -18.2 + Math.sin(runCycle) * 0.24;
     weaponRot = -0.08 + Math.sin(runCycle) * 0.03;
   } else if (isAir) {
-    weaponX = 12;
-    weaponY = -18.8;
+    weaponX = 10.6;
+    weaponY = -18.2;
     weaponRot = -0.14;
   }
 
   ctx.translate(weaponX, weaponY);
   ctx.rotate(weaponRot);
 
-  const muzzleGlow = ctx.createRadialGradient(18, 0, 1, 18, 0, isSpecialShot ? 12 : 8);
+  const muzzleGlow = ctx.createRadialGradient(14.5, 0, 1, 14.5, 0, isSpecialShot ? 10 : 6);
   muzzleGlow.addColorStop(0, palette.glowStrong);
   muzzleGlow.addColorStop(0.4, palette.glowSoft);
   muzzleGlow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = muzzleGlow;
   ctx.beginPath();
-  ctx.arc(18, 0, isSpecialShot ? 10 : 7, 0, Math.PI * 2);
+  ctx.arc(14.5, 0, isSpecialShot ? 8 : 5.5, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = palette.weaponDark;
-  roundRect(ctx, -9, -3.5, 24, 7, 2.8);
+  roundRect(ctx, -7, -2.8, 19, 5.6, 2.2);
   ctx.fill();
 
   ctx.fillStyle = palette.weaponMid;
-  roundRect(ctx, -1.2, -5.8, 10.5, 4.2, 1.8);
+  roundRect(ctx, -0.8, -4.6, 8.2, 3.2, 1.4);
   ctx.fill();
 
   ctx.fillStyle = palette.weaponLight;
-  roundRect(ctx, -10.5, -2.1, 4.2, 4.2, 1.4);
+  roundRect(ctx, -8.4, -1.7, 3.4, 3.4, 1.1);
   ctx.fill();
 
   ctx.fillStyle = palette.weaponLight;
-  roundRect(ctx, 13.5, -1.7, 7, 3.4, 1.4);
+  roundRect(ctx, 10.8, -1.3, 5.4, 2.6, 1.1);
   ctx.fill();
 
   ctx.fillStyle = palette.weaponGlow;
-  roundRect(ctx, 18.6, -1.4, 4.4, 2.8, 1.2);
+  roundRect(ctx, 14.5, -1.1, 3.2, 2.2, 0.9);
   ctx.fill();
 
   ctx.fillStyle = palette.weaponMid;
   ctx.save();
-  ctx.translate(-0.2, 4.4);
+  ctx.translate(-0.2, 3.4);
   ctx.rotate(0.5);
-  roundRect(ctx, -1.5, 0, 3.4, 8.4, 1.4);
+  roundRect(ctx, -1.1, 0, 2.6, 6.6, 1.1);
   ctx.fill();
   ctx.restore();
 

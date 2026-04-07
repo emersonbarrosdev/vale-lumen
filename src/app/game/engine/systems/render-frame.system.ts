@@ -192,22 +192,29 @@ function drawForwardBullet(
   const centerX = bullet.x + bullet.width / 2;
   const centerY = bullet.y + bullet.height / 2;
 
-  const glow = ctx.createRadialGradient(centerX, centerY, 1, centerX, centerY, 14);
+  const glow = ctx.createRadialGradient(centerX, centerY, 1, centerX, centerY, 6);
   glow.addColorStop(0, 'rgba(255, 220, 160, 0.95)');
-  glow.addColorStop(0.4, 'rgba(255, 154, 82, 0.75)');
+  glow.addColorStop(0.4, 'rgba(255, 154, 82, 0.68)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
 
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, 4.4, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#ffb15c';
-  roundRect(ctx, bullet.x, bullet.y, bullet.width, bullet.height, 5);
+  ctx.fillStyle = '#ffd9a3';
+  roundRect(ctx, bullet.x, bullet.y, bullet.width, bullet.height, 2);
   ctx.fill();
 
-  ctx.fillStyle = '#fff1cb';
-  roundRect(ctx, bullet.x + 4, bullet.y + 2, Math.max(4, bullet.width - 8), Math.max(3, bullet.height - 4), 3);
+  ctx.fillStyle = '#fff6df';
+  roundRect(
+    ctx,
+    bullet.x + 1,
+    bullet.y + 1,
+    Math.max(2, bullet.width - 2),
+    Math.max(1, bullet.height - 2),
+    1.5,
+  );
   ctx.fill();
 }
 
@@ -218,22 +225,29 @@ function drawUpwardBullet(
   const centerX = bullet.x + bullet.width / 2;
   const centerY = bullet.y + bullet.height / 2;
 
-  const glow = ctx.createRadialGradient(centerX, centerY, 1, centerX, centerY, 16);
+  const glow = ctx.createRadialGradient(centerX, centerY, 1, centerX, centerY, 6);
   glow.addColorStop(0, 'rgba(255, 228, 175, 0.95)');
-  glow.addColorStop(0.45, 'rgba(255, 164, 88, 0.78)');
+  glow.addColorStop(0.45, 'rgba(255, 164, 88, 0.68)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
 
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 13, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, 4.4, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#ffb15c';
-  roundRect(ctx, bullet.x, bullet.y, bullet.width, bullet.height, 5);
+  ctx.fillStyle = '#ffd9a3';
+  roundRect(ctx, bullet.x, bullet.y, bullet.width, bullet.height, 2);
   ctx.fill();
 
-  ctx.fillStyle = '#fff4d8';
-  roundRect(ctx, bullet.x + 2, bullet.y + 4, Math.max(4, bullet.width - 4), Math.max(8, bullet.height - 8), 3);
+  ctx.fillStyle = '#fff6df';
+  roundRect(
+    ctx,
+    bullet.x + 1,
+    bullet.y + 1,
+    Math.max(1, bullet.width - 2),
+    Math.max(2, bullet.height - 2),
+    1.5,
+  );
   ctx.fill();
 }
 
