@@ -36,6 +36,13 @@ export function updateCollectiblesSystem({
         spawnBurst(centerX, centerY, '#ffd45a', 10);
         break;
 
+      case 'specialCoin':
+        runtime.collectedCoins += 5;
+        runtime.score += 350;
+        addSpecialCharge(runtime, 12);
+        spawnBurst(centerX, centerY, '#ffe27a', 18);
+        break;
+
       case 'ray':
         runtime.collectedSparks += 1;
         addSpecialCharge(runtime, 10);

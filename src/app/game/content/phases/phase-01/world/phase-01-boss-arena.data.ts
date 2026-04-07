@@ -3,10 +3,10 @@ import { PHASE_01_GROUND_Y } from './phase-01-platforms.data';
 
 export function getPhase01BossArena(): BossArenaData {
   return {
-    startX: 5230,
-    endX: 6370,
-    bossX: 5880,
+    startX: 12010,
+    endX: 12770,
+    bossX: 12440,
     groundY: PHASE_01_GROUND_Y,
-    markerXs: [5460, 5790, 6120],
+    markerXs: [12190, 12410, 12610],
   };
 }

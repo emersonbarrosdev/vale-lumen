@@ -5,7 +5,7 @@ import { CollectibleData } from './collectible.model';
 import { PhaseDefinition } from './phase-definition.model';
 import { PlatformData } from './platform.model';
 
-export type HazardType = 'goo' | 'crystal';
+export type HazardType = 'goo' | 'crystal' | 'spike' | 'geyser';
 
 export interface HazardData {
   type: HazardType;

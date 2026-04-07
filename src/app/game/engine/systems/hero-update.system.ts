@@ -246,14 +246,24 @@ function moveHeroHorizontally(
   }
 
   for (const hazard of hazards) {
-    if (!hazard.active || !rectsOverlap(hero, hazard)) {
+    if (!hazard.active) {
+      continue;
+    }
+
+    if (hazard.type === 'goo' || hazard.type === 'geyser') {
+      continue;
+    }
+
+    const hitbox = getSolidHazardHorizontalHitbox(hazard);
+
+    if (!hitbox || !rectsOverlap(hero, hitbox)) {
       continue;
     }
 
     if (hero.vx > 0) {
-      hero.x = hazard.x - hero.width;
+      hero.x = hitbox.x - hero.width;
     } else if (hero.vx < 0) {
-      hero.x = hazard.x + hazard.width;
+      hero.x = hitbox.x + hitbox.width;
     }
   }
 }
@@ -307,6 +317,31 @@ function resolveTunnelCeilingCollision(
       hero.y = roofBottom;
       hero.vy = 0;
     }
+  }
+}
+
+function getSolidHazardHorizontalHitbox(
+  hazard: Hazard,
+): { x: number; y: number; width: number; height: number } | null {
+  switch (hazard.type) {
+    case 'spike':
+      return {
+        x: hazard.x + 4,
+        y: hazard.y + 2,
+        width: Math.max(0, hazard.width - 8),
+        height: Math.max(0, hazard.height - 2),
+      };
+
+    case 'crystal':
+      return {
+        x: hazard.x + hazard.width * 0.14,
+        y: hazard.y + 4,
+        width: hazard.width * 0.72,
+        height: hazard.height - 6,
+      };
+
+    default:
+      return null;
   }
 }
 

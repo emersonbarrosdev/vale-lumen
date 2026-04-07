@@ -4,17 +4,24 @@ export function drawCollectibles(
   ctx: CanvasRenderingContext2D,
   collectibles: Collectible[],
 ): void {
+  const time = performance.now();
+
   for (const item of collectibles) {
     if (item.collected) {
       continue;
     }
 
-    const bob = Math.sin(performance.now() * 0.004 + item.x * 0.02) * 4;
+    const bob = Math.sin(time * 0.004 + item.x * 0.02) * 4;
     const centerX = item.x + item.width / 2;
     const centerY = item.y + item.height / 2 + bob;
 
     if (item.type === 'coin') {
-      drawCoinMarioStyle(ctx, centerX, centerY);
+      drawCoinMarioStyle(ctx, centerX, centerY, time, false);
+      continue;
+    }
+
+    if (item.type === 'specialCoin') {
+      drawCoinMarioStyle(ctx, centerX, centerY, time, true);
       continue;
     }
 
@@ -41,43 +48,124 @@ function drawCoinMarioStyle(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
+  time: number,
+  special: boolean,
 ): void {
-  const glow = ctx.createRadialGradient(x, y, 1, x, y, 18);
-  glow.addColorStop(0, 'rgba(255, 227, 122, 0.42)');
+  const spin = Math.sin(time * 0.012 + x * 0.015);
+  const widthFactor = Math.max(0.2, Math.abs(spin));
+  const frontFacing = spin >= 0;
+
+  const coinWidth = (special ? 10 : 8) * widthFactor;
+  const coinHeight = special ? 13 : 11;
+
+  const glow = ctx.createRadialGradient(x, y, 1, x, y, special ? 22 : 18);
+  glow.addColorStop(
+    0,
+    special ? 'rgba(255, 244, 168, 0.56)' : 'rgba(255, 227, 122, 0.42)',
+  );
+  glow.addColorStop(
+    0.45,
+    special ? 'rgba(255, 196, 64, 0.24)' : 'rgba(255, 184, 72, 0.18)',
+  );
   glow.addColorStop(1, 'rgba(0,0,0,0)');
+
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(x, y, 16, 0, Math.PI * 2);
+  ctx.arc(x, y, special ? 20 : 16, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#f8c431';
+  if (coinWidth <= 2.4) {
+    ctx.fillStyle = special ? '#ffe78c' : '#ffd95b';
+    ctx.fillRect(x - 1.2, y - coinHeight, 2.4, coinHeight * 2);
+
+    ctx.strokeStyle = special ? '#d6a21b' : '#d79814';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(x - 1.2, y - coinHeight, 2.4, coinHeight * 2);
+    return;
+  }
+
+  const outerColor = special ? '#f8d14f' : '#f8c431';
+  const innerColor = special ? '#ffe78c' : '#ffd95b';
+  const strokeColor = special ? '#d19a12' : '#d79814';
+  const markColor = special ? '#fff7bf' : '#fff2a9';
+
+  ctx.fillStyle = outerColor;
   ctx.beginPath();
-  ctx.ellipse(x, y, 7, 11, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, y, coinWidth, coinHeight, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#ffd95b';
+  ctx.fillStyle = innerColor;
   ctx.beginPath();
-  ctx.ellipse(x - 1.2, y - 0.5, 5.2, 9.2, 0, 0, Math.PI * 2);
+  ctx.ellipse(x - 1, y - 0.5, Math.max(1.6, coinWidth - 2), coinHeight - 2, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = '#d79814';
-  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = special ? 2 : 1.8;
   ctx.beginPath();
-  ctx.ellipse(x, y, 7, 11, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, y, coinWidth, coinHeight, 0, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.strokeStyle = '#fff2a9';
-  ctx.lineWidth = 1.3;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(x, y - 6.5);
-  ctx.lineTo(x, y + 6.5);
-  ctx.stroke();
+  if (frontFacing) {
+    ctx.strokeStyle = markColor;
+    ctx.lineWidth = special ? 1.5 : 1.3;
+    ctx.lineCap = 'round';
 
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    if (special) {
+      drawStarMark(ctx, x, y, Math.min(5.4, coinWidth - 1));
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x, y - 6.5);
+      ctx.lineTo(x, y + 6.5);
+      ctx.stroke();
+    }
+  } else {
+    ctx.strokeStyle = markColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - coinWidth * 0.3, y - coinHeight + 2);
+    ctx.lineTo(x + coinWidth * 0.3, y + coinHeight - 2);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = 'rgba(255,255,255,0.42)';
   ctx.beginPath();
-  ctx.ellipse(x - 2.2, y - 4.4, 1.4, 2.2, 0, 0, Math.PI * 2);
+  ctx.ellipse(
+    x - Math.max(1.8, coinWidth * 0.28),
+    y - coinHeight * 0.4,
+    Math.max(1, coinWidth * 0.18),
+    2,
+    0,
+    0,
+    Math.PI * 2,
+  );
   ctx.fill();
+}
+
+function drawStarMark(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+): void {
+  const inner = radius * 0.45;
+
+  ctx.beginPath();
+
+  for (let i = 0; i < 10; i += 1) {
+    const angle = -Math.PI / 2 + (Math.PI / 5) * i;
+    const r = i % 2 === 0 ? radius : inner;
+    const px = x + Math.cos(angle) * r;
+    const py = y + Math.sin(angle) * r;
+
+    if (i === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+
+  ctx.closePath();
+  ctx.stroke();
 }
 
 function drawHeart(

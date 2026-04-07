@@ -416,43 +416,43 @@ export class GameEngine {
     }
   }
 
-private readonly fireBullet = (kind: 'forward' | 'upward'): void => {
-  if (kind === 'upward') {
+  private readonly fireBullet = (kind: 'forward' | 'upward'): void => {
+    if (kind === 'upward') {
+      this.runtime.bullets.push({
+        x: this.hero.x + this.hero.width / 2 + 0.5,
+        y: this.hero.y - 30,
+        width: 4,
+        height: 10,
+        vx: 0,
+        vy: -760,
+        active: true,
+        kind: 'upward',
+        spriteType: 'heroShotUp',
+        damage: 1,
+        ownerWeapon: 'arcaneGun',
+        muzzleFlash: true,
+      });
+      return;
+    }
+
     this.runtime.bullets.push({
-      x: this.hero.x + this.hero.width / 2 + 0.5,
-      y: this.hero.y - 30,
-      width: 4,
-      height: 10,
-      vx: 0,
-      vy: -760,
+      x:
+        this.hero.direction === 1
+          ? this.hero.x + this.hero.width + 8
+          : this.hero.x - 14,
+      y: this.hero.y + 15,
+      width: 10,
+      height: 4,
+      vx: this.hero.direction * 690,
+      vy: 0,
       active: true,
-      kind: 'upward',
-      spriteType: 'heroShotUp',
+      kind: 'forward',
+      spriteType: 'heroShot',
       damage: 1,
       ownerWeapon: 'arcaneGun',
       muzzleFlash: true,
     });
-    return;
-  }
-
-  this.runtime.bullets.push({
-    x:
-      this.hero.direction === 1
-        ? this.hero.x + this.hero.width + 8
-        : this.hero.x - 14,
-    y: this.hero.y + 15,
-    width: 10,
-    height: 4,
-    vx: this.hero.direction * 690,
-    vy: 0,
-    active: true,
-    kind: 'forward',
-    spriteType: 'heroShot',
-    damage: 1,
-    ownerWeapon: 'arcaneGun',
-    muzzleFlash: true,
-  });
-};
+  };
 
   private readonly activateSpecial = (): void => {
     if (this.runtime.specialSegmentsReady < 1) {

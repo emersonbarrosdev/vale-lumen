@@ -1,5 +1,6 @@
 export type CollectibleType =
   | 'coin'
+  | 'specialCoin'
   | 'heart'
   | 'ray'
   | 'flameVial'

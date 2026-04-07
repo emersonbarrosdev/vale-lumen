@@ -22,8 +22,8 @@ export function createWorldState(
     platforms: [...phaseData.platforms].sort((a, b) => a.x - b.x),
     collectibles: phaseData.collectibles.map((item) => ({
       ...item,
-      width: item.type === 'coin' ? 18 : 22,
-      height: item.type === 'coin' ? 18 : 22,
+      width: getCollectibleWidth(item.type),
+      height: getCollectibleHeight(item.type),
       collected: false,
       vy: 0,
       falling: false,
@@ -42,4 +42,42 @@ export function createWorldState(
     })),
     tunnels: (phaseData.tunnels ?? []).map((tunnel) => ({ ...tunnel })),
   };
+}
+
+function getCollectibleWidth(type: Collectible['type']): number {
+  switch (type) {
+    case 'coin':
+      return 18;
+    case 'specialCoin':
+      return 24;
+    case 'heart':
+      return 22;
+    case 'ray':
+      return 22;
+    case 'flameVial':
+      return 22;
+    case 'shieldOrb':
+      return 24;
+    default:
+      return 22;
+  }
+}
+
+function getCollectibleHeight(type: Collectible['type']): number {
+  switch (type) {
+    case 'coin':
+      return 18;
+    case 'specialCoin':
+      return 24;
+    case 'heart':
+      return 22;
+    case 'ray':
+      return 22;
+    case 'flameVial':
+      return 22;
+    case 'shieldOrb':
+      return 24;
+    default:
+      return 22;
+  }
 }
