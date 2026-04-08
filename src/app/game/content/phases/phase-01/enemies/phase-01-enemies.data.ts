@@ -13,8 +13,7 @@ export function getPhase01Enemies(): EnemyData[] {
     { type: 'errante', x: 1910, y: 576, patrolLeft: 1820, patrolRight: 2140 },
 
     /**
-     * plataforma alta do trecho 1
-     * baixado mais um pouco para assentar melhor visualmente
+     * PLATAFORMA ALTA DO TRECHO 1
      */
     { type: 'vigia', x: 2410, y: 218, patrolLeft: 2350, patrolRight: 2508 },
 
@@ -39,8 +38,7 @@ export function getPhase01Enemies(): EnemyData[] {
     { type: 'errante', x: 7500, y: 576, patrolLeft: 7290, patrolRight: 8060 },
 
     /**
-     * PLATAFORMA ALTA
-     * baixado novamente
+     * PLATAFORMA ALTA DE RECOMPENSA
      */
     { type: 'vigia', x: 8240, y: 188, patrolLeft: 8160, patrolRight: 8370 },
 
@@ -55,14 +53,17 @@ export function getPhase01Enemies(): EnemyData[] {
     { type: 'errante', x: 11070, y: 576, patrolLeft: 10910, patrolRight: 11620 },
 
     /**
-     * plataforma alta final
-     * baixado novamente para não parecer flutuar
+     * PLATAFORMA ALTA FINAL
      */
     { type: 'vigia', x: 11300, y: 152, patrolLeft: 11170, patrolRight: 11430 },
 
     /**
      * PRÉ-BOSS
+     * antes ficava perto demais da entrada da arena e podia
+     * atrapalhar checkpoint/continue/intro.
+     * agora foi recuado para o fim do trecho final, ainda como pressão,
+     * mas sem poluir a entrada do boss.
      */
-    { type: 'errante', x: 12200, y: 576, patrolLeft: 12110, patrolRight: 12590 },
+    { type: 'errante', x: 11730, y: 576, patrolLeft: 11620, patrolRight: 11890 },
   ];
 }

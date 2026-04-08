@@ -123,12 +123,16 @@ export class GameEngine {
     this.enemies = createEnemies(phaseData, this.randomRange);
 
     this.runtime.checkpointXs = buildCheckpointXs(this.runtimeRules);
+
     setCheckpoint(
       this.runtime.checkpointXs[0],
       this.runtime,
       this.hero,
       this.platforms,
+      this.hazards,
+      this.bossArena,
     );
+
     placeHeroAtRespawn(this.hero, this.runtime, true);
 
     this.runtime.cameraX = calculateCameraX(
@@ -247,6 +251,8 @@ export class GameEngine {
       hero: this.hero,
       runtime: this.runtime,
       platforms: this.platforms,
+      hazards: this.hazards,
+      bossArena: this.bossArena,
     });
 
     updateBulletsSystem({
@@ -409,6 +415,20 @@ export class GameEngine {
     }
 
     this.resetFallingPlatforms();
+
+    setCheckpoint(
+      this.runtime.checkpointXs[this.runtime.checkpointIndex] ??
+        this.runtime.checkpointXs[0] ??
+        96,
+      this.runtime,
+      this.hero,
+      this.platforms,
+      this.hazards,
+      this.bossArena,
+    );
+
+    this.runtime.bossIntroPending = false;
+
     placeHeroAtRespawn(this.hero, this.runtime);
     this.runtime.cameraX = calculateCameraX(
       this.hero,
@@ -448,6 +468,11 @@ export class GameEngine {
   }
 
   private readonly fireBullet = (kind: 'forward' | 'upward'): void => {
+    const firedWhileRunning =
+      kind === 'forward' &&
+      this.hero.onGround &&
+      Math.abs(this.hero.vx) > 70;
+
     if (kind === 'upward') {
       this.runtime.bullets.push({
         x: this.hero.x + this.hero.width / 2 + 0.5,
@@ -462,6 +487,8 @@ export class GameEngine {
         damage: 1,
         ownerWeapon: 'arcaneGun',
         muzzleFlash: true,
+        firedWhileRunning: false,
+        direction: this.hero.direction,
       });
       return;
     }
@@ -482,6 +509,8 @@ export class GameEngine {
       damage: 1,
       ownerWeapon: 'arcaneGun',
       muzzleFlash: true,
+      firedWhileRunning,
+      direction: this.hero.direction,
     });
   };
 
@@ -509,6 +538,8 @@ export class GameEngine {
       damage: 4,
       ownerWeapon: 'arcaneGun',
       muzzleFlash: true,
+      firedWhileRunning: false,
+      direction: this.hero.direction,
       explosionOnImpact: true,
       explosionRadius: this.canvas.width * 0.22,
       explosionDamage: 4,
@@ -553,6 +584,8 @@ export class GameEngine {
       damage: 8,
       ownerWeapon: 'arcaneGun',
       muzzleFlash: true,
+      firedWhileRunning: false,
+      direction: this.hero.direction,
       explosionOnImpact: true,
       explosionRadius: this.canvas.width * 0.52,
       explosionDamage: 8,
@@ -752,6 +785,7 @@ export class GameEngine {
     this.hero.specialCasting = false;
     this.hero.megaCasting = false;
     this.hero.megaVisualTimer = 0;
+    this.hero.aimingUp = false;
     this.runtime.bullets = [];
     this.runtime.bossProjectiles = [];
     this.runtime.enemyProjectiles = [];

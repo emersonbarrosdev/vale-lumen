@@ -1,11 +1,11 @@
+import { EngineCallbacks } from '../../../core/models/game/engine-callbacks.model';
+import { PhaseBossRuntimeRules } from '../../content/phases/shared/phase-runtime-rules.model';
 import { Boss } from '../../domain/bosses/boss.model';
 import { BossProjectile } from '../../domain/bosses/boss-projectile.model';
 import { Hero } from '../../domain/hero/hero.model';
 import { BossArenaData } from '../../domain/world/boss-arena.model';
 import { PhasePlayableData } from '../../domain/world/phase-playable-data.model';
-import { PhaseBossRuntimeRules } from '../../content/phases/shared/phase-runtime-rules.model';
 import { EngineRuntime } from '../runtime/engine-runtime.model';
-import { EngineCallbacks } from '../../../core/models/game/engine-callbacks.model';
 
 export interface BossUpdateSystemParams {
   boss: Boss;
@@ -36,17 +36,14 @@ export function updateBossSystem({
   applyHeroDamage,
   spawnBurst,
 }: BossUpdateSystemParams): void {
-  if (!boss.active && hero.x >= bossArena.startX - bossRuntimeRules.arenaTriggerOffset) {
-    boss.active = true;
-    boss.introPulse = 1.5;
-    boss.y = getBossGroundTop(boss, bossArena);
-
-    if (!runtime.bossIntroShown && callbacks.onBossIntro) {
-      runtime.bossIntroShown = true;
-      runtime.bossIntroPending = true;
-      callbacks.onBossIntro(phaseData.definition.boss.dialog);
-    }
-  }
+  tryActivateBoss({
+    boss,
+    hero,
+    runtime,
+    bossArena,
+    phaseData,
+    callbacks,
+  });
 
   if (!boss.active || boss.hp <= 0) {
     return;
@@ -110,6 +107,59 @@ export function updateBossSystem({
 
   if (hero.invulnerabilityTimer <= 0 && rectsOverlap(hero, boss)) {
     applyHeroDamage();
+  }
+}
+
+function tryActivateBoss({
+  boss,
+  hero,
+  runtime,
+  bossArena,
+  phaseData,
+  callbacks,
+}: {
+  boss: Boss;
+  hero: Hero;
+  runtime: EngineRuntime;
+  bossArena: BossArenaData;
+  phaseData: PhasePlayableData;
+  callbacks: EngineCallbacks;
+}): void {
+  if (boss.active) {
+    return;
+  }
+
+  /**
+   * Ativação mais segura:
+   * o herói precisa realmente entrar no chão da arena,
+   * não apenas se aproximar pelo lado de fora.
+   */
+  const heroCenterX = hero.x + hero.width / 2;
+  const arenaActivationX = bossArena.startX + 120;
+
+  if (heroCenterX < arenaActivationX) {
+    return;
+  }
+
+  boss.active = true;
+  boss.introPulse = 1.5;
+  boss.y = getBossGroundTop(boss, bossArena);
+
+  /**
+   * Garante que a intro aconteça já em piso seguro,
+   * sem o herói ficar travado em borda ruim.
+   */
+  hero.x = Math.max(hero.x, bossArena.startX + 42);
+  hero.y = bossArena.groundY - hero.height;
+  hero.vx = 0;
+  hero.vy = 0;
+  hero.onGround = true;
+  hero.jumpsRemaining = hero.maxJumps;
+
+  if (!runtime.bossIntroShown && callbacks.onBossIntro) {
+    runtime.bossIntroShown = true;
+    runtime.bossIntroPending = true;
+    callbacks.onBossIntro(phaseData.definition.boss.dialog);
   }
 }
 

@@ -11,18 +11,25 @@ import { getPhase01Enemies } from './enemies/phase-01-enemies.data';
 export function buildPhase01PlayableData(
   definition: PhaseDefinition,
 ): PhasePlayableData {
+  const platforms = [...getPhase01Platforms()].sort((a, b) => a.x - b.x);
+  const enemies = [...getPhase01Enemies()].sort((a, b) => a.x - b.x);
+  const collectibles = [...getPhase01Collectibles()].sort((a, b) => a.x - b.x);
+  const chests = [...getPhase01Chests()].sort((a, b) => a.x - b.x);
+  const hazards = [...getPhase01Hazards()].sort((a, b) => a.x - b.x);
+  const tunnels = [...getPhase01Tunnels()].sort((a, b) => a.x - b.x);
+
   return {
     definition: {
       ...definition,
       worldWidth: PHASE_01_WORLD_WIDTH,
     },
     worldWidth: PHASE_01_WORLD_WIDTH,
-    platforms: getPhase01Platforms(),
-    enemies: getPhase01Enemies(),
-    collectibles: getPhase01Collectibles(),
-    chests: getPhase01Chests(),
+    platforms,
+    enemies,
+    collectibles,
+    chests,
     bossArena: getPhase01BossArena(),
-    hazards: getPhase01Hazards(),
-    tunnels: getPhase01Tunnels(),
+    hazards,
+    tunnels,
   };
 }

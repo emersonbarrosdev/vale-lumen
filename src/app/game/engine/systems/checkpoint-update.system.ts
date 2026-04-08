@@ -1,12 +1,16 @@
+import { PhaseRuntimeRules } from '../../content/phases/shared/phase-runtime-rules.model';
 import { Hero } from '../../domain/hero/hero.model';
+import { BossArenaData } from '../../domain/world/boss-arena.model';
+import { Hazard } from '../../domain/world/hazard.model';
 import { Platform } from '../../domain/world/platform.model';
 import { EngineRuntime } from '../runtime/engine-runtime.model';
-import { PhaseRuntimeRules } from '../../content/phases/shared/phase-runtime-rules.model';
 
 export interface CheckpointUpdateSystemParams {
   hero: Hero;
   runtime: EngineRuntime;
   platforms: Platform[];
+  hazards?: Hazard[];
+  bossArena?: BossArenaData;
 }
 
 export function buildCheckpointXs(
@@ -27,17 +31,22 @@ export function updateCheckpointProgressSystem({
   hero,
   runtime,
   platforms,
+  hazards = [],
+  bossArena,
 }: CheckpointUpdateSystemParams): void {
   while (
     runtime.checkpointIndex + 1 < runtime.checkpointXs.length &&
     hero.x >= runtime.checkpointXs[runtime.checkpointIndex + 1]
   ) {
     runtime.checkpointIndex += 1;
+
     setCheckpoint(
       runtime.checkpointXs[runtime.checkpointIndex],
       runtime,
       hero,
       platforms,
+      hazards,
+      bossArena,
     );
   }
 }
@@ -47,8 +56,17 @@ export function setCheckpoint(
   runtime: EngineRuntime,
   hero: Hero,
   platforms: Platform[],
+  hazards: Hazard[] = [],
+  bossArena?: BossArenaData,
 ): void {
-  const spawn = findSpawnPointNear(x, hero, platforms);
+  const spawn = findSpawnPointNear(
+    x,
+    hero,
+    platforms,
+    hazards,
+    bossArena,
+  );
+
   runtime.respawnX = spawn.x;
   runtime.respawnY = spawn.y;
 }
@@ -70,69 +88,152 @@ export function placeHeroAtRespawn(
   hero.castDuration = 0;
   hero.castAim = 'forward';
   hero.hurtTimer = 0;
+  hero.landingTimer = 0;
   hero.state = 'idle';
+  hero.aimingUp = false;
+  hero.specialCasting = false;
+  hero.megaCasting = false;
+  hero.megaVisualTimer = 0;
+  hero.shieldGraceTimer = 0;
 }
 
 export function findSpawnPointNear(
   targetX: number,
   hero: Hero,
   platforms: Platform[],
+  hazards: Hazard[] = [],
+  bossArena?: BossArenaData,
 ): { x: number; y: number } {
   const safeGroundSegments = platforms
     .filter((platform) => platform.height >= 70 && platform.active !== false)
     .sort((a, b) => a.x - b.x);
 
+  let bestSpawn: { x: number; y: number } | null = null;
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  for (const platform of safeGroundSegments) {
+    const usableLeft = platform.x + 56;
+    const usableRight = platform.x + platform.width - hero.width - 56;
+
+    if (usableRight <= usableLeft) {
+      continue;
+    }
+
+    const candidateXs = buildCandidateXs(targetX, usableLeft, usableRight);
+
+    for (const candidateX of candidateXs) {
+      const candidate = {
+        x: candidateX,
+        y: platform.y - hero.height,
+      };
+
+      if (!isSafeRespawnPoint(candidate, hero, platform, hazards, bossArena)) {
+        continue;
+      }
+
+      const score = Math.abs(candidateX - targetX);
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestSpawn = candidate;
+      }
+    }
+  }
+
+  if (bestSpawn) {
+    return bestSpawn;
+  }
+
   const preferredGround =
     safeGroundSegments.find(
       (platform) =>
-        targetX >= platform.x + 36 &&
-        targetX <= platform.x + platform.width - hero.width - 36,
-    ) ??
-    safeGroundSegments.find(
-      (platform) =>
-        targetX >= platform.x - 24 &&
-        targetX <= platform.x + platform.width + 24,
+        targetX >= platform.x + 48 &&
+        targetX <= platform.x + platform.width - hero.width - 48,
     ) ??
     safeGroundSegments[0];
 
   if (preferredGround) {
-    const safeX = Math.max(
-      preferredGround.x + 36,
-      Math.min(
-        targetX,
-        preferredGround.x + preferredGround.width - hero.width - 36,
-      ),
-    );
-
     return {
-      x: safeX,
+      x: Math.max(
+        preferredGround.x + 56,
+        Math.min(
+          targetX,
+          preferredGround.x + preferredGround.width - hero.width - 56,
+        ),
+      ),
       y: preferredGround.y - hero.height,
     };
   }
 
-  let bestPlatform: Platform | null = null;
-  let bestDistance = Number.POSITIVE_INFINITY;
+  return { x: 96, y: 500 };
+}
 
-  for (const platform of platforms) {
-    if (platform.active === false) {
+function buildCandidateXs(
+  targetX: number,
+  usableLeft: number,
+  usableRight: number,
+): number[] {
+  const center = usableLeft + (usableRight - usableLeft) / 2;
+
+  return Array.from(
+    new Set([
+      clamp(targetX, usableLeft, usableRight),
+      clamp(targetX - 72, usableLeft, usableRight),
+      clamp(targetX + 72, usableLeft, usableRight),
+      clamp(center, usableLeft, usableRight),
+    ]),
+  );
+}
+
+function isSafeRespawnPoint(
+  spawn: { x: number; y: number },
+  hero: Hero,
+  platform: Platform,
+  hazards: Hazard[],
+  bossArena?: BossArenaData,
+): boolean {
+  const heroLeft = spawn.x;
+  const heroRight = spawn.x + hero.width;
+  const heroTop = spawn.y;
+  const heroBottom = spawn.y + hero.height;
+
+  const leftMargin = heroLeft - platform.x;
+  const rightMargin = platform.x + platform.width - heroRight;
+
+  if (leftMargin < 52 || rightMargin < 52) {
+    return false;
+  }
+
+  for (const hazard of hazards) {
+    if (!hazard.active) {
       continue;
     }
 
-    const centerX = platform.x + platform.width / 2;
-    const distance = Math.abs(centerX - targetX);
+    const expandedLeft = hazard.x - 28;
+    const expandedRight = hazard.x + hazard.width + 28;
+    const expandedTop = hazard.y - hero.height - 12;
+    const expandedBottom = hazard.y + hazard.height + 12;
 
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestPlatform = platform;
+    const overlapsX = heroRight > expandedLeft && heroLeft < expandedRight;
+    const overlapsY = heroBottom > expandedTop && heroTop < expandedBottom;
+
+    if (overlapsX && overlapsY) {
+      return false;
     }
   }
 
-  if (!bestPlatform) {
-    return { x: 96, y: 500 };
+  if (bossArena) {
+    const unsafeBossStart = bossArena.startX - 40;
+    const unsafeBossEnd = bossArena.startX + 180;
+
+    if (heroRight >= unsafeBossStart && heroLeft <= unsafeBossEnd) {
+      return false;
+    }
   }
 
-  return {
-    x: bestPlatform.x + 28,
-    y: bestPlatform.y - hero.height,
-  };
+  return true;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }

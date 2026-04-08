@@ -51,45 +51,74 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   }
 
   const t = hero.animationTime;
+  const speedAbs = Math.abs(hero.vx);
+
   const isRun = hero.state === 'run';
   const isIdle = hero.state === 'idle';
   const isJump = hero.state === 'jump';
   const isFall = hero.state === 'fall';
   const isCast = hero.state === 'cast';
   const isAir = isJump || isFall;
+
   const isAimingUp = hero.aimingUp && !isCast;
   const isUpShot = (isCast && hero.castAim === 'up') || isAimingUp;
   const isSpecialShot = hero.specialCasting;
   const isMegaShot = hero.megaCasting || hero.megaVisualTimer > 0;
+
+  /**
+   * Se estiver correndo no chão e usando o tiro normal para frente,
+   * mantém a pose de corrida e só aplica um "aim" leve.
+   */
+  const isRunShot =
+    isCast &&
+    hero.castAim === 'forward' &&
+    !isSpecialShot &&
+    !isMegaShot &&
+    !isAir &&
+    speedAbs > 70;
+
   const palette: HeroPalette = isMegaShot
     ? MEGA_COLORS
     : isSpecialShot
       ? SPECIAL_COLORS
       : BASE_COLORS;
 
-  const runCycle = isRun ? t * 14 : 0;
+  const runCycleBase = t * 14;
+  const runCycle = (isRun || isRunShot) ? runCycleBase : 0;
 
-  const bob = isRun
-    ? Math.sin(runCycle * 2) * 1.8 + Math.cos(runCycle) * 0.35
-    : isCast || isAimingUp
-      ? Math.sin(t * 10) * 0.04
-      : Math.sin(t * 2.5) * 0.4;
+  const bob = isRunShot
+    ? Math.sin(runCycle * 2) * 1.5 + Math.cos(runCycle) * 0.25
+    : isRun
+      ? Math.sin(runCycle * 2) * 1.8 + Math.cos(runCycle) * 0.35
+      : isCast || isAimingUp
+        ? Math.sin(t * 10) * 0.04
+        : Math.sin(t * 2.5) * 0.4;
 
   const lean = isIdle
     ? (isAimingUp ? -0.015 : 0)
-    : isCast || isAimingUp
-      ? (isUpShot ? -0.025 : isMegaShot ? 0 : -0.06)
-      : isRun
-        ? 0.22 + Math.sin(runCycle) * 0.03
-        : isAir
-          ? 0.24
-          : 0.04;
+    : isRunShot
+      ? 0.18 + Math.sin(runCycle) * 0.025
+      : isCast || isAimingUp
+        ? (isUpShot ? -0.025 : isMegaShot ? 0 : -0.06)
+        : isRun
+          ? 0.22 + Math.sin(runCycle) * 0.03
+          : isAir
+            ? 0.24
+            : 0.04;
 
   ctx.save();
   ctx.translate(hero.x + hero.width / 2, hero.y + hero.height / 2 + bob + 10);
   ctx.scale(hero.direction * 1.1, 0.98);
 
-  drawLeg(ctx, runCycle + Math.PI, isRun, isAir, isIdle, false, palette);
+  drawLeg(
+    ctx,
+    runCycle + Math.PI,
+    isRun || isRunShot,
+    isAir,
+    isIdle,
+    false,
+    palette,
+  );
 
   ctx.save();
   ctx.rotate(lean);
@@ -97,12 +126,13 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   drawArmBack(
     ctx,
     runCycle,
-    isRun,
+    isRun || isRunShot,
     isIdle,
     isAir,
     isCast || isAimingUp,
     isUpShot,
     isMegaShot,
+    isRunShot,
     palette,
   );
 
@@ -165,15 +195,21 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.fill();
 
   ctx.save();
-  const headTranslateX = isUpShot ? -1.8 : (isRun || isAir ? 4.2 : isCast ? 1.2 : 0);
+  const headTranslateX = isUpShot
+    ? -1.8
+    : isRunShot
+      ? 3.2
+      : (isRun || isAir ? 4.2 : isCast ? 1.2 : 0);
+
   const headTranslateY = isUpShot
     ? -34.8
-    : -35.8 + (isAir ? -1.8 : 0) + (isRun ? Math.sin(runCycle) * 0.35 : 0);
+    : -35.8 + (isAir ? -1.8 : 0) + ((isRun || isRunShot) ? Math.sin(runCycle) * 0.35 : 0);
 
   ctx.translate(headTranslateX, headTranslateY);
+
   if (isUpShot) {
     ctx.rotate(-0.28);
-  } else if (isRun) {
+  } else if (isRun || isRunShot) {
     ctx.rotate(Math.sin(runCycle) * 0.04);
   }
 
@@ -213,51 +249,63 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
     drawArmFront(
       ctx,
       runCycle + Math.PI,
-      isRun,
+      isRun || isRunShot,
       isIdle,
       isAir,
       isCast || isAimingUp,
       isUpShot,
       isMegaShot,
+      isRunShot,
       palette,
     );
     drawWeapon(
       ctx,
-      isRun,
+      isRun || isRunShot,
       isAir,
       isCast || isAimingUp,
       isUpShot,
       isSpecialShot || isMegaShot,
+      isRunShot,
       runCycle,
       palette,
     );
   } else {
     drawWeapon(
       ctx,
-      isRun,
+      isRun || isRunShot,
       isAir,
       isCast || isAimingUp,
       isUpShot,
       isSpecialShot || isMegaShot,
+      isRunShot,
       runCycle,
       palette,
     );
     drawArmFront(
       ctx,
       runCycle + Math.PI,
-      isRun,
+      isRun || isRunShot,
       isIdle,
       isAir,
       isCast || isAimingUp,
       isUpShot,
       isMegaShot,
+      isRunShot,
       palette,
     );
   }
 
   ctx.restore();
 
-  drawLeg(ctx, runCycle, isRun, isAir, isIdle, true, palette);
+  drawLeg(
+    ctx,
+    runCycle,
+    isRun || isRunShot,
+    isAir,
+    isIdle,
+    true,
+    palette,
+  );
 
   ctx.restore();
 }
@@ -480,6 +528,7 @@ function drawArmBack(
   isCast: boolean,
   isUpShot: boolean,
   isMegaShot: boolean,
+  isRunShot: boolean,
   palette: HeroPalette,
 ): void {
   ctx.save();
@@ -489,7 +538,12 @@ function drawArmBack(
   let armRot = 0;
   let elbowRot = 0;
 
-  if (isCast) {
+  if (isRunShot) {
+    shoulderX = -2.6;
+    shoulderY = -21.1;
+    armRot = Math.sin(cycle) * 0.48 - 0.22;
+    elbowRot = -0.36 + Math.sin(cycle * 2) * 0.04;
+  } else if (isCast) {
     if (isUpShot) {
       shoulderX = -4.4;
       shoulderY = -20.8;
@@ -530,6 +584,7 @@ function drawArmFront(
   isCast: boolean,
   isUpShot: boolean,
   isMegaShot: boolean,
+  isRunShot: boolean,
   palette: HeroPalette,
 ): void {
   ctx.save();
@@ -539,7 +594,12 @@ function drawArmFront(
   let armRot = 0;
   let elbowRot = 0;
 
-  if (isCast) {
+  if (isRunShot) {
+    shoulderX = 4.8;
+    shoulderY = -20.9;
+    armRot = -0.54 + Math.sin(cycle) * 0.12;
+    elbowRot = -0.2 + Math.sin(cycle * 2) * 0.02;
+  } else if (isCast) {
     if (isUpShot) {
       shoulderX = 5.0;
       shoulderY = -21.2;
@@ -608,6 +668,7 @@ function drawWeapon(
   isCast: boolean,
   isUpShot: boolean,
   isSpecialShot: boolean,
+  isRunShot: boolean,
   runCycle: number,
   palette: HeroPalette,
 ): void {
@@ -617,7 +678,11 @@ function drawWeapon(
   let weaponY = -18.2;
   let weaponRot = -0.06;
 
-  if (isCast) {
+  if (isRunShot) {
+    weaponX = 13.1;
+    weaponY = -19.0 + Math.sin(runCycle) * 0.14;
+    weaponRot = -0.14 + Math.sin(runCycle) * 0.02;
+  } else if (isCast) {
     if (isUpShot) {
       weaponX = 0.2;
       weaponY = -48.5;
@@ -640,11 +705,6 @@ function drawWeapon(
   ctx.translate(weaponX, weaponY);
   ctx.rotate(weaponRot);
 
-  /**
-   * ajuste fino:
-   * levantado levemente o bico e o brilho da ponta
-   * para alinhar melhor com o cano
-   */
   const muzzleGlow = ctx.createRadialGradient(14.8, -0.35, 1, 14.8, -0.35, isSpecialShot ? 10 : 6);
   muzzleGlow.addColorStop(0, palette.glowStrong);
   muzzleGlow.addColorStop(0.4, palette.glowSoft);
@@ -666,9 +726,6 @@ function drawWeapon(
   roundRect(ctx, -8.4, -1.7, 3.4, 3.4, 1.1);
   ctx.fill();
 
-  /**
-   * ponta do cano alinhada um pouco mais pra cima
-   */
   ctx.fillStyle = palette.weaponLight;
   roundRect(ctx, 10.8, -1.7, 5.6, 2.8, 1.1);
   ctx.fill();

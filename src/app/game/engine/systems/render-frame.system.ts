@@ -111,12 +111,6 @@ export function renderFrameWithHud({
   ctx.save();
   ctx.translate(-cameraX, 0);
 
-  /**
-   * Ordem revista:
-   * - túneis primeiro como parte do cenário
-   * - plataformas por cima, para evitar sensação de "plataforma escura escondida"
-   * - hazards e itens acima do chão
-   */
   drawTunnels(ctx, tunnels);
   drawPlatforms(ctx, platforms);
   drawHazards(ctx, hazards);
@@ -197,16 +191,46 @@ function drawForwardBullet(
 ): void {
   const centerX = bullet.x + bullet.width / 2;
   const centerY = bullet.y + bullet.height / 2;
+  const runningBoost = bullet.firedWhileRunning ? 1.18 : 1;
+  const tailLength = bullet.firedWhileRunning ? 5.5 : 3.5;
+  const dir = bullet.direction ?? (bullet.vx >= 0 ? 1 : -1);
 
-  const glow = ctx.createRadialGradient(centerX, centerY, 1, centerX, centerY, 6);
+  const glow = ctx.createRadialGradient(centerX, centerY, 1, centerX, centerY, 6.5);
   glow.addColorStop(0, 'rgba(255, 220, 160, 0.95)');
   glow.addColorStop(0.4, 'rgba(255, 154, 82, 0.68)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
 
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 4.4, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, 4.4 * runningBoost, 0, Math.PI * 2);
   ctx.fill();
+
+  if (bullet.firedWhileRunning) {
+    const tail = ctx.createLinearGradient(
+      centerX - dir * tailLength,
+      centerY,
+      centerX,
+      centerY,
+    );
+    if (dir === 1) {
+      tail.addColorStop(0, 'rgba(255, 170, 96, 0)');
+      tail.addColorStop(1, 'rgba(255, 210, 150, 0.72)');
+    } else {
+      tail.addColorStop(0, 'rgba(255, 210, 150, 0.72)');
+      tail.addColorStop(1, 'rgba(255, 170, 96, 0)');
+    }
+
+    ctx.fillStyle = tail;
+    roundRect(
+      ctx,
+      dir === 1 ? bullet.x - tailLength : bullet.x + bullet.width,
+      bullet.y + 0.5,
+      tailLength,
+      Math.max(2.2, bullet.height - 1),
+      1.4,
+    );
+    ctx.fill();
+  }
 
   ctx.fillStyle = '#ffd9a3';
   roundRect(ctx, bullet.x, bullet.y, bullet.width, bullet.height, 2);

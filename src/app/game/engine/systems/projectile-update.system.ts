@@ -5,8 +5,8 @@ import { Hero } from '../../domain/hero/hero.model';
 import { Chest } from '../../domain/world/chest.model';
 import { Hazard } from '../../domain/world/hazard.model';
 import { Tunnel } from '../../domain/world/tunnel.model';
-import { EngineRuntime } from '../runtime/engine-runtime.model';
 import { BossArenaData } from '../../domain/world/boss-arena.model';
+import { EngineRuntime } from '../runtime/engine-runtime.model';
 
 export interface ProjectileSystemParams {
   runtime: EngineRuntime;
@@ -524,10 +524,14 @@ export function updateBossProjectilesSystem({
         projectile.active = false;
         spawnBurst(projectile.x, bossArena.groundY - 6, '#45b857', 14);
 
+        /**
+         * reduz levemente a área "injusta" de dano ao tocar o chão
+         * para evitar sensação de morte gratuita perto da entrada da arena.
+         */
         if (
           hero.invulnerabilityTimer <= 0 &&
-          Math.abs(hero.x + hero.width / 2 - projectile.x) <= 46 &&
-          hero.y + hero.height >= bossArena.groundY - 40
+          Math.abs(hero.x + hero.width / 2 - projectile.x) <= 38 &&
+          hero.y + hero.height >= bossArena.groundY - 36
         ) {
           applyHeroDamage(projectile.damage);
         }
@@ -543,8 +547,11 @@ export function updateBossProjectilesSystem({
         projectile.amplitude *
         deltaTime;
 
+      /**
+       * Mantém projéteis normais/ultimate circulando apenas dentro da área útil da arena.
+       */
       if (
-        projectile.x + projectile.radius < bossArena.startX - 120 ||
+        projectile.x + projectile.radius < bossArena.startX + 24 ||
         projectile.x - projectile.radius > bossArena.endX + 120 ||
         projectile.y < 380 ||
         projectile.y > bossArena.groundY - 28

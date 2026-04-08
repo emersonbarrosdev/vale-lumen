@@ -1,4 +1,3 @@
-// src/app/game/engine/factories/hero.factory.ts
 import { Hero } from '../../domain/hero/hero.model';
 import { GameStateService } from '../../services/game-state.service';
 
@@ -13,7 +12,12 @@ export function createHero(gameState: GameStateService): Hero {
     vx: 0,
     vy: 0,
     speed: 260,
-    jumpForce: 780,
+
+    /**
+     * Leve folga para travessia sem deixar o herói “leve demais”.
+     */
+    jumpForce: 800,
+
     direction: 1,
     onGround: false,
 
@@ -44,5 +48,8 @@ export function createHero(gameState: GameStateService): Hero {
     megaCasting: false,
     megaVisualTimer: 0,
     aimingUp: false,
+
+    coyoteTimer: 0,
+    jumpBufferTimer: 0,
   };
 }

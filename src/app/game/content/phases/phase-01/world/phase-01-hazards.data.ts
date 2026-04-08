@@ -6,7 +6,6 @@ export function getPhase01Hazards(): HazardData[] {
      * BURACO 1
      * Gap entre:
      * chão 1500..1760
-     * Agora preenchendo de ponta a ponta.
      */
     { type: 'goo', x: 1500, y: 628, width: 260, height: 92, damage: 20 },
 
@@ -34,9 +33,10 @@ export function getPhase01Hazards(): HazardData[] {
 
     /**
      * SEGUNDO BURACO
-     * geyser vertical
+     * mantém a leitura do perigo verde no fundo do vão,
+     * agora alinhado ao apoio intermediário
      */
-    { type: 'geyser', x: 9102, y: 610, width: 50, height: 32, damage: 28 },
+    { type: 'geyser', x: 9138, y: 610, width: 50, height: 32, damage: 28 },
 
     /**
      * TRECHO FINAL

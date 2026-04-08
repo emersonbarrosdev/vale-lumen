@@ -21,10 +21,6 @@ export class InputManager {
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
-    if (this.hasConnectedGamepad) {
-      return;
-    }
-
     const key = this.normalizeKey(event.key);
     const actions = this.keyToActionsMap.get(key) ?? [];
 
@@ -271,7 +267,7 @@ export class InputManager {
     const x = gamepad.axes[0] ?? 0;
     const y = gamepad.axes[1] ?? 0;
     const deadzone = this.gamepadDeadzone;
-    const dominanceGap = 0.14;
+    const dominanceGap = 0.18;
 
     const absX = Math.abs(x);
     const absY = Math.abs(y);
@@ -280,23 +276,31 @@ export class InputManager {
       return;
     }
 
-    // Snap cardinal:
-    // só aceita uma direção dominante por vez para evitar diagonal falsa
-    if (absX > absY + dominanceGap) {
-      if (x <= -deadzone) {
-        currentTokens.set(
-          `gamepad:${gamepad.index}:left-stick:move-left`,
-          'moveLeft',
-        );
-      } else if (x >= deadzone) {
-        currentTokens.set(
-          `gamepad:${gamepad.index}:left-stick:move-right`,
-          'moveRight',
-        );
+    /**
+     * Dá prioridade mais estável para horizontal.
+     * Isso ajuda a evitar entrada “nervosa” quando o jogador
+     * quer correr e acaba encostando um pouco na diagonal.
+     */
+    if (absX >= absY - 0.04 && absX >= deadzone) {
+      if (absX > absY + dominanceGap || absX >= absY) {
+        if (x <= -deadzone) {
+          currentTokens.set(
+            `gamepad:${gamepad.index}:left-stick:move-left`,
+            'moveLeft',
+          );
+        } else if (x >= deadzone) {
+          currentTokens.set(
+            `gamepad:${gamepad.index}:left-stick:move-right`,
+            'moveRight',
+          );
+        }
       }
-      return;
     }
 
+    /**
+     * Vertical só entra quando realmente dominante.
+     * Isso evita “andar e mirar pra cima” sem querer.
+     */
     if (absY > absX + dominanceGap) {
       if (y <= -deadzone) {
         currentTokens.set(
@@ -309,11 +313,7 @@ export class InputManager {
           'moveDown',
         );
       }
-      return;
     }
-
-    // se estiver muito diagonal, não ativa vertical/horizontal nenhuma
-    // para não gerar “andar e olhar pra cima” ao mesmo tempo sem querer
   }
 
   private collectFirefoxDualSenseDpadFallback(

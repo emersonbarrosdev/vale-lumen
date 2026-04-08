@@ -4,7 +4,9 @@ export function drawPlatforms(
   ctx: CanvasRenderingContext2D,
   platforms: Platform[],
 ): void {
-  const groundSegments = platforms
+  const activePlatforms = platforms.filter((platform) => platform.active !== false);
+
+  const groundSegments = activePlatforms
     .filter((platform) => platform.height >= 70)
     .sort((a, b) => a.x - b.x);
 
@@ -19,11 +21,13 @@ export function drawPlatforms(
     }
   }
 
-  const elevatedPlatforms = platforms
-    .filter((platform) => platform.height < 70 && platform.active !== false);
+  const elevatedPlatforms = activePlatforms
+    .filter((platform) => platform.height < 70)
+    .sort((a, b) => a.x - b.x || a.y - b.y);
 
   for (const platform of elevatedPlatforms) {
     drawPlatform(ctx, platform);
+    drawPlatformSupportHint(ctx, platform);
   }
 }
 
@@ -214,10 +218,6 @@ function drawPlatform(
   ctx.fillStyle = '#98785a';
   ctx.fillRect(platform.x + 3, platform.y + 4, platform.width - 6, 2);
 
-  /**
-   * reduzido bastante o contraste escuro
-   * para parar de parecer “plataforma apagada”
-   */
   ctx.strokeStyle = 'rgba(28, 22, 18, 0.42)';
   ctx.lineWidth = 1;
   ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
@@ -267,6 +267,31 @@ function drawFallAwayWarning(
     ctx.beginPath();
     ctx.moveTo(platform.x + x, platform.y + 5);
     ctx.lineTo(platform.x + x + 8, platform.y + 11);
+    ctx.stroke();
+  }
+}
+
+function drawPlatformSupportHint(
+  ctx: CanvasRenderingContext2D,
+  platform: Platform,
+): void {
+  if (platform.y >= 470) {
+    return;
+  }
+
+  const supportCount = Math.max(1, Math.floor(platform.width / 110));
+  const supportSpacing = platform.width / (supportCount + 1);
+  const supportBottomY = Math.min(620, platform.y + 180);
+
+  ctx.strokeStyle = 'rgba(92, 72, 56, 0.14)';
+  ctx.lineWidth = 2;
+
+  for (let index = 1; index <= supportCount; index += 1) {
+    const supportX = platform.x + supportSpacing * index;
+
+    ctx.beginPath();
+    ctx.moveTo(supportX, platform.y + platform.height - 1);
+    ctx.lineTo(supportX - 6, supportBottomY);
     ctx.stroke();
   }
 }

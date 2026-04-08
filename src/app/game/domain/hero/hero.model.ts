@@ -1,4 +1,3 @@
-// src/app/game/domain/hero/hero.model.ts
 export type HeroState =
   | 'idle'
   | 'run'
@@ -66,7 +65,17 @@ export interface Hero {
 
   /**
    * Mantém o herói olhando e apontando a arma para cima
-   * enquanto o jogador segura W.
+   * enquanto o jogador segura a ação correspondente.
    */
   aimingUp: boolean;
+
+  /**
+   * Permite pular alguns frames após sair da borda.
+   */
+  coyoteTimer: number;
+
+  /**
+   * Guarda o input de pulo por poucos frames antes de tocar o chão.
+   */
+  jumpBufferTimer: number;
 }

@@ -23,6 +23,18 @@ export interface Bullet {
   muzzleFlash?: boolean;
 
   /**
+   * Indica que o projétil saiu durante corrida
+   * para permitir render/efeitos mais orgânicos.
+   */
+  firedWhileRunning?: boolean;
+
+  /**
+   * Direção do tiro no momento do disparo.
+   * Ajuda no render de flash/efeito sem depender do herói.
+   */
+  direction?: 1 | -1;
+
+  /**
    * Usado no especial.
    */
   explosionOnImpact?: boolean;

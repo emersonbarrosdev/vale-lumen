@@ -21,6 +21,11 @@ export interface HeroUpdateParams {
   activateMegaSpecial: () => void;
 }
 
+const COYOTE_TIME = 0.09;
+const JUMP_BUFFER_TIME = 0.11;
+const JUMP_CUT_MULTIPLIER = 1.45;
+const PEAK_GRAVITY_FACTOR = 0.56;
+
 export function updateHeroSystem({
   hero,
   input,
@@ -51,6 +56,8 @@ export function updateHeroSystem({
   hero.landingTimer = Math.max(0, hero.landingTimer - deltaTime);
   hero.shieldGraceTimer = Math.max(0, hero.shieldGraceTimer - deltaTime);
   hero.megaVisualTimer = Math.max(0, hero.megaVisualTimer - deltaTime);
+  hero.coyoteTimer = Math.max(0, hero.coyoteTimer - deltaTime);
+  hero.jumpBufferTimer = Math.max(0, hero.jumpBufferTimer - deltaTime);
   runtime.megaComboTimer = Math.max(0, runtime.megaComboTimer - deltaTime);
 
   if (hero.castTimer <= 0) {
@@ -70,14 +77,22 @@ export function updateHeroSystem({
     !hero.specialCasting &&
     !hero.megaCasting;
 
+  /**
+   * Movimento lateral sempre orgânico.
+   * O tiro comum não trava mais a corrida.
+   * Só o especial/mega bloqueia o movimento.
+   */
+  const movementLocked =
+    hero.hurtTimer > 0 || isLockedInSpecialCast;
+
   const movingLeft =
     !hero.aimingUp &&
-    !isLockedInSpecialCast &&
+    !movementLocked &&
     input.isActionPressed('moveLeft');
 
   const movingRight =
     !hero.aimingUp &&
-    !isLockedInSpecialCast &&
+    !movementLocked &&
     input.isActionPressed('moveRight');
 
   const targetVx =
@@ -102,15 +117,15 @@ export function updateHeroSystem({
     hero.direction = 1;
   }
 
-  if (
-    !isLockedInSpecialCast &&
-    input.isActionJustPressed('jump') &&
-    hero.jumpsRemaining > 0
-  ) {
-    hero.vy = -hero.jumpForce;
-    hero.jumpsRemaining -= 1;
-    hero.onGround = false;
+  if (input.isActionJustPressed('jump')) {
+    hero.jumpBufferTimer = JUMP_BUFFER_TIME;
   }
+
+  if (wasOnGround) {
+    hero.coyoteTimer = COYOTE_TIME;
+  }
+
+  tryConsumeJump(hero);
 
   const attackJustPressed = input.isActionJustPressed('attack');
   const specialJustPressed = input.isActionJustPressed('special');
@@ -137,14 +152,18 @@ export function updateHeroSystem({
     if (hero.aimingUp) {
       fireBullet('upward');
       hero.shootCooldown = 0.26;
-      hero.castTimer = 0.26;
-      hero.castDuration = 0.26;
+      hero.castTimer = 0.16;
+      hero.castDuration = 0.16;
       hero.castAim = 'up';
     } else {
       fireBullet('forward');
       hero.shootCooldown = 0.2;
-      hero.castTimer = 0.14;
-      hero.castDuration = 0.14;
+
+      /**
+       * Cast visual curto para não causar “tranco” na corrida.
+       */
+      hero.castTimer = Math.max(hero.castTimer, 0.08);
+      hero.castDuration = Math.max(hero.castDuration, 0.08);
       hero.castAim = 'forward';
       runtime.megaComboTimer = runtime.ignitionReady ? 0.14 : 0;
     }
@@ -182,8 +201,25 @@ export function updateHeroSystem({
     hero.aimingUp = false;
   }
 
-  const gravityThisFrame =
+  const jumpHeld = input.isActionPressed('jump');
+
+  let gravityThisFrame =
     hero.vy > 0 ? gravity + fallBoost : gravity;
+
+  /**
+   * Topo do pulo mais agradável e controlável.
+   */
+  if (hero.vy < 0 && Math.abs(hero.vy) < 140 && jumpHeld) {
+    gravityThisFrame *= PEAK_GRAVITY_FACTOR;
+  }
+
+  /**
+   * Soltar o botão antes do pico corta o pulo
+   * e deixa o controle mais preciso.
+   */
+  if (hero.vy < 0 && !jumpHeld) {
+    gravityThisFrame *= JUMP_CUT_MULTIPLIER;
+  }
 
   hero.vy += gravityThisFrame * deltaTime;
 
@@ -193,6 +229,11 @@ export function updateHeroSystem({
 
   if (!wasOnGround && hero.onGround) {
     hero.landingTimer = 0.16;
+  }
+
+  if (hero.onGround) {
+    hero.coyoteTimer = COYOTE_TIME;
+    tryConsumeJump(hero);
   }
 
   if (hero.x < 0) {
@@ -256,6 +297,35 @@ function updateFallingPlatforms(
   }
 }
 
+function tryConsumeJump(hero: Hero): void {
+  if (hero.jumpBufferTimer <= 0) {
+    return;
+  }
+
+  /**
+   * Pulo do chão ou ainda na janelinha após sair da borda.
+   */
+  if (hero.onGround || hero.coyoteTimer > 0) {
+    hero.vy = -hero.jumpForce;
+    hero.jumpBufferTimer = 0;
+    hero.coyoteTimer = 0;
+    hero.onGround = false;
+    hero.jumpsRemaining = Math.max(0, hero.maxJumps - 1);
+    return;
+  }
+
+  /**
+   * Pulo aéreo adicional.
+   */
+  if (!hero.onGround && hero.jumpsRemaining > 0) {
+    hero.vy = -hero.jumpForce;
+    hero.jumpBufferTimer = 0;
+    hero.coyoteTimer = 0;
+    hero.jumpsRemaining -= 1;
+    hero.onGround = false;
+  }
+}
+
 function updateHeroState(hero: Hero): void {
   if (hero.hurtTimer > 0) {
     hero.state = 'hurt';
@@ -286,10 +356,19 @@ function moveHeroHorizontally(
   platforms: Platform[],
   hazards: Hazard[],
 ): void {
+  const previousX = hero.x;
   hero.x += hero.vx * deltaTime;
 
   for (const platform of platforms) {
-    if (platform.active === false || !rectsOverlap(hero, platform)) {
+    if (platform.active === false) {
+      continue;
+    }
+
+    if (!rectsOverlap(hero, platform)) {
+      continue;
+    }
+
+    if (!isPlatformBlockingFromSide(hero, platform)) {
       continue;
     }
 
@@ -297,6 +376,8 @@ function moveHeroHorizontally(
       hero.x = platform.x - hero.width;
     } else if (hero.vx < 0) {
       hero.x = platform.x + platform.width;
+    } else {
+      hero.x = previousX;
     }
   }
 
@@ -315,10 +396,16 @@ function moveHeroHorizontally(
       continue;
     }
 
+    if (!isRectBlockingFromSide(hero, hitbox)) {
+      continue;
+    }
+
     if (hero.vx > 0) {
       hero.x = hitbox.x - hero.width;
     } else if (hero.vx < 0) {
       hero.x = hitbox.x + hitbox.width;
+    } else {
+      hero.x = previousX;
     }
   }
 }
@@ -328,16 +415,28 @@ function moveHeroVertically(
   deltaTime: number,
   platforms: Platform[],
 ): void {
+  const previousBottom = hero.y + hero.height;
+  const previousTop = hero.y;
+
   hero.onGround = false;
   hero.y += hero.vy * deltaTime;
 
   for (const platform of platforms) {
-    if (platform.active === false || !rectsOverlap(hero, platform)) {
+    if (platform.active === false) {
       continue;
     }
 
-    if (hero.vy > 0) {
-      hero.y = platform.y - hero.height;
+    if (!rectsOverlap(hero, platform)) {
+      continue;
+    }
+
+    const platformTop = platform.y;
+    const platformBottom = platform.y + platform.height;
+    const heroBottom = hero.y + hero.height;
+    const heroTop = hero.y;
+
+    if (hero.vy > 0 && previousBottom <= platformTop + 4 && heroBottom >= platformTop) {
+      hero.y = platformTop - hero.height;
       hero.vy = 0;
       hero.onGround = true;
       hero.jumpsRemaining = hero.maxJumps;
@@ -346,8 +445,12 @@ function moveHeroVertically(
         platform.triggered = true;
         platform.triggerTimer = platform.fallDelay ?? 0.35;
       }
-    } else if (hero.vy < 0) {
-      hero.y = platform.y + platform.height;
+
+      continue;
+    }
+
+    if (hero.vy < 0 && previousTop >= platformBottom - 4 && heroTop <= platformBottom) {
+      hero.y = platformBottom;
       hero.vy = 0;
     }
   }
@@ -373,9 +476,22 @@ function resolveTunnelCeilingCollision(
     const heroTop = hero.y;
     const roofBottom = tunnel.ceilingY + tunnel.thickness;
 
+    /**
+     * Pequena correção lateral para “escapar” de quina de teto,
+     * inspirada no tipo de forgiveness usado em platformers modernos.
+     */
     if (heroTop <= roofBottom && heroTop >= tunnel.ceilingY - 18) {
-      hero.y = roofBottom;
-      hero.vy = 0;
+      const leftEscape = Math.abs(heroRight - tunnel.x);
+      const rightEscape = Math.abs(heroLeft - (tunnel.x + tunnel.width));
+
+      if (leftEscape <= 8) {
+        hero.x = tunnel.x - hero.width - 1;
+      } else if (rightEscape <= 8) {
+        hero.x = tunnel.x + tunnel.width + 1;
+      } else {
+        hero.y = roofBottom;
+        hero.vy = 0;
+      }
     }
   }
 }
@@ -390,6 +506,35 @@ function isHeroStandingOnPlatform(hero: Hero, platform: Platform): boolean {
   const nearTop = Math.abs(heroBottom - platformTop) <= 10;
 
   return overlapsX && nearTop;
+}
+
+function isPlatformBlockingFromSide(hero: Hero, platform: Platform): boolean {
+  return isRectBlockingFromSide(hero, {
+    x: platform.x,
+    y: platform.y,
+    width: platform.width,
+    height: platform.height,
+  });
+}
+
+function isRectBlockingFromSide(
+  hero: Hero,
+  rect: { x: number; y: number; width: number; height: number },
+): boolean {
+  const heroTop = hero.y;
+  const heroBottom = hero.y + hero.height;
+  const rectTop = rect.y;
+  const rectBottom = rect.y + rect.height;
+
+  if (heroBottom <= rectTop + 8) {
+    return false;
+  }
+
+  if (heroTop >= rectBottom - 8) {
+    return false;
+  }
+
+  return true;
 }
 
 function getSolidHazardHorizontalHitbox(

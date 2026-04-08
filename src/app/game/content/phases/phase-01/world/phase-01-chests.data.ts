@@ -3,26 +3,51 @@ import { ChestData } from '../../../../domain/world/chest.model';
 export function getPhase01Chests(): ChestData[] {
   return [
     /**
-     * Início/meio inicial
+     * TRECHO 1
+     * antes estava flutuando perto do primeiro grande vão.
+     * agora fica apoiado na plataforma alta do trecho 1.
      */
-    { x: 1488, y: 308, width: 38, height: 28, rare: false },
+    { x: 2420, y: 256, width: 38, height: 28, rare: false },
 
     /**
-     * Meio da fase
+     * TÚNEL / TRECHO CENTRAL
+     * antes estava em uma altura sem apoio real.
+     * agora fica no chão firme, visível e alcançável.
      */
-    { x: 3980, y: 304, width: 40, height: 28, rare: false },
+    { x: 3940, y: 592, width: 40, height: 28, rare: false },
+
+    /**
+     * TRECHO DAS PLATAFORMAS QUE CAEM
+     * mantido como recompensa de risco.
+     */
     { x: 5376, y: 374, width: 40, height: 28, rare: true },
 
     /**
-     * Segunda metade
+     * SEGUNDA METADE
+     * antes estava praticamente no vazio entre trechos.
+     * agora fica sobre a plataforma média da segunda metade.
      */
-    { x: 7060, y: 298, width: 40, height: 28, rare: false },
-    { x: 8392, y: 368, width: 40, height: 28, rare: true },
+    { x: 7666, y: 396, width: 40, height: 28, rare: false },
 
     /**
-     * Final da exploração
+     * PLATAFORMA ALTA DE RECOMPENSA
+     * antes estava abaixo da plataforma alta.
+     * agora fica assentado sobre ela.
      */
-    { x: 10226, y: 336, width: 40, height: 28, rare: false },
-    { x: 11334, y: 372, width: 42, height: 30, rare: true },
+    { x: 8306, y: 246, width: 40, height: 28, rare: true },
+
+    /**
+     * SEGUNDO TRECHO APÓS BURACO
+     * antes estava em altura sem apoio correspondente.
+     * agora fica sobre a plataforma intermediária do trecho.
+     */
+    { x: 9804, y: 404, width: 40, height: 28, rare: false },
+
+    /**
+     * TRECHO FINAL
+     * antes estava "flutuando" muito abaixo da plataforma alta final.
+     * agora fica corretamente apoiado nela.
+     */
+    { x: 11334, y: 216, width: 42, height: 30, rare: true },
   ];
 }

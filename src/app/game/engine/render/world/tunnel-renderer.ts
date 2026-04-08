@@ -5,30 +5,95 @@ export function drawTunnels(
   tunnels: Tunnel[],
 ): void {
   for (const tunnel of tunnels) {
+    drawTunnelBackWall(ctx, tunnel);
+    drawTunnelSideFrames(ctx, tunnel);
     drawTunnelCeiling(ctx, tunnel);
     drawTunnelTeeth(ctx, tunnel);
     drawTunnelShade(ctx, tunnel);
+    drawTunnelFloorHint(ctx, tunnel);
   }
+}
+
+function drawTunnelBackWall(
+  ctx: CanvasRenderingContext2D,
+  tunnel: Tunnel,
+): void {
+  const recessHeight = 86;
+
+  const backWall = ctx.createLinearGradient(
+    tunnel.x,
+    tunnel.ceilingY + tunnel.thickness,
+    tunnel.x,
+    tunnel.ceilingY + tunnel.thickness + recessHeight,
+  );
+  backWall.addColorStop(0, 'rgba(18, 16, 22, 0.22)');
+  backWall.addColorStop(0.35, 'rgba(12, 10, 16, 0.16)');
+  backWall.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+  ctx.fillStyle = backWall;
+  ctx.fillRect(
+    tunnel.x + 8,
+    tunnel.ceilingY + tunnel.thickness,
+    Math.max(0, tunnel.width - 16),
+    recessHeight,
+  );
+}
+
+function drawTunnelSideFrames(
+  ctx: CanvasRenderingContext2D,
+  tunnel: Tunnel,
+): void {
+  const frameHeight = 64;
+  const baseY = tunnel.ceilingY + tunnel.thickness - 4;
+
+  const leftFrame = ctx.createLinearGradient(
+    tunnel.x,
+    baseY - 22,
+    tunnel.x + 18,
+    baseY + frameHeight,
+  );
+  leftFrame.addColorStop(0, 'rgba(84, 66, 50, 0.32)');
+  leftFrame.addColorStop(1, 'rgba(28, 22, 20, 0.04)');
+  ctx.fillStyle = leftFrame;
+  ctx.beginPath();
+  ctx.moveTo(tunnel.x, tunnel.ceilingY + 6);
+  ctx.lineTo(tunnel.x + 16, baseY + 6);
+  ctx.lineTo(tunnel.x + 6, baseY + frameHeight);
+  ctx.lineTo(tunnel.x, baseY + frameHeight);
+  ctx.closePath();
+  ctx.fill();
+
+  const rightFrame = ctx.createLinearGradient(
+    tunnel.x + tunnel.width - 18,
+    baseY - 22,
+    tunnel.x + tunnel.width,
+    baseY + frameHeight,
+  );
+  rightFrame.addColorStop(0, 'rgba(84, 66, 50, 0.32)');
+  rightFrame.addColorStop(1, 'rgba(28, 22, 20, 0.04)');
+  ctx.fillStyle = rightFrame;
+  ctx.beginPath();
+  ctx.moveTo(tunnel.x + tunnel.width, tunnel.ceilingY + 6);
+  ctx.lineTo(tunnel.x + tunnel.width - 16, baseY + 6);
+  ctx.lineTo(tunnel.x + tunnel.width - 6, baseY + frameHeight);
+  ctx.lineTo(tunnel.x + tunnel.width, baseY + frameHeight);
+  ctx.closePath();
+  ctx.fill();
 }
 
 function drawTunnelCeiling(
   ctx: CanvasRenderingContext2D,
   tunnel: Tunnel,
 ): void {
-  /**
-   * Antes estava muito pesado/escuro e passava sensação
-   * de plataforma escondida ou atrás de camada.
-   * Agora o teto continua existindo, mas bem mais discreto.
-   */
   const shadow = ctx.createLinearGradient(
     tunnel.x,
     tunnel.ceilingY,
     tunnel.x,
     tunnel.ceilingY + tunnel.thickness,
   );
-  shadow.addColorStop(0, 'rgba(26, 24, 28, 0.72)');
-  shadow.addColorStop(0.4, 'rgba(18, 16, 20, 0.76)');
-  shadow.addColorStop(1, 'rgba(10, 10, 14, 0.8)');
+  shadow.addColorStop(0, 'rgba(42, 36, 30, 0.72)');
+  shadow.addColorStop(0.38, 'rgba(26, 22, 22, 0.82)');
+  shadow.addColorStop(1, 'rgba(12, 12, 16, 0.88)');
 
   ctx.fillStyle = shadow;
   ctx.beginPath();
@@ -44,10 +109,10 @@ function drawTunnelCeiling(
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(210, 178, 128, 0.12)';
-  ctx.fillRect(tunnel.x, tunnel.ceilingY, tunnel.width, 2);
+  ctx.fillStyle = 'rgba(240, 202, 138, 0.16)';
+  ctx.fillRect(tunnel.x + 4, tunnel.ceilingY, Math.max(0, tunnel.width - 8), 2);
 
-  ctx.strokeStyle = 'rgba(22, 18, 16, 0.34)';
+  ctx.strokeStyle = 'rgba(18, 14, 14, 0.42)';
   ctx.lineWidth = 1;
   ctx.strokeRect(tunnel.x, tunnel.ceilingY, tunnel.width, tunnel.thickness);
 }
@@ -60,7 +125,7 @@ function drawTunnelTeeth(
   const toothWidth = tunnel.width / toothCount;
   const baseY = tunnel.ceilingY + tunnel.thickness;
 
-  ctx.fillStyle = 'rgba(42, 34, 30, 0.52)';
+  ctx.fillStyle = 'rgba(42, 34, 30, 0.5)';
 
   for (let index = 0; index < toothCount; index += 1) {
     const x = tunnel.x + index * toothWidth;
@@ -79,16 +144,13 @@ function drawTunnelShade(
   ctx: CanvasRenderingContext2D,
   tunnel: Tunnel,
 ): void {
-  /**
-   * sombra bem mais curta para não “apagar” plataforma
-   */
   const shade = ctx.createLinearGradient(
     tunnel.x,
     tunnel.ceilingY + tunnel.thickness,
     tunnel.x,
-    tunnel.ceilingY + tunnel.thickness + 24,
+    tunnel.ceilingY + tunnel.thickness + 30,
   );
-  shade.addColorStop(0, 'rgba(0, 0, 0, 0.18)');
+  shade.addColorStop(0, 'rgba(0, 0, 0, 0.2)');
   shade.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
   ctx.fillStyle = shade;
@@ -96,7 +158,7 @@ function drawTunnelShade(
     tunnel.x,
     tunnel.ceilingY + tunnel.thickness,
     tunnel.width,
-    24,
+    30,
   );
 
   for (let index = 14; index < tunnel.width - 8; index += 36) {
@@ -107,4 +169,30 @@ function drawTunnelShade(
     ctx.lineTo(tunnel.x + index - 3, tunnel.ceilingY + tunnel.thickness - 2);
     ctx.stroke();
   }
+}
+
+function drawTunnelFloorHint(
+  ctx: CanvasRenderingContext2D,
+  tunnel: Tunnel,
+): void {
+  const floorY = tunnel.ceilingY + tunnel.thickness + 54;
+
+  const glow = ctx.createLinearGradient(
+    tunnel.x,
+    floorY,
+    tunnel.x,
+    floorY + 16,
+  );
+  glow.addColorStop(0, 'rgba(255, 176, 104, 0.08)');
+  glow.addColorStop(1, 'rgba(255, 176, 104, 0)');
+
+  ctx.fillStyle = glow;
+  ctx.fillRect(tunnel.x + 12, floorY, Math.max(0, tunnel.width - 24), 16);
+
+  ctx.strokeStyle = 'rgba(255, 206, 144, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(tunnel.x + 18, floorY + 1);
+  ctx.lineTo(tunnel.x + tunnel.width - 18, floorY + 1);
+  ctx.stroke();
 }

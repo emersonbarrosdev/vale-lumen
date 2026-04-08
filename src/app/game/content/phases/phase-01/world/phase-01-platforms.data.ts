@@ -4,11 +4,11 @@ export const PHASE_01_WORLD_WIDTH = 12800;
 export const PHASE_01_GROUND_Y = 620;
 
 /**
- * Ajuste fino final:
- * - menos plataformas "suspeitas"
- * - nada de plataforma baixa demais
- * - menos chance de salto ruim
- * - mais leitura visual limpa
+ * Ajuste estrutural da fase 1:
+ * - mantém os trechos já corrigidos
+ * - cria subida mais legível para plataformas altas
+ * - elimina sensação de "entrada quebrada" no boss
+ * - garante chão contínuo e seguro na pré-arena
  */
 export function getPhase01Platforms(): PlatformData[] {
   return [
@@ -27,14 +27,14 @@ export function getPhase01Platforms(): PlatformData[] {
 
     /**
      * TÚNEL
-     * removidas plataformas próximas da zona visual problemática
      */
     { x: 3160, y: 620, width: 980, height: 100 },
 
     /**
      * TRECHO LINEAR
+     * suavizado para não deixar salto seco demais
      */
-    { x: 4300, y: 620, width: 760, height: 100 },
+    { x: 4260, y: 620, width: 800, height: 100 },
 
     /**
      * TRECHO ESPECIAL COM BURACO E PLATAFORMAS QUE CAEM
@@ -54,24 +54,32 @@ export function getPhase01Platforms(): PlatformData[] {
 
     /**
      * PLATAFORMA ALTA DE RECOMPENSA
+     * agora com apoio intermediário de subida
      */
+    { x: 7860, y: 452, width: 150, height: 22 },
     { x: 8120, y: 276, width: 280, height: 24 },
 
     /**
      * SEGUNDO BURACO
+     * agora com apoio intermediário claro
      */
-    { x: 9300, y: 620, width: 1260, height: 100 },
+    { x: 9050, y: 448, width: 180, height: 22 },
+    { x: 9280, y: 620, width: 1280, height: 100 },
     { x: 9740, y: 432, width: 180, height: 22 },
 
     /**
      * TRECHO FINAL
+     * suavizado e com progressão de subida
      */
-    { x: 10840, y: 620, width: 920, height: 100 },
+    { x: 10800, y: 620, width: 960, height: 100 },
+    { x: 10940, y: 438, width: 150, height: 22 },
     { x: 11110, y: 246, width: 340, height: 24 },
 
     /**
      * PRÉ-BOSS
+     * agora é um chão contínuo, sem qualquer buraco visual ou lógico
+     * até a entrada efetiva da arena.
      */
-    { x: 12010, y: 620, width: 790, height: 100 },
+    { x: 11820, y: 620, width: 980, height: 100 },
   ];
 }
