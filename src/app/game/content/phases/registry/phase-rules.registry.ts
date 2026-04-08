@@ -23,6 +23,11 @@ export function getPhaseRuntimeRules(
   definition: PhaseDefinition,
 ): PhaseRuntimeRules {
   const module = getPhaseModuleById(definition.id);
+
+  /**
+   * Fase customizada usa suas próprias rules.
+   * Fase ainda genérica usa fallback padrão.
+   */
   return module?.getRuntimeRules?.(definition) ?? DEFAULT_RUNTIME_RULES;
 }
 
@@ -30,5 +35,10 @@ export function getPhaseBossRuntimeRules(
   definition: PhaseDefinition,
 ): PhaseBossRuntimeRules {
   const module = getPhaseModuleById(definition.id);
+
+  /**
+   * Mantém regras mínimas de arena mesmo para fases
+   * ainda não customizadas.
+   */
   return module?.getBossRuntimeRules?.() ?? DEFAULT_BOSS_RUNTIME_RULES;
 }

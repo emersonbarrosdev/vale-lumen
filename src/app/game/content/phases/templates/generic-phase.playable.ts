@@ -15,15 +15,26 @@ export function buildGenericPlayablePhaseData(
 ): PhasePlayableData {
   const worldWidth = definition.worldWidth;
   const groundY = 620;
+
   const platforms: PlatformData[] = [];
   const enemies: EnemyData[] = [];
   const collectibles: CollectibleData[] = [];
   const chests: ChestData[] = [];
   const hazards: HazardData[] = [];
+
+  /**
+   * Mantido vazio por enquanto:
+   * túneis foram desativados globalmente até existir
+   * um visual/gameplay realmente correto para eles.
+   */
   const tunnels: TunnelData[] = [];
 
   const groundSegments =
-    definition.length === 'long' ? 10 : definition.length === 'medium' ? 8 : 7;
+    definition.length === 'long'
+      ? 10
+      : definition.length === 'medium'
+        ? 8
+        : 7;
 
   let cursorX = 0;
 
@@ -48,6 +59,10 @@ export function buildGenericPlayablePhaseData(
     if (index < groundSegments - 1) {
       const gapWidth = index % 3 === 0 ? 96 : index % 3 === 1 ? 148 : 210;
 
+      /**
+       * Para gaps médios/grandes, cria apoio intermediário
+       * e mantém o perigo no fundo do vão.
+       */
       if (gapWidth >= 140) {
         platforms.push({
           x: cursorX + width + Math.floor(gapWidth / 2) - 42,
@@ -120,7 +135,7 @@ export function buildGenericPlayablePhaseData(
   }
 
   /**
-   * Proteção logo no começo
+   * Itens básicos de progressão
    */
   collectibles.push({
     type: 'shieldOrb',
@@ -134,6 +149,10 @@ export function buildGenericPlayablePhaseData(
     y: 388,
   });
 
+  /**
+   * Baús sempre em pontos elevados ou claramente de recompensa.
+   * Nada de baú perdido no chão por padrão.
+   */
   chests.push({
     x: Math.floor(worldWidth * 0.34),
     y: 286,
@@ -148,13 +167,6 @@ export function buildGenericPlayablePhaseData(
     width: 42,
     height: 30,
     rare: true,
-  });
-
-  tunnels.push({
-    x: Math.floor(worldWidth * 0.42),
-    width: 190,
-    ceilingY: 426,
-    thickness: 22,
   });
 
   const bossArena: BossArenaData = {

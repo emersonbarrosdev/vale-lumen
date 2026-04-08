@@ -1,14 +1,24 @@
 import { PhaseModule } from '../shared/phase-module.model';
-import { buildPhase01PlayableData } from './phase-01.playable';
 import { getPhase01BossRuntimeRules } from './boss/phase-01-boss.rules';
+import { getPhase01Enemies } from './enemies/phase-01-enemies.data';
+import { buildPhase01PlayableData } from './phase-01.playable';
 import { getPhase01RuntimeRules } from './rules/phase-01.rules';
+import { getPhase01BossArena } from './world/phase-01-boss-arena.data';
+import { getPhase01Chests } from './world/phase-01-chests.data';
+import { getPhase01Collectibles } from './world/phase-01-collectibles.data';
+import { getPhase01Hazards } from './world/phase-01-hazards.data';
+import {
+  getPhase01Platforms,
+  PHASE_01_GROUND_Y,
+  PHASE_01_WORLD_WIDTH,
+} from './world/phase-01-platforms.data';
+import { getPhase01Tunnels } from './world/phase-01-tunnels.data';
 
 export { buildPhase01PlayableData } from './phase-01.playable';
 
 export { getPhase01Enemies } from './enemies/phase-01-enemies.data';
 
 export { getPhase01BossRuntimeRules } from './boss/phase-01-boss.rules';
-
 export { getPhase01RuntimeRules } from './rules/phase-01.rules';
 
 export { getPhase01BossArena } from './world/phase-01-boss-arena.data';

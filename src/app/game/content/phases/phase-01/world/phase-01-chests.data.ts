@@ -4,50 +4,44 @@ export function getPhase01Chests(): ChestData[] {
   return [
     /**
      * TRECHO 1
-     * antes estava flutuando perto do primeiro grande vão.
-     * agora fica apoiado na plataforma alta do trecho 1.
+     * baú reposicionado para plataforma alta acessível
      */
-    { x: 2420, y: 256, width: 38, height: 28, rare: false },
+    { x: 2408, y: 258, width: 38, height: 28, rare: false },
 
     /**
-     * TÚNEL / TRECHO CENTRAL
-     * antes estava em uma altura sem apoio real.
-     * agora fica no chão firme, visível e alcançável.
+     * TRECHO CENTRAL
+     * removido do chão e levado para plataforma do primeiro trecho alto
      */
-    { x: 3940, y: 592, width: 40, height: 28, rare: false },
+    { x: 2012, y: 390, width: 40, height: 28, rare: false },
 
     /**
      * TRECHO DAS PLATAFORMAS QUE CAEM
-     * mantido como recompensa de risco.
+     * mantido como recompensa de risco
      */
     { x: 5376, y: 374, width: 40, height: 28, rare: true },
 
     /**
      * SEGUNDA METADE
-     * antes estava praticamente no vazio entre trechos.
-     * agora fica sobre a plataforma média da segunda metade.
+     * removido do chão e levado para plataforma média acessível
      */
-    { x: 7666, y: 396, width: 40, height: 28, rare: false },
+    { x: 7664, y: 396, width: 40, height: 28, rare: false },
 
     /**
      * PLATAFORMA ALTA DE RECOMPENSA
-     * antes estava abaixo da plataforma alta.
-     * agora fica assentado sobre ela.
+     * mantido em ponto elevado
      */
-    { x: 8306, y: 246, width: 40, height: 28, rare: true },
+    { x: 8308, y: 248, width: 40, height: 28, rare: true },
 
     /**
-     * SEGUNDO TRECHO APÓS BURACO
-     * antes estava em altura sem apoio correspondente.
-     * agora fica sobre a plataforma intermediária do trecho.
+     * TRECHO FINAL INTERMEDIÁRIO
+     * removido do chão e levado para plataforma média antes da alta final
      */
-    { x: 9804, y: 404, width: 40, height: 28, rare: false },
+    { x: 10946, y: 410, width: 40, height: 28, rare: false },
 
     /**
-     * TRECHO FINAL
-     * antes estava "flutuando" muito abaixo da plataforma alta final.
-     * agora fica corretamente apoiado nela.
+     * PLATAFORMA ALTA FINAL
+     * mantido no ponto alto como grande recompensa
      */
-    { x: 11334, y: 216, width: 42, height: 30, rare: true },
+    { x: 11336, y: 216, width: 42, height: 30, rare: true },
   ];
 }
