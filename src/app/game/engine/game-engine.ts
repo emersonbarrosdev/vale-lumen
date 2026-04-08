@@ -23,6 +23,18 @@ import { createBoss } from './factories/boss.factory';
 import { createEnemies } from './factories/enemy.factory';
 import { createHero } from './factories/hero.factory';
 import { createWorldState } from './factories/world.factory';
+import {
+  consumeSpecialCharge,
+  resetHeroTransientCombatState,
+  syncSpecialHudState,
+} from './helpers/game-engine-state.helper';
+import {
+  createForwardBullet,
+  createMegaSpecialBullet,
+  createMegaSpecialStrike,
+  createSpecialBullet,
+  createUpwardBullet,
+} from './helpers/hero-shot.helper';
 import { InputManager } from './input-manager';
 import { createInitialEngineRuntime } from './runtime/engine-state.factory';
 import { EngineRuntime } from './runtime/engine-runtime.model';
@@ -245,7 +257,7 @@ export class GameEngine {
     });
 
     this.updateProgressScore();
-    this.syncSpecialHudState();
+    syncSpecialHudState(this.runtime);
 
     updateCheckpointProgressSystem({
       hero: this.hero,
@@ -375,7 +387,7 @@ export class GameEngine {
       );
     }
 
-    this.syncSpecialHudState();
+    syncSpecialHudState(this.runtime);
 
     this.gameState.setCurrentScore(this.runtime.score);
     this.gameState.setCurrentCoins(this.runtime.collectedCoins);
@@ -468,50 +480,12 @@ export class GameEngine {
   }
 
   private readonly fireBullet = (kind: 'forward' | 'upward'): void => {
-    const firedWhileRunning =
-      kind === 'forward' &&
-      this.hero.onGround &&
-      Math.abs(this.hero.vx) > 70;
+    const bullet =
+      kind === 'upward'
+        ? createUpwardBullet(this.hero)
+        : createForwardBullet(this.hero);
 
-    if (kind === 'upward') {
-      this.runtime.bullets.push({
-        x: this.hero.x + this.hero.width / 2 + 0.5,
-        y: this.hero.y - 30,
-        width: 4,
-        height: 10,
-        vx: 0,
-        vy: -760,
-        active: true,
-        kind: 'upward',
-        spriteType: 'heroShotUp',
-        damage: 1,
-        ownerWeapon: 'arcaneGun',
-        muzzleFlash: true,
-        firedWhileRunning: false,
-        direction: this.hero.direction,
-      });
-      return;
-    }
-
-    this.runtime.bullets.push({
-      x:
-        this.hero.direction === 1
-          ? this.hero.x + this.hero.width + 8
-          : this.hero.x - 14,
-      y: this.hero.y + 15,
-      width: 10,
-      height: 4,
-      vx: this.hero.direction * 690,
-      vy: 0,
-      active: true,
-      kind: 'forward',
-      spriteType: 'heroShot',
-      damage: 1,
-      ownerWeapon: 'arcaneGun',
-      muzzleFlash: true,
-      firedWhileRunning,
-      direction: this.hero.direction,
-    });
+    this.runtime.bullets.push(bullet);
   };
 
   private readonly activateSpecial = (): void => {
@@ -519,38 +493,16 @@ export class GameEngine {
       return;
     }
 
-    this.consumeSpecialCharge(this.specialSegmentCost);
+    consumeSpecialCharge(this.runtime, this.specialSegmentCost);
     this.runtime.specialFlashTimer = 0.62;
 
-    this.runtime.bullets.push({
-      x:
-        this.hero.direction === 1
-          ? this.hero.x + this.hero.width + 2
-          : this.hero.x - 38,
-      y: this.hero.y + 10,
-      width: 38,
-      height: 20,
-      vx: this.hero.direction * 980,
-      vy: 0,
-      active: true,
-      kind: 'special',
-      spriteType: 'heroSpecialShot',
-      damage: 4,
-      ownerWeapon: 'arcaneGun',
-      muzzleFlash: true,
-      firedWhileRunning: false,
-      direction: this.hero.direction,
-      explosionOnImpact: true,
-      explosionRadius: this.canvas.width * 0.22,
-      explosionDamage: 4,
-      chestCast: true,
-      maxTravelDistance: this.canvas.width * 0.4,
-      distanceTraveled: 0,
-    });
+    this.runtime.bullets.push(
+      createSpecialBullet(this.hero, this.canvas.width),
+    );
 
     this.runtime.enemyProjectiles = [];
     this.runtime.bossProjectiles = [];
-    this.syncSpecialHudState();
+    syncSpecialHudState(this.runtime);
   };
 
   private readonly activateMegaSpecial = (): void => {
@@ -566,94 +518,17 @@ export class GameEngine {
     this.runtime.specialFlashTimer = 0.86;
     this.hero.megaVisualTimer = 1.05;
 
-    const originX =
-      this.hero.direction === 1
-        ? this.hero.x + this.hero.width + 2
-        : this.hero.x - 78;
+    this.runtime.bullets.push(
+      createMegaSpecialBullet(this.hero, this.canvas.width),
+    );
 
-    this.runtime.bullets.push({
-      x: originX,
-      y: this.hero.y + 2,
-      width: 82,
-      height: 42,
-      vx: this.hero.direction * 1240,
-      vy: 0,
-      active: true,
-      kind: 'megaSpecial',
-      spriteType: 'heroMegaSpecialShot',
-      damage: 8,
-      ownerWeapon: 'arcaneGun',
-      muzzleFlash: true,
-      firedWhileRunning: false,
-      direction: this.hero.direction,
-      explosionOnImpact: true,
-      explosionRadius: this.canvas.width * 0.52,
-      explosionDamage: 8,
-      pierceEnemies: true,
-      chestCast: true,
-      maxTravelDistance: this.canvas.width,
-      distanceTraveled: 0,
-    });
-
-    this.runtime.specialStrikes.push({
-      points: this.buildMegaSpecialStrikePoints(),
-      life: 0.34,
-      maxLife: 0.34,
-      width: 20,
-      theme: 'heroMegaSpecial',
-    });
+    this.runtime.specialStrikes.push(
+      createMegaSpecialStrike(this.hero, this.canvas.width),
+    );
 
     this.runtime.enemyProjectiles = [];
     this.runtime.bossProjectiles = [];
   };
-
-  private buildMegaSpecialStrikePoints(): Array<{ x: number; y: number }> {
-    const originX =
-      this.hero.direction === 1
-        ? this.hero.x + this.hero.width / 2 + 10
-        : this.hero.x + this.hero.width / 2 - 10;
-    const originY = this.hero.y + 18;
-    const endX =
-      this.hero.direction === 1
-        ? this.hero.x + this.canvas.width
-        : this.hero.x - this.canvas.width;
-
-    const points = [];
-    const segments = 8;
-
-    for (let index = 0; index <= segments; index += 1) {
-      const t = index / segments;
-      const x = originX + (endX - originX) * t;
-      const wobble = Math.sin(t * Math.PI * 4 + performance.now() * 0.02) * 18;
-      const y = originY + wobble;
-
-      points.push({ x, y });
-    }
-
-    return points;
-  }
-
-  private consumeSpecialCharge(amount: number): void {
-    this.runtime.specialCharge = Math.max(0, this.runtime.specialCharge - amount);
-  }
-
-  private syncSpecialHudState(): void {
-    this.runtime.specialSegmentsReady = Math.min(
-      3,
-      Math.floor(this.runtime.specialCharge / 33.34),
-    );
-
-    if (this.runtime.specialCharge >= 100) {
-      this.runtime.specialCharge = 100;
-      this.runtime.specialSegmentsReady = 3;
-      this.runtime.ignitionReady = true;
-      this.runtime.specialHudLabel = 'Super Especial';
-      return;
-    }
-
-    this.runtime.ignitionReady = false;
-    this.runtime.specialHudLabel = 'Especial';
-  }
 
   private readonly breakChest = (chest: Chest): void => {
     breakChestSystem({
@@ -775,23 +650,8 @@ export class GameEngine {
     this.hero.vx = 0;
     this.hero.vy = 0;
     this.hero.onGround = false;
-    this.hero.castTimer = 0;
-    this.hero.castDuration = 0;
-    this.hero.castAim = 'forward';
-    this.hero.hurtTimer = 0;
-    this.hero.invulnerabilityTimer = 0;
-    this.hero.shieldActive = false;
-    this.hero.shieldGraceTimer = 0;
-    this.hero.specialCasting = false;
-    this.hero.megaCasting = false;
-    this.hero.megaVisualTimer = 0;
-    this.hero.aimingUp = false;
-    this.runtime.bullets = [];
-    this.runtime.bossProjectiles = [];
-    this.runtime.enemyProjectiles = [];
-    this.runtime.specialExplosions = [];
-    this.runtime.specialStrikes = [];
-    this.runtime.megaComboTimer = 0;
+
+    resetHeroTransientCombatState(this.hero, this.runtime);
   };
 
   private updateCamera(): void {
