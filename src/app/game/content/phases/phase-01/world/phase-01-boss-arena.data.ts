@@ -5,8 +5,8 @@ export function getPhase01BossArena(): BossArenaData {
   return {
     startX: 12010,
     endX: 12770,
-    bossX: 12460,
+    bossX: 12480,
     groundY: PHASE_01_GROUND_Y,
-    markerXs: [12190, 12440, 12620],
+    markerXs: [12200, 12450, 12630],
   };
 }

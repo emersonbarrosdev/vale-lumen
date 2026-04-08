@@ -9,6 +9,7 @@ import { GamepadState } from '../domain/input/gamepad-state.model';
 export class DeviceInputService implements OnDestroy {
   private readonly isBrowser: boolean;
   private readonly gamepadsSubject = new BehaviorSubject<GamepadState[]>([]);
+  private refreshIntervalId: number | null = null;
 
   readonly gamepads$ = this.gamepadsSubject.asObservable();
   readonly hasConnectedGamepad$ = this.gamepads$.pipe(
@@ -27,6 +28,7 @@ export class DeviceInputService implements OnDestroy {
     window.addEventListener('gamepaddisconnected', this.handleGamepadChange);
 
     this.refresh();
+    this.startPolling();
   }
 
   refresh(): void {
@@ -56,6 +58,21 @@ export class DeviceInputService implements OnDestroy {
 
     window.removeEventListener('gamepadconnected', this.handleGamepadChange);
     window.removeEventListener('gamepaddisconnected', this.handleGamepadChange);
+
+    if (this.refreshIntervalId !== null) {
+      window.clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
+  }
+
+  private startPolling(): void {
+    if (!this.isBrowser || this.refreshIntervalId !== null) {
+      return;
+    }
+
+    this.refreshIntervalId = window.setInterval(() => {
+      this.refresh();
+    }, 500);
   }
 
   private readonly handleGamepadChange = (): void => {

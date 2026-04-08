@@ -3,86 +3,71 @@ import { PlatformData } from '../../../../domain/world/platform.model';
 export const PHASE_01_WORLD_WIDTH = 12800;
 export const PHASE_01_GROUND_Y = 620;
 
+/**
+ * Ajuste fino final:
+ * - menos plataformas "suspeitas"
+ * - nada de plataforma baixa demais
+ * - menos chance de salto ruim
+ * - mais leitura visual limpa
+ */
 export function getPhase01Platforms(): PlatformData[] {
   return [
     /**
      * INÍCIO
-     * começo mais linear, estilo Sonic/Mario World
-     * espaço para o jogador voltar e pegar a vida escondida
      */
-    { x: 0, y: 620, width: 1380, height: 100 },
+    { x: 0, y: 620, width: 1500, height: 100 },
+    { x: 320, y: 448, width: 160, height: 22 },
 
     /**
-     * Pequeno trecho alto para recompensa visual, sem exagero
+     * TRECHO 1
      */
-    { x: 260, y: 500, width: 120, height: 22 },
+    { x: 1760, y: 620, width: 1280, height: 100 },
+    { x: 1990, y: 418, width: 160, height: 22 },
+    { x: 2330, y: 286, width: 220, height: 22 },
 
     /**
-     * PRIMEIRO BURACO MÉDIO
+     * TÚNEL
+     * removidas plataformas próximas da zona visual problemática
      */
-    { x: 1600, y: 620, width: 1180, height: 100 },
+    { x: 3160, y: 620, width: 980, height: 100 },
 
     /**
-     * Algumas plataformas, mas poucas
+     * TRECHO LINEAR
      */
-    { x: 1830, y: 500, width: 130, height: 22 },
-    { x: 2140, y: 436, width: 118, height: 20 },
+    { x: 4300, y: 620, width: 760, height: 100 },
 
     /**
-     * TRECHO DE TÚNEL
-     * chão contínuo com teto baixo depois
+     * TRECHO ESPECIAL COM BURACO E PLATAFORMAS QUE CAEM
      */
-    { x: 2960, y: 620, width: 920, height: 100 },
-    { x: 3260, y: 508, width: 126, height: 22 },
+    { x: 5800, y: 620, width: 1120, height: 100 },
+
+    { x: 5130, y: 420, width: 128, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 360 },
+    { x: 5294, y: 420, width: 128, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 360 },
+    { x: 5458, y: 420, width: 128, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 360 },
+    { x: 5622, y: 420, width: 128, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 360 },
 
     /**
-     * TRECHO LINEAR LONGO
+     * TRECHO LINEAR GRANDE
      */
-    { x: 4040, y: 620, width: 660, height: 100 },
+    { x: 7180, y: 620, width: 1720, height: 100 },
+    { x: 7650, y: 424, width: 170, height: 22 },
 
     /**
-     * BURACO GRANDE ~40% DA TELA
-     * com plataformas que caem estilo Sonic
-     * 1280 * 0.4 = 512px aprox
+     * PLATAFORMA ALTA DE RECOMPENSA
      */
-    { x: 5220, y: 620, width: 1080, height: 100 },
-
-    { x: 4720, y: 486, width: 114, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 360 },
-    { x: 4895, y: 430, width: 114, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 380 },
-    { x: 5070, y: 372, width: 114, height: 20, fallAway: true, fallDelay: 0.34, fallSpeed: 400 },
+    { x: 8120, y: 276, width: 280, height: 24 },
 
     /**
-     * TRECHO LINEAR DE RESPIRO
+     * SEGUNDO BURACO
      */
-    { x: 6520, y: 620, width: 1480, height: 100 },
+    { x: 9300, y: 620, width: 1260, height: 100 },
+    { x: 9740, y: 432, width: 180, height: 22 },
 
     /**
-     * Pouca verticalidade aqui
+     * TRECHO FINAL
      */
-    { x: 6940, y: 500, width: 132, height: 22 },
-    { x: 7320, y: 438, width: 118, height: 20 },
-
-    /**
-     * SEGUNDO BURACO MENOR
-     */
-    { x: 8240, y: 620, width: 980, height: 100 },
-
-    { x: 8480, y: 512, width: 128, height: 22 },
-
-    /**
-     * TRECHO MAIS LONGO DE CHÃO
-     */
-    { x: 9440, y: 620, width: 1560, height: 100 },
-
-    { x: 9860, y: 504, width: 128, height: 22 },
-    { x: 10220, y: 436, width: 118, height: 20 },
-
-    /**
-     * TRECHO FINAL DE EXPLORAÇÃO
-     */
-    { x: 11240, y: 620, width: 520, height: 100 },
-
-    { x: 11410, y: 504, width: 126, height: 22 },
+    { x: 10840, y: 620, width: 920, height: 100 },
+    { x: 11110, y: 246, width: 340, height: 24 },
 
     /**
      * PRÉ-BOSS

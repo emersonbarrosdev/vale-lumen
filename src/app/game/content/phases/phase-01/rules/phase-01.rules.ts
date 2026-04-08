@@ -9,7 +9,22 @@ export function getPhase01RuntimeRules(
 
   return {
     worldWidth: PHASE_01_WORLD_WIDTH,
-    checkpointXs: [180, 1760, 3220, 5340, 6900, 8600, 10020, 11480, 12110],
+    checkpointXs: [
+      /**
+       * primeiro checkpoint mais à frente:
+       * - vida escondida fica realmente fora da tela
+       * - evita snap inicial esquisito
+       */
+      420,
+      1880,
+      3340,
+      4480,
+      5940,
+      7480,
+      9760,
+      11100,
+      12140,
+    ],
     scoreStepDistance: 240,
     scorePerStep: 15,
     heroFallDeathOffset: 260,

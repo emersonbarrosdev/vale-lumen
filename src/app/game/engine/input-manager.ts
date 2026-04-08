@@ -13,8 +13,18 @@ export class InputManager {
   private readonly previousGamepadTokens = new Map<string, InputAction>();
 
   private lastInputSource: InputSourceType = 'keyboard';
+  private readonly gamepadDeadzone: number;
+  private hasConnectedGamepad = false;
+
+  constructor(gamepadDeadzone: number = INPUT_CONFIG.gamepadDeadzone) {
+    this.gamepadDeadzone = gamepadDeadzone;
+  }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (this.hasConnectedGamepad) {
+      return;
+    }
+
     const key = this.normalizeKey(event.key);
     const actions = this.keyToActionsMap.get(key) ?? [];
 
@@ -70,13 +80,11 @@ export class InputManager {
 
   isPressed(actionOrKey: InputAction | string): boolean {
     const resolvedAction = this.resolveAction(actionOrKey);
-
     return resolvedAction ? this.pressedActions.has(resolvedAction) : false;
   }
 
   isJustPressed(actionOrKey: InputAction | string): boolean {
     const resolvedAction = this.resolveAction(actionOrKey);
-
     return resolvedAction ? this.justPressedActions.has(resolvedAction) : false;
   }
 
@@ -194,19 +202,25 @@ export class InputManager {
 
   private syncGamepads(): void {
     if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') {
+      this.hasConnectedGamepad = false;
       return;
     }
 
     const currentTokens = new Map<string, InputAction>();
     const gamepads = navigator.getGamepads();
 
+    this.hasConnectedGamepad = false;
+
     for (const gamepad of gamepads) {
       if (!gamepad?.connected) {
         continue;
       }
 
-      this.collectGamepadButtonActions(gamepad, currentTokens);
-      this.collectGamepadAxisActions(gamepad, currentTokens);
+      this.hasConnectedGamepad = true;
+
+      this.collectStandardButtons(gamepad, currentTokens);
+      this.collectLeftStickCardinal(gamepad, currentTokens);
+      this.collectFirefoxDualSenseDpadFallback(gamepad, currentTokens);
     }
 
     for (const [token, action] of currentTokens) {
@@ -228,7 +242,7 @@ export class InputManager {
     }
   }
 
-  private collectGamepadButtonActions(
+  private collectStandardButtons(
     gamepad: Gamepad,
     currentTokens: Map<string, InputAction>,
   ): void {
@@ -238,43 +252,107 @@ export class InputManager {
       for (const buttonIndex of buttonIndexes) {
         const button = gamepad.buttons[buttonIndex];
 
-        if (!button?.pressed) {
+        if (!button || (!button.pressed && button.value < 0.5)) {
           continue;
         }
 
         currentTokens.set(
-          `gamepad:${gamepad.index}:button:${buttonIndex}`,
+          `gamepad:${gamepad.index}:button:${buttonIndex}:action:${action}`,
           action,
         );
       }
     }
   }
 
-  private collectGamepadAxisActions(
+  private collectLeftStickCardinal(
     gamepad: Gamepad,
     currentTokens: Map<string, InputAction>,
   ): void {
-    for (const action of GAME_INPUT_ACTIONS) {
-      const axisBindings = INPUT_CONFIG.gamepadAxisBindings[action] ?? [];
+    const x = gamepad.axes[0] ?? 0;
+    const y = gamepad.axes[1] ?? 0;
+    const deadzone = this.gamepadDeadzone;
+    const dominanceGap = 0.14;
 
-      for (const axisBinding of axisBindings) {
-        const axisValue = gamepad.axes[axisBinding.axisIndex] ?? 0;
-        const threshold = axisBinding.threshold ?? INPUT_CONFIG.gamepadDeadzone;
+    const absX = Math.abs(x);
+    const absY = Math.abs(y);
 
-        if (axisBinding.direction === -1 && axisValue <= -threshold) {
-          currentTokens.set(
-            `gamepad:${gamepad.index}:axis:${axisBinding.axisIndex}:negative`,
-            action,
-          );
-        }
+    if (absX < deadzone && absY < deadzone) {
+      return;
+    }
 
-        if (axisBinding.direction === 1 && axisValue >= threshold) {
-          currentTokens.set(
-            `gamepad:${gamepad.index}:axis:${axisBinding.axisIndex}:positive`,
-            action,
-          );
-        }
+    // Snap cardinal:
+    // só aceita uma direção dominante por vez para evitar diagonal falsa
+    if (absX > absY + dominanceGap) {
+      if (x <= -deadzone) {
+        currentTokens.set(
+          `gamepad:${gamepad.index}:left-stick:move-left`,
+          'moveLeft',
+        );
+      } else if (x >= deadzone) {
+        currentTokens.set(
+          `gamepad:${gamepad.index}:left-stick:move-right`,
+          'moveRight',
+        );
       }
+      return;
+    }
+
+    if (absY > absX + dominanceGap) {
+      if (y <= -deadzone) {
+        currentTokens.set(
+          `gamepad:${gamepad.index}:left-stick:up-attack`,
+          'upAttack',
+        );
+      } else if (y >= deadzone) {
+        currentTokens.set(
+          `gamepad:${gamepad.index}:left-stick:move-down`,
+          'moveDown',
+        );
+      }
+      return;
+    }
+
+    // se estiver muito diagonal, não ativa vertical/horizontal nenhuma
+    // para não gerar “andar e olhar pra cima” ao mesmo tempo sem querer
+  }
+
+  private collectFirefoxDualSenseDpadFallback(
+    gamepad: Gamepad,
+    currentTokens: Map<string, InputAction>,
+  ): void {
+    const isFirefox =
+      typeof navigator !== 'undefined' &&
+      navigator.userAgent.toLowerCase().includes('firefox');
+
+    const isDualSense = gamepad.id.toLowerCase().includes('dualsense');
+    const needsFallback = isFirefox && isDualSense && gamepad.mapping !== 'standard';
+
+    if (!needsFallback) {
+      return;
+    }
+
+    const axis9 = gamepad.axes[9];
+    if (typeof axis9 !== 'number') {
+      return;
+    }
+
+    const approx = (value: number, target: number, epsilon = 0.2): boolean =>
+      Math.abs(value - target) <= epsilon;
+
+    if (approx(axis9, -1.0) || approx(axis9, 1.0)) {
+      currentTokens.set(`gamepad:${gamepad.index}:ff:dpad-up`, 'upAttack');
+    }
+
+    if (approx(axis9, 0.14286) || approx(axis9, 0.42857)) {
+      currentTokens.set(`gamepad:${gamepad.index}:ff:dpad-down`, 'moveDown');
+    }
+
+    if (approx(axis9, 0.71429) || approx(axis9, 0.42857) || approx(axis9, 1.0)) {
+      currentTokens.set(`gamepad:${gamepad.index}:ff:dpad-left`, 'moveLeft');
+    }
+
+    if (approx(axis9, -0.42857) || approx(axis9, -0.71429) || approx(axis9, -0.14286)) {
+      currentTokens.set(`gamepad:${gamepad.index}:ff:dpad-right`, 'moveRight');
     }
   }
 
@@ -282,6 +360,7 @@ export class InputManager {
     this.pressedActions.clear();
     this.justPressedActions.clear();
     this.previousGamepadTokens.clear();
+    this.hasConnectedGamepad = false;
 
     for (const sources of this.actionSources.values()) {
       sources.clear();

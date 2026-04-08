@@ -37,7 +37,8 @@ export function updateHeroSystem({
   activateMegaSpecial,
 }: HeroUpdateParams): void {
   const wasOnGround = hero.onGround;
-  const isLockedInSpecialCast = hero.castTimer > 0 && (hero.specialCasting || hero.megaCasting);
+  const isLockedInSpecialCast =
+    hero.castTimer > 0 && (hero.specialCasting || hero.megaCasting);
 
   updateFallingPlatforms(platforms, hero, deltaTime);
 
@@ -79,16 +80,19 @@ export function updateHeroSystem({
     !isLockedInSpecialCast &&
     input.isActionPressed('moveRight');
 
-  const runBlend = Math.min(1, deltaTime * 11);
-  const targetVx = movingLeft && !movingRight
-    ? -hero.speed
-    : movingRight && !movingLeft
-      ? hero.speed
-      : 0;
+  const targetVx =
+    movingLeft && !movingRight
+      ? -hero.speed
+      : movingRight && !movingLeft
+        ? hero.speed
+        : 0;
+
+  const acceleration = hero.onGround ? 18 : 12;
+  const runBlend = Math.min(1, deltaTime * acceleration);
 
   hero.vx += (targetVx - hero.vx) * runBlend;
 
-  if (Math.abs(hero.vx) < 4) {
+  if (!movingLeft && !movingRight && Math.abs(hero.vx) < 4) {
     hero.vx = 0;
   }
 
@@ -122,7 +126,6 @@ export function updateHeroSystem({
     hero.castDuration = 0.54;
     hero.castAim = 'forward';
     hero.shootCooldown = Math.max(hero.shootCooldown, 0.55);
-    hero.vx = 0;
     hero.specialCasting = false;
     hero.megaCasting = true;
     hero.aimingUp = false;
@@ -137,7 +140,6 @@ export function updateHeroSystem({
       hero.castTimer = 0.26;
       hero.castDuration = 0.26;
       hero.castAim = 'up';
-      hero.vx = 0;
     } else {
       fireBullet('forward');
       hero.shootCooldown = 0.2;
@@ -146,6 +148,9 @@ export function updateHeroSystem({
       hero.castAim = 'forward';
       runtime.megaComboTimer = runtime.ignitionReady ? 0.14 : 0;
     }
+
+    hero.specialCasting = false;
+    hero.megaCasting = false;
   }
 
   if (
@@ -159,7 +164,6 @@ export function updateHeroSystem({
     hero.castDuration = 0.54;
     hero.castAim = 'forward';
     hero.shootCooldown = Math.max(hero.shootCooldown, 0.55);
-    hero.vx = 0;
     hero.specialCasting = false;
     hero.megaCasting = true;
     hero.aimingUp = false;
@@ -173,7 +177,6 @@ export function updateHeroSystem({
     hero.castDuration = 0.34;
     hero.castAim = 'forward';
     hero.shootCooldown = Math.max(hero.shootCooldown, 0.35);
-    hero.vx = 0;
     hero.specialCasting = true;
     hero.megaCasting = false;
     hero.aimingUp = false;

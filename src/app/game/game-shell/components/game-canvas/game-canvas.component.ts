@@ -45,6 +45,7 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
 
   showMobileControls = false;
   mobileControlsBlocked = false;
+  private hasConnectedGamepad = false;
 
   constructor(
     @Inject(PLATFORM_ID) platformId: object,
@@ -79,6 +80,7 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
 
     canvas.width = CANVAS_CONFIG.width;
     canvas.height = CANVAS_CONFIG.height;
+    canvas.tabIndex = 0;
 
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
@@ -117,9 +119,12 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
       if (!dialog && this.waitingBossDialogClose) {
         this.waitingBossDialogClose = false;
         this.engine?.resumeBossBattle();
+        this.deviceInputService.refresh();
+        queueMicrotask(() => canvas.focus());
       }
     });
 
+    queueMicrotask(() => canvas.focus());
     this.engine.start();
   }
 
@@ -135,7 +140,7 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   handleTouchActionStateChange(event: TouchActionStateChange): void {
-    if (this.mobileControlsBlocked) {
+    if (this.mobileControlsBlocked || this.hasConnectedGamepad) {
       return;
     }
 
@@ -147,10 +152,30 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
       this.mobileDetectionService.shouldShowTouchControls$,
       this.loadingOverlayService.isVisible$,
       this.bossDialogService.isOpen$,
-    ]).subscribe(([shouldShowTouchControls, isLoadingVisible, isBossDialogOpen]) => {
+      this.deviceInputService.hasConnectedGamepad$,
+    ]).subscribe(([
+      shouldShowTouchControls,
+      isLoadingVisible,
+      isBossDialogOpen,
+      hasConnectedGamepad,
+    ]) => {
+      this.hasConnectedGamepad = hasConnectedGamepad;
+
       const allowTouchControls = this.gameState.settings.showTouchControls;
-      const nextShowMobileControls = shouldShowTouchControls && allowTouchControls;
-      const nextMobileControlsBlocked = isLoadingVisible || isBossDialogOpen;
+
+      // Regra pedida:
+      // - mobile -> touch
+      // - se gamepad estiver conectado, ele vence
+      // - desktop sem gamepad -> teclado
+      const nextShowMobileControls =
+        shouldShowTouchControls &&
+        allowTouchControls &&
+        !hasConnectedGamepad;
+
+      const nextMobileControlsBlocked =
+        isLoadingVisible ||
+        isBossDialogOpen ||
+        hasConnectedGamepad;
 
       if ((!nextShowMobileControls || nextMobileControlsBlocked) && this.engine) {
         this.engine.clearVirtualInputs('touch');

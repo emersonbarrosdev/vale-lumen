@@ -38,15 +38,15 @@ export function updateHazardsSystem({
 function getHazardPulseSpeed(hazard: Hazard): number {
   switch (hazard.type) {
     case 'geyser':
-      return 3.2;
+      return 3.1;
     case 'goo':
-      return 1.8;
+      return 1.5;
     case 'spike':
-      return 0.9;
+      return 0.85;
     case 'crystal':
-      return 1.4;
+      return 1.2;
     default:
-      return 1.8;
+      return 1.4;
   }
 }
 
@@ -65,9 +65,17 @@ function getHazardHitbox(hazard: Hazard): {
         height: Math.max(0, hazard.height - 2),
       };
 
+    case 'goo':
+      return {
+        x: hazard.x + 6,
+        y: hazard.y + 6,
+        width: Math.max(0, hazard.width - 12),
+        height: Math.max(0, hazard.height - 8),
+      };
+
     case 'geyser': {
       const pulse = Math.sin(hazard.pulseOffset) * 0.5 + 0.5;
-      const activeHeight = 22 + pulse * 38;
+      const activeHeight = 24 + pulse * 34;
 
       return {
         x: hazard.x + hazard.width * 0.18,
@@ -77,20 +85,12 @@ function getHazardHitbox(hazard: Hazard): {
       };
     }
 
-    case 'goo':
-      return {
-        x: hazard.x + 6,
-        y: hazard.y + 3,
-        width: Math.max(0, hazard.width - 12),
-        height: Math.max(0, hazard.height - 4),
-      };
-
     case 'crystal':
       return {
-        x: hazard.x + hazard.width * 0.18,
-        y: hazard.y + 2,
-        width: hazard.width * 0.64,
-        height: hazard.height - 4,
+        x: hazard.x + hazard.width * 0.16,
+        y: hazard.y + 4,
+        width: hazard.width * 0.68,
+        height: hazard.height - 6,
       };
 
     default:

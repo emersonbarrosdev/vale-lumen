@@ -19,7 +19,9 @@ export function drawPlatforms(
     }
   }
 
-  const elevatedPlatforms = platforms.filter((platform) => platform.height < 70);
+  const elevatedPlatforms = platforms
+    .filter((platform) => platform.height < 70 && platform.active !== false);
+
   for (const platform of elevatedPlatforms) {
     drawPlatform(ctx, platform);
   }
@@ -35,11 +37,11 @@ function drawGroundSegment(
     platform.x,
     platform.y + platform.height,
   );
-  body.addColorStop(0, '#8b6a47');
-  body.addColorStop(0.04, '#6b543d');
-  body.addColorStop(0.14, '#43362c');
-  body.addColorStop(0.45, '#221d1f');
-  body.addColorStop(1, '#090a0d');
+  body.addColorStop(0, '#a88459');
+  body.addColorStop(0.06, '#856749');
+  body.addColorStop(0.18, '#564438');
+  body.addColorStop(0.5, '#2c2527');
+  body.addColorStop(1, '#0a0b0d');
 
   ctx.fillStyle = body;
   ctx.beginPath();
@@ -47,8 +49,8 @@ function drawGroundSegment(
 
   for (let x = 0; x <= platform.width; x += 16) {
     const yOffset =
-      Math.sin((platform.x + x) * 0.045) * 1.8 +
-      Math.sin((platform.x + x) * 0.11) * 0.7;
+      Math.sin((platform.x + x) * 0.042) * 1.2 +
+      Math.sin((platform.x + x) * 0.09) * 0.45;
     ctx.lineTo(platform.x + x, platform.y + yOffset);
   }
 
@@ -57,88 +59,21 @@ function drawGroundSegment(
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = '#c09561';
+  ctx.fillStyle = '#efc98e';
   ctx.fillRect(platform.x, platform.y, platform.width, 4);
 
-  ctx.fillStyle = '#6c5138';
-  ctx.fillRect(platform.x, platform.y + 4, platform.width, 3);
+  ctx.fillStyle = '#a37c52';
+  ctx.fillRect(platform.x, platform.y + 4, platform.width, 2);
 
-  ctx.fillStyle = '#312827';
-  for (let x = 12; x < platform.width - 10; x += 30) {
-    const h = 8 + ((x / 30) % 3);
+  ctx.fillStyle = '#493a35';
+  for (let x = 14; x < platform.width - 12; x += 34) {
+    const h = 7 + ((x / 34) % 2);
     ctx.fillRect(platform.x + x, platform.y + 9, 12, h);
-    ctx.fillRect(platform.x + x + 10, platform.y + 12, 6, h + 3);
+    ctx.fillRect(platform.x + x + 10, platform.y + 12, 5, h + 2);
   }
 
-  ctx.strokeStyle = 'rgba(28, 20, 18, 0.62)';
-  ctx.lineWidth = 1.2;
-  for (let crack = 20; crack < platform.width - 12; crack += 54) {
-    ctx.beginPath();
-    ctx.moveTo(platform.x + crack, platform.y + 8);
-    ctx.lineTo(platform.x + crack - 5, platform.y + 18);
-    ctx.lineTo(platform.x + crack + 3, platform.y + 30);
-    ctx.lineTo(platform.x + crack - 4, platform.y + 44);
-    ctx.stroke();
-  }
-
-  drawGroundGrassGlow(ctx, platform);
-  drawGroundRoots(ctx, platform);
   drawGroundDepth(ctx, platform);
   drawGroundEdges(ctx, platform);
-}
-
-function drawGroundGrassGlow(
-  ctx: CanvasRenderingContext2D,
-  platform: Platform,
-): void {
-  ctx.fillStyle = 'rgba(255, 192, 94, 0.14)';
-
-  for (let x = 6; x < platform.width - 4; x += 20) {
-    const h = 3 + ((x / 20) % 2);
-    ctx.beginPath();
-    ctx.moveTo(platform.x + x, platform.y + 1);
-    ctx.lineTo(platform.x + x + 3, platform.y - h);
-    ctx.lineTo(platform.x + x + 6, platform.y + 1);
-    ctx.closePath();
-    ctx.fill();
-  }
-}
-
-function drawGroundRoots(
-  ctx: CanvasRenderingContext2D,
-  platform: Platform,
-): void {
-  ctx.strokeStyle = 'rgba(31, 20, 24, 0.72)';
-  ctx.lineWidth = 3;
-
-  for (let x = 18; x < platform.width - 10; x += 54) {
-    const rootX = platform.x + x;
-    const startY = platform.y + platform.height - 2;
-
-    ctx.beginPath();
-    ctx.moveTo(rootX, startY);
-    ctx.bezierCurveTo(
-      rootX - 6,
-      startY + 18,
-      rootX + 8,
-      startY + 34,
-      rootX - 3,
-      startY + 52,
-    );
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(rootX + 8, startY + 8);
-    ctx.bezierCurveTo(
-      rootX + 18,
-      startY + 20,
-      rootX + 10,
-      startY + 32,
-      rootX + 16,
-      startY + 42,
-    );
-    ctx.stroke();
-  }
 }
 
 function drawGroundDepth(
@@ -147,25 +82,25 @@ function drawGroundDepth(
 ): void {
   const depth = ctx.createLinearGradient(
     platform.x,
-    platform.y + platform.height * 0.45,
+    platform.y + platform.height * 0.4,
     platform.x,
     platform.y + platform.height,
   );
   depth.addColorStop(0, 'rgba(0,0,0,0)');
-  depth.addColorStop(1, 'rgba(0,0,0,0.34)');
+  depth.addColorStop(1, 'rgba(0,0,0,0.18)');
 
   ctx.fillStyle = depth;
   ctx.fillRect(
     platform.x,
-    platform.y + platform.height * 0.45,
+    platform.y + platform.height * 0.4,
     platform.width,
-    platform.height * 0.55,
+    platform.height * 0.6,
   );
 
-  ctx.fillStyle = '#050607';
-  ctx.fillRect(platform.x, platform.y + platform.height - 10, platform.width, 10);
+  ctx.fillStyle = '#07080a';
+  ctx.fillRect(platform.x, platform.y + platform.height - 8, platform.width, 8);
 
-  ctx.strokeStyle = 'rgba(10, 10, 14, 0.86)';
+  ctx.strokeStyle = 'rgba(10, 10, 14, 0.44)';
   ctx.lineWidth = 1;
   ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
 }
@@ -174,22 +109,22 @@ function drawGroundEdges(
   ctx: CanvasRenderingContext2D,
   platform: Platform,
 ): void {
-  const leftGlow = ctx.createLinearGradient(platform.x - 34, 0, platform.x + 8, 0);
+  const leftGlow = ctx.createLinearGradient(platform.x - 28, 0, platform.x + 8, 0);
   leftGlow.addColorStop(0, 'rgba(255, 142, 78, 0)');
-  leftGlow.addColorStop(1, 'rgba(255, 142, 78, 0.24)');
+  leftGlow.addColorStop(1, 'rgba(255, 142, 78, 0.12)');
   ctx.fillStyle = leftGlow;
-  ctx.fillRect(platform.x - 34, platform.y + 4, 34, platform.height - 4);
+  ctx.fillRect(platform.x - 28, platform.y + 4, 28, platform.height - 4);
 
   const rightGlow = ctx.createLinearGradient(
     platform.x + platform.width - 8,
     0,
-    platform.x + platform.width + 34,
+    platform.x + platform.width + 28,
     0,
   );
-  rightGlow.addColorStop(0, 'rgba(255, 142, 78, 0.24)');
+  rightGlow.addColorStop(0, 'rgba(255, 142, 78, 0.12)');
   rightGlow.addColorStop(1, 'rgba(255, 142, 78, 0)');
   ctx.fillStyle = rightGlow;
-  ctx.fillRect(platform.x + platform.width, platform.y + 4, 34, platform.height - 4);
+  ctx.fillRect(platform.x + platform.width, platform.y + 4, 28, platform.height - 4);
 }
 
 function drawPit(
@@ -199,22 +134,17 @@ function drawPit(
   groundY: number,
 ): void {
   const pitWidth = endX - startX;
-  const isEmptyPit = pitWidth >= 185;
   const depthBottom = 720;
 
   const pitGradient = ctx.createLinearGradient(0, groundY, 0, depthBottom);
-  pitGradient.addColorStop(0, isEmptyPit ? 'rgba(28, 12, 18, 0.18)' : 'rgba(255, 98, 42, 0.14)');
-  pitGradient.addColorStop(0.12, isEmptyPit ? 'rgba(18, 8, 14, 0.34)' : 'rgba(126, 24, 18, 0.22)');
-  pitGradient.addColorStop(0.32, 'rgba(18, 6, 12, 0.78)');
+  pitGradient.addColorStop(0, 'rgba(16, 8, 14, 0.1)');
+  pitGradient.addColorStop(0.14, 'rgba(12, 6, 12, 0.22)');
+  pitGradient.addColorStop(0.34, 'rgba(8, 4, 10, 0.68)');
   pitGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
   ctx.fillStyle = pitGradient;
   ctx.fillRect(startX, groundY, pitWidth, depthBottom - groundY);
 
   drawPitWalls(ctx, startX, endX, groundY);
-
-  if (!isEmptyPit) {
-    drawPitEmbers(ctx, startX, pitWidth, groundY);
-  }
 }
 
 function drawPitWalls(
@@ -223,73 +153,33 @@ function drawPitWalls(
   endX: number,
   groundY: number,
 ): void {
-  ctx.fillStyle = 'rgba(255, 150, 88, 0.2)';
+  ctx.fillStyle = 'rgba(255, 150, 88, 0.1)';
 
   ctx.beginPath();
   ctx.moveTo(startX, groundY + 2);
-  ctx.lineTo(startX + 22, groundY + 28);
-  ctx.lineTo(startX, groundY + 62);
+  ctx.lineTo(startX + 20, groundY + 26);
+  ctx.lineTo(startX, groundY + 58);
   ctx.closePath();
   ctx.fill();
 
   ctx.beginPath();
   ctx.moveTo(endX, groundY + 2);
-  ctx.lineTo(endX - 22, groundY + 28);
-  ctx.lineTo(endX, groundY + 62);
+  ctx.lineTo(endX - 20, groundY + 26);
+  ctx.lineTo(endX, groundY + 58);
   ctx.closePath();
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(255, 170, 96, 0.36)';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255, 170, 96, 0.18)';
+  ctx.lineWidth = 1.6;
   ctx.beginPath();
   ctx.moveTo(startX, groundY + 3);
-  ctx.lineTo(startX + 20, groundY + 26);
+  ctx.lineTo(startX + 18, groundY + 24);
   ctx.stroke();
 
   ctx.beginPath();
   ctx.moveTo(endX, groundY + 3);
-  ctx.lineTo(endX - 20, groundY + 26);
+  ctx.lineTo(endX - 18, groundY + 24);
   ctx.stroke();
-}
-
-function drawPitEmbers(
-  ctx: CanvasRenderingContext2D,
-  startX: number,
-  pitWidth: number,
-  groundY: number,
-): void {
-  const emberY = groundY + 90;
-  const total = Math.max(2, Math.floor(pitWidth / 64));
-
-  for (let index = 0; index < total; index += 1) {
-    const px =
-      startX +
-      28 +
-      index * 58 +
-      Math.sin(performance.now() * 0.003 + index) * 10;
-
-    ctx.fillStyle = 'rgba(255, 132, 72, 0.2)';
-    ctx.beginPath();
-    ctx.arc(
-      px,
-      emberY + Math.sin(performance.now() * 0.004 + index) * 8,
-      8,
-      0,
-      Math.PI * 2,
-    );
-    ctx.fill();
-
-    ctx.fillStyle = 'rgba(255, 186, 115, 0.12)';
-    ctx.beginPath();
-    ctx.arc(
-      px,
-      emberY + 2 + Math.sin(performance.now() * 0.004 + index) * 6,
-      4,
-      0,
-      Math.PI * 2,
-    );
-    ctx.fill();
-  }
 }
 
 function drawPlatform(
@@ -302,58 +192,81 @@ function drawPlatform(
     platform.x,
     platform.y + platform.height,
   );
-  slab.addColorStop(0, '#b39a78');
-  slab.addColorStop(0.18, '#8a755c');
-  slab.addColorStop(0.52, '#53463f');
-  slab.addColorStop(1, '#231f22');
+  slab.addColorStop(0, '#ead2a8');
+  slab.addColorStop(0.2, '#c4a37c');
+  slab.addColorStop(0.55, '#876f62');
+  slab.addColorStop(1, '#3b3134');
 
   ctx.fillStyle = slab;
   ctx.beginPath();
   ctx.moveTo(platform.x + 4, platform.y + 2);
-  ctx.lineTo(platform.x + platform.width - 8, platform.y);
-  ctx.lineTo(platform.x + platform.width, platform.y + 7);
-  ctx.lineTo(platform.x + platform.width - 4, platform.y + platform.height);
+  ctx.lineTo(platform.x + platform.width - 6, platform.y);
+  ctx.lineTo(platform.x + platform.width, platform.y + 6);
+  ctx.lineTo(platform.x + platform.width - 3, platform.y + platform.height);
   ctx.lineTo(platform.x + 2, platform.y + platform.height);
-  ctx.lineTo(platform.x, platform.y + 6);
+  ctx.lineTo(platform.x, platform.y + 5);
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = '#dcc49a';
-  ctx.fillRect(platform.x + 4, platform.y, platform.width - 10, 3);
+  ctx.fillStyle = '#ffe8bf';
+  ctx.fillRect(platform.x + 4, platform.y, platform.width - 8, 3);
 
-  ctx.fillStyle = '#5a4c45';
-  ctx.fillRect(platform.x + 3, platform.y + 4, platform.width - 8, 2);
+  ctx.fillStyle = '#98785a';
+  ctx.fillRect(platform.x + 3, platform.y + 4, platform.width - 6, 2);
 
-  ctx.strokeStyle = 'rgba(18, 16, 16, 0.82)';
-  ctx.lineWidth = 1.1;
+  /**
+   * reduzido bastante o contraste escuro
+   * para parar de parecer “plataforma apagada”
+   */
+  ctx.strokeStyle = 'rgba(28, 22, 18, 0.42)';
+  ctx.lineWidth = 1;
   ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
 
-  for (let crack = 12; crack < platform.width - 10; crack += 28) {
-    ctx.strokeStyle = 'rgba(45, 30, 24, 0.3)';
+  ctx.strokeStyle = 'rgba(60, 44, 34, 0.12)';
+  for (let crack = 14; crack < platform.width - 10; crack += 32) {
     ctx.beginPath();
-    ctx.moveTo(platform.x + crack, platform.y + 3);
-    ctx.lineTo(platform.x + crack - 4, platform.y + 10);
-    ctx.lineTo(platform.x + crack + 2, platform.y + 17);
+    ctx.moveTo(platform.x + crack, platform.y + 4);
+    ctx.lineTo(platform.x + crack - 3, platform.y + 10);
+    ctx.lineTo(platform.x + crack + 2, platform.y + 16);
     ctx.stroke();
   }
 
   drawPlatformUnderside(ctx, platform);
+
+  if (platform.fallAway) {
+    drawFallAwayWarning(ctx, platform);
+  }
 }
 
 function drawPlatformUnderside(
   ctx: CanvasRenderingContext2D,
   platform: Platform,
 ): void {
-  ctx.strokeStyle = 'rgba(36, 24, 20, 0.56)';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(42, 28, 22, 0.22)';
+  ctx.lineWidth = 1.5;
 
-  for (let x = 10; x < platform.width - 8; x += 24) {
+  for (let x = 12; x < platform.width - 10; x += 28) {
     const px = platform.x + x;
     const py = platform.y + platform.height - 1;
 
     ctx.beginPath();
     ctx.moveTo(px, py);
-    ctx.lineTo(px - 4, py + 8);
+    ctx.lineTo(px - 3, py + 7);
+    ctx.stroke();
+  }
+}
+
+function drawFallAwayWarning(
+  ctx: CanvasRenderingContext2D,
+  platform: Platform,
+): void {
+  ctx.strokeStyle = 'rgba(255, 180, 92, 0.52)';
+  ctx.lineWidth = 1;
+
+  for (let x = 10; x < platform.width - 6; x += 18) {
+    ctx.beginPath();
+    ctx.moveTo(platform.x + x, platform.y + 5);
+    ctx.lineTo(platform.x + x + 8, platform.y + 11);
     ctx.stroke();
   }
 }

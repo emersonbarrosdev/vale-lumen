@@ -52,8 +52,8 @@ function drawLeftBlock(
   ctx.font = 'bold 16px "Press Start 2P", Arial';
   ctx.fillText(hero.name, x, y + 12);
 
-  drawLivesBlock(ctx, x, y + 32, lives);
-  drawSpecialBlock(ctx, x, y + 66, specialCharge, specialHudLabel);
+  drawLivesBlock(ctx, x, y + 34, lives);
+  drawSpecialBlock(ctx, x, y + 68, specialCharge, specialHudLabel);
 }
 
 function drawCenterBlock(

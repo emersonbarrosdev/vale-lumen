@@ -111,11 +111,17 @@ export function renderFrameWithHud({
   ctx.save();
   ctx.translate(-cameraX, 0);
 
+  /**
+   * Ordem revista:
+   * - túneis primeiro como parte do cenário
+   * - plataformas por cima, para evitar sensação de "plataforma escura escondida"
+   * - hazards e itens acima do chão
+   */
+  drawTunnels(ctx, tunnels);
   drawPlatforms(ctx, platforms);
   drawHazards(ctx, hazards);
   drawCollectibles(ctx, collectibles);
   drawChests(ctx, chests);
-  drawTunnels(ctx, tunnels);
 
   drawHeroBullets(ctx, bullets);
   drawSpecialStrikes(ctx, specialStrikes);

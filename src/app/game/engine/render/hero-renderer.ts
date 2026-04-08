@@ -2,14 +2,14 @@ import { Hero } from '../../domain/hero/hero.model';
 
 const BASE_COLORS = {
   body: '#000000',
-  glow: '#ff6a00',
+  glow: '#ffffff',
   glowSoft: 'rgba(255, 106, 0, 0.28)',
   glowStrong: 'rgba(255, 140, 40, 0.72)',
   weaponDark: '#101216',
-  weaponMid: '#d9dee6',
-  weaponLight: '#f7f9fc',
+  weaponMid: '#ff9900',
+  weaponLight: '#804603',
   weaponGlow: '#ffb15c',
-  hair: '#ff7b24',
+  hair: '#ffffff',
 };
 
 const SPECIAL_COLORS = {
@@ -640,13 +640,18 @@ function drawWeapon(
   ctx.translate(weaponX, weaponY);
   ctx.rotate(weaponRot);
 
-  const muzzleGlow = ctx.createRadialGradient(14.5, 0, 1, 14.5, 0, isSpecialShot ? 10 : 6);
+  /**
+   * ajuste fino:
+   * levantado levemente o bico e o brilho da ponta
+   * para alinhar melhor com o cano
+   */
+  const muzzleGlow = ctx.createRadialGradient(14.8, -0.35, 1, 14.8, -0.35, isSpecialShot ? 10 : 6);
   muzzleGlow.addColorStop(0, palette.glowStrong);
   muzzleGlow.addColorStop(0.4, palette.glowSoft);
   muzzleGlow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = muzzleGlow;
   ctx.beginPath();
-  ctx.arc(14.5, 0, isSpecialShot ? 8 : 5.5, 0, Math.PI * 2);
+  ctx.arc(14.8, -0.35, isSpecialShot ? 8 : 5.5, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = palette.weaponDark;
@@ -661,12 +666,15 @@ function drawWeapon(
   roundRect(ctx, -8.4, -1.7, 3.4, 3.4, 1.1);
   ctx.fill();
 
+  /**
+   * ponta do cano alinhada um pouco mais pra cima
+   */
   ctx.fillStyle = palette.weaponLight;
-  roundRect(ctx, 10.8, -1.3, 5.4, 2.6, 1.1);
+  roundRect(ctx, 10.8, -1.7, 5.6, 2.8, 1.1);
   ctx.fill();
 
   ctx.fillStyle = palette.weaponGlow;
-  roundRect(ctx, 14.5, -1.1, 3.2, 2.2, 0.9);
+  roundRect(ctx, 14.8, -1.5, 3.3, 2.3, 0.9);
   ctx.fill();
 
   ctx.fillStyle = palette.weaponMid;

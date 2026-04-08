@@ -61,7 +61,7 @@ import { renderFrameWithHud } from './systems/render-frame.system';
 export class GameEngine {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly canvas: HTMLCanvasElement;
-  private readonly input = new InputManager();
+  private readonly input: InputManager;
   private readonly callbacks: EngineCallbacks;
   private readonly gameState: GameStateService;
   private readonly phaseData: PhasePlayableData;
@@ -105,6 +105,7 @@ export class GameEngine {
     this.bossArena = phaseData.bossArena;
     this.runtimeRules = getPhaseRuntimeRules(phaseData.definition);
     this.bossRuntimeRules = getPhaseBossRuntimeRules(phaseData.definition);
+    this.input = new InputManager(this.gameState.settings.gamepadDeadzone);
 
     this.gameState.resetCurrentPhaseTimer();
 
@@ -129,11 +130,18 @@ export class GameEngine {
       this.platforms,
     );
     placeHeroAtRespawn(this.hero, this.runtime, true);
+
+    this.runtime.cameraX = calculateCameraX(
+      this.hero,
+      this.canvas.width,
+      this.worldWidth,
+    );
   }
 
   start(): void {
     this.input.attach();
     this.lastTime = performance.now();
+    this.render();
     this.animationFrameId = requestAnimationFrame(this.loop);
   }
 
@@ -400,7 +408,30 @@ export class GameEngine {
       return;
     }
 
+    this.resetFallingPlatforms();
     placeHeroAtRespawn(this.hero, this.runtime);
+    this.runtime.cameraX = calculateCameraX(
+      this.hero,
+      this.canvas.width,
+      this.worldWidth,
+    );
+  }
+
+  private resetFallingPlatforms(): void {
+    for (const platform of this.platforms) {
+      if (!platform.fallAway) {
+        continue;
+      }
+
+      platform.triggered = false;
+      platform.triggerTimer = platform.fallDelay ?? 0.35;
+      platform.falling = false;
+      platform.active = true;
+
+      if (typeof platform.startY === 'number') {
+        platform.y = platform.startY;
+      }
+    }
   }
 
   private updateProgressScore(): void {

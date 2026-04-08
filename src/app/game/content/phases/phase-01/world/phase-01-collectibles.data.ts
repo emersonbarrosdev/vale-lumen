@@ -3,97 +3,85 @@ import { CollectibleData } from '../../../../domain/world/collectible.model';
 export function getPhase01Collectibles(): CollectibleData[] {
   return [
     /**
-     * Vida escondida no início, no estilo Sonic:
-     * a câmera começa um pouco à frente, mas se o jogador voltar,
-     * encontra a recompensa atrás.
+     * VIDA ESCONDIDA ATRÁS DO HERÓI, FORA DA TELA INICIAL.
+     * O jogador precisa voltar um pouco para enxergar.
      */
-    { type: 'heart', x: 86, y: 572 },
+    { type: 'heart', x: 0, y: 572 },
 
     /**
-     * Proteção inicial visível, mas não imediata
+     * Proteção inicial
      */
-    { type: 'shieldOrb', x: 320, y: 580 },
+    { type: 'shieldOrb', x: 388, y: 580 },
 
     /**
-     * Pequena linha de moedas para sugerir a plataforma inicial
+     * Plataforma inicial
      */
-    { type: 'coin', x: 286, y: 462 },
-    { type: 'coin', x: 324, y: 450 },
-    { type: 'coin', x: 362, y: 462 },
+    { type: 'coin', x: 330, y: 416 },
+    { type: 'coin', x: 374, y: 404 },
+    { type: 'coin', x: 418, y: 416 },
 
     /**
-     * Primeiro trecho com salto moderado
+     * Primeiro trecho
      */
-    { type: 'coin', x: 1850, y: 462 },
-    { type: 'coin', x: 1890, y: 450 },
-    { type: 'coin', x: 1930, y: 462 },
-
-    { type: 'specialCoin', x: 2178, y: 398 },
+    { type: 'coin', x: 2012, y: 386 },
+    { type: 'coin', x: 2058, y: 374 },
+    { type: 'coin', x: 2104, y: 386 },
 
     /**
-     * Túnel: poucas moedas, só para indicar a rota
+     * Plataforma alta de recompensa
      */
-    { type: 'coin', x: 3284, y: 470 },
-    { type: 'coin', x: 3330, y: 458 },
+    { type: 'coin', x: 2354, y: 264 },
+    { type: 'coin', x: 2398, y: 252 },
+    { type: 'coin', x: 2442, y: 240 },
+    { type: 'coin', x: 2486, y: 252 },
+    { type: 'specialCoin', x: 2532, y: 232 },
 
     /**
-     * Trecho linear com recompensa simples
+     * Túnel
      */
-    { type: 'coin', x: 4300, y: 584 },
-    { type: 'coin', x: 4342, y: 572 },
-    { type: 'coin', x: 4384, y: 584 },
+    { type: 'coin', x: 3492, y: 396 },
+    { type: 'coin', x: 3538, y: 384 },
 
     /**
-     * Sequência do buraco grande com plataformas que caem
-     * moedas guiando a subida
+     * Trecho linear
      */
-    { type: 'coin', x: 4748, y: 450 },
-    { type: 'coin', x: 4924, y: 394 },
-    { type: 'coin', x: 5098, y: 336 },
-    { type: 'specialCoin', x: 5128, y: 312 },
+    { type: 'coin', x: 4522, y: 586 },
+    { type: 'coin', x: 4568, y: 574 },
+    { type: 'coin', x: 4614, y: 586 },
 
     /**
-     * Respiro depois do desafio
+     * Buraco com plataformas que caem
      */
-    { type: 'heart', x: 6668, y: 580 },
+    { type: 'coin', x: 5162, y: 388 },
+    { type: 'coin', x: 5322, y: 388 },
+    { type: 'coin', x: 5482, y: 388 },
+    { type: 'specialCoin', x: 5642, y: 384 },
 
     /**
-     * Trecho linear longo: poucas moedas no chão
+     * Respiro
      */
-    { type: 'coin', x: 6982, y: 464 },
-    { type: 'coin', x: 7024, y: 452 },
-    { type: 'coin', x: 7066, y: 464 },
-
-    { type: 'coin', x: 7344, y: 402 },
-    { type: 'ray', x: 7380, y: 396 },
+    { type: 'heart', x: 7342, y: 580 },
 
     /**
-     * Segundo buraco menor
+     * Plataforma média
      */
-    { type: 'coin', x: 8500, y: 476 },
-    { type: 'coin', x: 8544, y: 464 },
-    { type: 'coin', x: 8588, y: 476 },
+    { type: 'coin', x: 7674, y: 394 },
+    { type: 'coin', x: 7720, y: 382 },
 
     /**
-     * Trecho mais longo final
+     * Plataforma alta tipo Mario
      */
-    { type: 'coin', x: 9886, y: 468 },
-    { type: 'coin', x: 9928, y: 456 },
-    { type: 'coin', x: 9970, y: 468 },
-
-    { type: 'specialCoin', x: 10278, y: 392 },
-
-    /**
-     * Último trecho antes do boss
-     */
-    { type: 'coin', x: 11434, y: 468 },
-    { type: 'flameVial', x: 11500, y: 472 },
+    { type: 'coin', x: 11154, y: 220 },
+    { type: 'coin', x: 11198, y: 220 },
+    { type: 'coin', x: 11242, y: 220 },
+    { type: 'coin', x: 11286, y: 220 },
+    { type: 'coin', x: 11330, y: 220 },
+    { type: 'coin', x: 11374, y: 220 },
+    { type: 'specialCoin', x: 11420, y: 212 },
 
     /**
      * Pré-boss
      */
-    { type: 'coin', x: 12112, y: 586 },
-    { type: 'coin', x: 12156, y: 574 },
-    { type: 'coin', x: 12200, y: 586 },
+    { type: 'flameVial', x: 12120, y: 578 },
   ];
 }

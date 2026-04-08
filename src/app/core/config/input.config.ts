@@ -27,6 +27,8 @@ export const INPUT_CONFIG: InputConfig = {
     'escape',
     'j',
     'l',
+    'enter',
+    'backspace',
   ],
   keyboardBindings: {
     moveLeft: ['a', 'arrowleft'],
@@ -42,39 +44,27 @@ export const INPUT_CONFIG: InputConfig = {
     cancel: ['backspace'],
   },
   gamepadButtonBindings: {
+    // D-pad
     moveLeft: [14],
     moveRight: [15],
     moveDown: [13],
-    jump: [0],
-    attack: [2],
-    upAttack: [3],
+    upAttack: [12],
+
+    // Face buttons - padrão W3C standard
+    jump: [0],     // PS5 X | Xbox A
+    special: [1],  // PS5 Bola | Xbox B
+    attack: [2],   // PS5 Quadrado | Xbox X
+
     dash: [],
-    special: [5],
-    pause: [9],
-    confirm: [0],
-    cancel: [1],
+    pause: [9],    // Start / Options
+    confirm: [2],  // PS5 Quadrado | Xbox X
+    cancel: [1],   // PS5 Bola | Xbox B
   },
   gamepadAxisBindings: {
-    moveLeft: [
-      {
-        axisIndex: 0,
-        direction: -1,
-      },
-    ],
-    moveRight: [
-      {
-        axisIndex: 0,
-        direction: 1,
-      },
-    ],
-    moveDown: [
-      {
-        axisIndex: 1,
-        direction: 1,
-      },
-    ],
+    // leitura analógica real será feita pelo InputManager com snap cardinal,
+    // para evitar diagonais falsas e "olhar para cima" ao andar para o lado
   },
-  gamepadDeadzone: 0.35,
+  gamepadDeadzone: 0.42,
   touchEnabledActions: [
     'moveLeft',
     'moveRight',

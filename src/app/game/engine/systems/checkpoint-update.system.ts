@@ -17,7 +17,7 @@ export function buildCheckpointXs(
     .sort((a, b) => a - b);
 
   if (!checkpointXs.length) {
-    return [48];
+    return [96];
   }
 
   return Array.from(new Set(checkpointXs));
@@ -78,22 +78,29 @@ export function findSpawnPointNear(
   hero: Hero,
   platforms: Platform[],
 ): { x: number; y: number } {
-  const groundSegments = platforms
-    .filter((platform) => platform.height >= 70)
+  const safeGroundSegments = platforms
+    .filter((platform) => platform.height >= 70 && platform.active !== false)
     .sort((a, b) => a.x - b.x);
 
   const preferredGround =
-    groundSegments.find(
+    safeGroundSegments.find(
       (platform) =>
-        targetX >= platform.x - 24 && targetX <= platform.x + platform.width + 24,
-    ) ?? groundSegments[0];
+        targetX >= platform.x + 36 &&
+        targetX <= platform.x + platform.width - hero.width - 36,
+    ) ??
+    safeGroundSegments.find(
+      (platform) =>
+        targetX >= platform.x - 24 &&
+        targetX <= platform.x + platform.width + 24,
+    ) ??
+    safeGroundSegments[0];
 
   if (preferredGround) {
     const safeX = Math.max(
-      preferredGround.x + 26,
+      preferredGround.x + 36,
       Math.min(
         targetX,
-        preferredGround.x + preferredGround.width - hero.width - 26,
+        preferredGround.x + preferredGround.width - hero.width - 36,
       ),
     );
 
@@ -107,6 +114,10 @@ export function findSpawnPointNear(
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const platform of platforms) {
+    if (platform.active === false) {
+      continue;
+    }
+
     const centerX = platform.x + platform.width / 2;
     const distance = Math.abs(centerX - targetX);
 
@@ -117,7 +128,7 @@ export function findSpawnPointNear(
   }
 
   if (!bestPlatform) {
-    return { x: 48, y: 500 };
+    return { x: 96, y: 500 };
   }
 
   return {

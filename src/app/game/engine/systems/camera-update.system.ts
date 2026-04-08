@@ -6,10 +6,10 @@ export function calculateCameraX(
   worldWidth: number,
 ): number {
   /**
-   * Antes a câmera centralizava demais no herói.
-   * Agora ela deixa o herói mais para a esquerda da tela,
-   * mostrando mais caminho à frente, mas ainda permitindo
-   * enxergar um trecho para trás no início da fase.
+   * Mantém a câmera estável e sem "snap" no início.
+   * O herói fica um pouco mais à esquerda da tela,
+   * mostrando mais caminho à frente sem troca brusca
+   * de offset nos primeiros frames.
    */
   const heroScreenAnchor = canvasWidth * 0.38;
   const target = hero.x - heroScreenAnchor + hero.width / 2;

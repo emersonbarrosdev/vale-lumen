@@ -3,54 +3,66 @@ import { EnemyData } from '../../../../domain/enemies/enemy.model';
 export function getPhase01Enemies(): EnemyData[] {
   return [
     /**
-     * Trecho inicial:
-     * sem poluir demais logo no começo
+     * INÍCIO
      */
-    { type: 'errante', x: 880, y: 576, patrolLeft: 760, patrolRight: 1180 },
+    { type: 'errante', x: 1000, y: 576, patrolLeft: 910, patrolRight: 1290 },
 
     /**
-     * Primeiro trecho com salto
-     * inimigo em chão firme e vigia em plataforma válida
+     * TRECHO 1
      */
-    { type: 'errante', x: 1715, y: 576, patrolLeft: 1635, patrolRight: 1970 },
-    { type: 'vigia', x: 2158, y: 380, patrolLeft: 2148, patrolRight: 2236 },
+    { type: 'errante', x: 1910, y: 576, patrolLeft: 1820, patrolRight: 2140 },
 
     /**
-     * Túnel
+     * plataforma alta do trecho 1
+     * baixado mais um pouco para assentar melhor visualmente
      */
-    { type: 'errante', x: 3400, y: 576, patrolLeft: 3040, patrolRight: 3730 },
+    { type: 'vigia', x: 2410, y: 218, patrolLeft: 2350, patrolRight: 2508 },
 
     /**
-     * Trecho linear
+     * TÚNEL
      */
-    { type: 'errante', x: 4300, y: 576, patrolLeft: 4110, patrolRight: 4620 },
+    { type: 'errante', x: 3520, y: 576, patrolLeft: 3280, patrolRight: 3920 },
 
     /**
-     * Plataformas que caem:
-     * só um inimigo antes do desafio, não em cima delas
+     * TRECHO LINEAR
      */
-    { type: 'errante', x: 5350, y: 576, patrolLeft: 5240, patrolRight: 6120 },
+    { type: 'errante', x: 4540, y: 576, patrolLeft: 4400, patrolRight: 4920 },
 
     /**
-     * Grande trecho linear de respiro
+     * ANTES DO TRECHO DAS PLATAFORMAS QUE CAEM
      */
-    { type: 'errante', x: 6840, y: 576, patrolLeft: 6600, patrolRight: 7200 },
-    { type: 'vigia', x: 7344, y: 402, patrolLeft: 7334, patrolRight: 7420 },
+    { type: 'errante', x: 5980, y: 576, patrolLeft: 5890, patrolRight: 6760 },
 
     /**
-     * Segundo buraco
+     * TRECHO LINEAR GRANDE
      */
-    { type: 'errante', x: 8600, y: 576, patrolLeft: 8325, patrolRight: 9100 },
+    { type: 'errante', x: 7500, y: 576, patrolLeft: 7290, patrolRight: 8060 },
 
     /**
-     * Parte final longa
+     * PLATAFORMA ALTA
+     * baixado novamente
      */
-    { type: 'errante', x: 9800, y: 576, patrolLeft: 9500, patrolRight: 10360 },
-    { type: 'vigia', x: 11434, y: 470, patrolLeft: 11418, patrolRight: 11516 },
+    { type: 'vigia', x: 8240, y: 188, patrolLeft: 8160, patrolRight: 8370 },
 
     /**
-     * Pré-boss
+     * SEGUNDO TRECHO APÓS BURACO
      */
-    { type: 'errante', x: 12180, y: 576, patrolLeft: 12090, patrolRight: 12560 },
+    { type: 'errante', x: 9830, y: 576, patrolLeft: 9450, patrolRight: 10350 },
+
+    /**
+     * TRECHO FINAL
+     */
+    { type: 'errante', x: 11070, y: 576, patrolLeft: 10910, patrolRight: 11620 },
+
+    /**
+     * plataforma alta final
+     * baixado novamente para não parecer flutuar
+     */
+    { type: 'vigia', x: 11300, y: 152, patrolLeft: 11170, patrolRight: 11430 },
+
+    /**
+     * PRÉ-BOSS
+     */
+    { type: 'errante', x: 12200, y: 576, patrolLeft: 12110, patrolRight: 12590 },
   ];
 }
