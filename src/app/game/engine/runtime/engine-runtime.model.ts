@@ -41,25 +41,8 @@ export interface EngineRuntime {
   bossIntroPending: boolean;
   lastInputSource: InputSourceType;
 
-  /**
-   * Nome exibido na HUD para a barra.
-   * Muda para o modo “cheio total”.
-   */
   specialHudLabel: string;
-
-  /**
-   * Quantas cargas simples estão disponíveis.
-   * 0 a 3.
-   */
   specialSegmentsReady: number;
-
-  /**
-   * Quando chega a 3/3 entra no estado máximo.
-   */
   ignitionReady: boolean;
-
-  /**
-   * Janela curta para combinar ataque + especial e disparar o mega ataque.
-   */
   megaComboTimer: number;
 }

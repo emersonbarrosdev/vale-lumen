@@ -42,7 +42,6 @@ export interface Hero {
   name: string;
 
   shieldActive: boolean;
-
   shieldGraceTimer: number;
 
   specialCasting: boolean;
@@ -54,4 +53,10 @@ export interface Hero {
 
   coyoteTimer: number;
   jumpBufferTimer: number;
+
+  /**
+   * Tiro carregado simples
+   */
+  attackHoldTimer: number;
+  chargedShotPending: boolean;
 }

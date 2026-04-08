@@ -1,4 +1,8 @@
-export type EnemyType = 'errante' | 'vigia';
+export type EnemyType =
+  | 'errante'
+  | 'vigia'
+  | 'corvoCorrompido'
+  | 'gosmaPequena';
 
 export interface EnemyData {
   type: EnemyType;

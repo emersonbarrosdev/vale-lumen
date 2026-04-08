@@ -3,73 +3,74 @@ import { CollectibleData } from '../../../../domain/world/collectible.model';
 export function getPhase01Collectibles(): CollectibleData[] {
   return [
     /**
-     * VIDA ESCONDIDA ATRÁS DO HERÓI, FORA DA TELA INICIAL.
-     * O jogador precisa voltar um pouco para enxergar.
+     * 1 CORAÇÃO ESCONDIDO OPCIONAL
+     * fora da visão inicial, incentivando curiosidade
      */
     { type: 'heart', x: 0, y: 572 },
 
     /**
-     * Proteção inicial
-     */
-    { type: 'shieldOrb', x: 388, y: 580 },
-
-    /**
-     * Plataforma inicial
+     * PLATAFORMA INICIAL
+     * moedas comuns para ensinar coleta logo no começo
      */
     { type: 'coin', x: 330, y: 416 },
     { type: 'coin', x: 374, y: 404 },
     { type: 'coin', x: 418, y: 416 },
 
     /**
-     * Primeiro trecho
+     * PRIMEIRO TRECHO
      */
     { type: 'coin', x: 2012, y: 386 },
     { type: 'coin', x: 2058, y: 374 },
     { type: 'coin', x: 2104, y: 386 },
 
     /**
-     * Plataforma alta de recompensa
+     * PLATAFORMA ALTA DE RECOMPENSA
+     * moedas + primeira centelha visível em ponto alto
      */
     { type: 'coin', x: 2354, y: 264 },
     { type: 'coin', x: 2398, y: 252 },
     { type: 'coin', x: 2442, y: 240 },
     { type: 'coin', x: 2486, y: 252 },
-    { type: 'specialCoin', x: 2532, y: 232 },
+    { type: 'specialSpark', x: 2532, y: 232 },
 
     /**
-     * Túnel
+     * TÚNEL
+     * um fragmento de vida em rota menos óbvia
      */
     { type: 'coin', x: 3492, y: 396 },
     { type: 'coin', x: 3538, y: 384 },
+    { type: 'lifeFragment', x: 3590, y: 372 },
 
     /**
-     * Trecho linear
+     * TRECHO LINEAR
      */
     { type: 'coin', x: 4522, y: 586 },
     { type: 'coin', x: 4568, y: 574 },
     { type: 'coin', x: 4614, y: 586 },
 
     /**
-     * Buraco com plataformas que caem
+     * BURACO COM PLATAFORMAS QUE CAEM
+     * recompensa de risco com centelha de especial
      */
     { type: 'coin', x: 5162, y: 388 },
     { type: 'coin', x: 5322, y: 388 },
     { type: 'coin', x: 5482, y: 388 },
-    { type: 'specialCoin', x: 5642, y: 384 },
+    { type: 'specialSpark', x: 5642, y: 384 },
 
     /**
-     * Respiro
+     * RESPIRO
+     * fragmento de vida no lugar de vida inteira comum
      */
-    { type: 'heart', x: 7342, y: 580 },
+    { type: 'lifeFragment', x: 7342, y: 580 },
 
     /**
-     * Plataforma média
+     * PLATAFORMA MÉDIA
      */
     { type: 'coin', x: 7674, y: 394 },
     { type: 'coin', x: 7720, y: 382 },
 
     /**
-     * Plataforma alta tipo Mario
+     * PLATAFORMA ALTA TIPO MARIO
      */
     { type: 'coin', x: 11154, y: 220 },
     { type: 'coin', x: 11198, y: 220 },
@@ -77,11 +78,12 @@ export function getPhase01Collectibles(): CollectibleData[] {
     { type: 'coin', x: 11286, y: 220 },
     { type: 'coin', x: 11330, y: 220 },
     { type: 'coin', x: 11374, y: 220 },
-    { type: 'specialCoin', x: 11420, y: 212 },
+    { type: 'specialSpark', x: 11420, y: 212 },
 
     /**
-     * Pré-boss
+     * PRÉ-BOSS
+     * último fragmento opcional antes da arena
      */
-    { type: 'flameVial', x: 12120, y: 578 },
+    { type: 'lifeFragment', x: 12120, y: 578 },
   ];
 }

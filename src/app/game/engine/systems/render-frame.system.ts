@@ -99,6 +99,7 @@ export function renderFrameWithHud({
   paused,
   bossIntroPending,
   respawningTimer,
+  specialFlashTimer,
   ending,
 
   formattedTime,
@@ -133,6 +134,10 @@ export function renderFrameWithHud({
   }
 
   ctx.restore();
+
+  if (specialFlashTimer > 0) {
+    drawSpecialFlash(ctx, canvas, specialFlashTimer);
+  }
 
   drawHud(
     ctx,
@@ -212,6 +217,7 @@ function drawForwardBullet(
       centerX,
       centerY,
     );
+
     if (dir === 1) {
       tail.addColorStop(0, 'rgba(255, 170, 96, 0)');
       tail.addColorStop(1, 'rgba(255, 210, 150, 0.72)');
@@ -327,7 +333,14 @@ function drawSpecialBullet(
   }
 
   ctx.fillStyle = core;
-  roundRect(ctx, bullet.x, bullet.y, bullet.width, bullet.height, Math.min(10, bullet.height / 2));
+  roundRect(
+    ctx,
+    bullet.x,
+    bullet.y,
+    bullet.width,
+    bullet.height,
+    Math.min(10, bullet.height / 2),
+  );
   ctx.fill();
 
   ctx.fillStyle = isMega ? 'rgba(255, 244, 216, 0.95)' : 'rgba(255,255,255,0.9)';
@@ -340,6 +353,23 @@ function drawSpecialBullet(
     Math.min(8, (bullet.height - 6) / 2),
   );
   ctx.fill();
+}
+
+function drawSpecialFlash(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  specialFlashTimer: number,
+): void {
+  const alpha = Math.max(0, Math.min(0.22, specialFlashTimer * 0.35));
+
+  if (alpha <= 0) {
+    return;
+  }
+
+  ctx.save();
+  ctx.fillStyle = `rgba(255, 245, 220, ${alpha})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
 }
 
 function drawCenterOverlay(

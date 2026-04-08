@@ -20,8 +20,13 @@ export function drawCollectibles(
       continue;
     }
 
-    if (item.type === 'specialCoin') {
-      drawCoinMarioStyle(ctx, centerX, centerY, time, true);
+    if (item.type === 'lifeFragment') {
+      drawLifeFragment(ctx, centerX, centerY);
+      continue;
+    }
+
+    if (item.type === 'specialSpark') {
+      drawSpecialSpark(ctx, centerX, centerY, time);
       continue;
     }
 
@@ -189,6 +194,75 @@ function drawHeart(
   ctx.bezierCurveTo(x + 2, y - 7, x + 3, y - 10, x + 6, y - 10);
   ctx.bezierCurveTo(x + 14, y - 10, x + 14, y + 1, x, y + 8);
   ctx.fill();
+}
+
+function drawLifeFragment(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+): void {
+  const glow = ctx.createRadialGradient(x, y, 1, x, y, 18);
+  glow.addColorStop(0, 'rgba(255, 165, 173, 0.34)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, 15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#ff9aa2';
+  ctx.beginPath();
+  ctx.moveTo(x, y + 7);
+  ctx.bezierCurveTo(x - 8, y + 1, x - 8, y - 8, x - 1.5, y - 8);
+  ctx.bezierCurveTo(x + 0.5, y - 8, x + 1, y - 6, x, y - 4.5);
+  ctx.bezierCurveTo(x + 1, y - 6, x + 1.5, y - 8, x + 4, y - 8);
+  ctx.bezierCurveTo(x + 10, y - 8, x + 10, y + 1, x, y + 7);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath();
+  ctx.arc(x - 2.2, y - 4.2, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawSpecialSpark(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  time: number,
+): void {
+  const pulse = Math.sin(time * 0.01 + x * 0.03) * 0.5 + 0.5;
+
+  const glow = ctx.createRadialGradient(x, y, 1, x, y, 20);
+  glow.addColorStop(0, 'rgba(142, 234, 255, 0.5)');
+  glow.addColorStop(0.45, 'rgba(101, 208, 255, 0.22)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, 18, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#8eeaff';
+  ctx.lineWidth = 2.8;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 6, y - 8);
+  ctx.lineTo(x + 1, y - 1);
+  ctx.lineTo(x - 2, y - 1);
+  ctx.lineTo(x + 6, y + 8);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(214, 251, 255, ${0.45 + pulse * 0.35})`;
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(x - 9, y);
+  ctx.lineTo(x - 5, y);
+  ctx.moveTo(x + 5, y);
+  ctx.lineTo(x + 9, y);
+  ctx.moveTo(x, y - 10);
+  ctx.lineTo(x, y - 6);
+  ctx.moveTo(x, y + 6);
+  ctx.lineTo(x, y + 10);
+  ctx.stroke();
 }
 
 function drawRay(

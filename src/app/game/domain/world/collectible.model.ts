@@ -1,6 +1,7 @@
 export type CollectibleType =
   | 'coin'
-  | 'specialCoin'
+  | 'lifeFragment'
+  | 'specialSpark'
   | 'heart'
   | 'ray'
   | 'flameVial'

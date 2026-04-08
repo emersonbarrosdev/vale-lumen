@@ -155,6 +155,8 @@ export class GameStateService {
     relicSlots: 0,
     cosmeticsUnlocked: [],
     relicsUnlocked: [],
+    weakFlameCoreUnlocked: false,
+    simpleChargedShotUnlocked: false,
   };
 
   constructor() {
@@ -314,6 +316,15 @@ export class GameStateService {
 
   applyPhaseProgression(phaseNumber: number): void {
     this.heroProgress.level = Math.max(this.heroProgress.level, phaseNumber);
+
+    /**
+     * Fase 1 — Núcleo da Chama Fraca
+     * libera o tiro carregado simples
+     */
+    if (phaseNumber >= 1) {
+      this.heroProgress.weakFlameCoreUnlocked = true;
+      this.heroProgress.simpleChargedShotUnlocked = true;
+    }
 
     if (phaseNumber === 2) {
       this.heroProgress.manaRegenPerSecond += 2;

@@ -61,8 +61,13 @@ export function checkEndingConditionsSystem({
   gameState,
   loseLife,
 }: EndingStateCheckParams): void {
+  if (runtime.ending || runtime.respawningTimer > 0) {
+    return;
+  }
+
   if (hero.y > canvasHeight + 260) {
     loseLife();
+    return;
   }
 
   if (runtime.lives <= 0) {

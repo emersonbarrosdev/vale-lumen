@@ -98,6 +98,9 @@ export class PhaseFlowService {
       coinMultiplier,
     });
 
+    /**
+     * Aplica recompensa/progressão da fase concluída
+     */
     this.gameState.applyPhaseProgression(currentPhase.order);
 
     const nextPhase = getNextPhaseDefinition(currentPhase.id);

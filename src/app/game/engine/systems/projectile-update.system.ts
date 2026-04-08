@@ -36,10 +36,7 @@ export interface ProjectileSystemParams {
 
 export function updateSpecialSequenceSystem({
   runtime,
-}: Pick<
-  ProjectileSystemParams,
-  'runtime'
-> & {
+}: Pick<ProjectileSystemParams, 'runtime'> & {
   deltaTime: number;
   hero: Hero;
   boss: Boss;
@@ -96,17 +93,28 @@ export function updateBulletsSystem({
   canvasWidth,
   canvasHeight,
   cameraX,
+  deltaTime,
   spawnBurst,
   breakChest,
   killEnemy,
 }: Pick<
   ProjectileSystemParams,
-  'runtime' | 'boss' | 'enemies' | 'chests' | 'hazards' | 'tunnels' | 'worldWidth' | 'canvasWidth' | 'canvasHeight' | 'cameraX' | 'spawnBurst' | 'breakChest' | 'killEnemy'
+  | 'runtime'
+  | 'boss'
+  | 'enemies'
+  | 'chests'
+  | 'hazards'
+  | 'tunnels'
+  | 'worldWidth'
+  | 'canvasWidth'
+  | 'canvasHeight'
+  | 'cameraX'
+  | 'spawnBurst'
+  | 'breakChest'
+  | 'killEnemy'
 > & {
   deltaTime: number;
 }): void {
-  const { deltaTime } = arguments[0];
-
   for (const bullet of runtime.bullets) {
     if (!bullet.active) {
       continue;
@@ -345,7 +353,7 @@ export function updateSpecialExplosionsSystem({
     const progress = 1 - explosion.life / explosion.maxLife;
     explosion.radius = explosion.maxRadius * Math.min(1, progress * 1.15);
 
-    const isMega = (explosion as SpecialExplosionRuntime).theme === 'heroMegaSpecial';
+    const isMega = explosion.theme === 'heroMegaSpecial';
 
     if (!explosion.appliedDamage && explosion.radius >= explosion.maxRadius * 0.5) {
       explosion.appliedDamage = true;
@@ -439,6 +447,7 @@ export function updateEnemyProjectilesSystem({
   hero,
   bossArena,
   worldWidth,
+  deltaTime,
   spawnBurst,
   applyHeroDamage,
 }: Pick<
@@ -447,8 +456,6 @@ export function updateEnemyProjectilesSystem({
 > & {
   deltaTime: number;
 }): void {
-  const { deltaTime } = arguments[0];
-
   for (const projectile of runtime.enemyProjectiles) {
     if (!projectile.active) {
       continue;
@@ -496,6 +503,7 @@ export function updateBossProjectilesSystem({
   runtime,
   hero,
   bossArena,
+  deltaTime,
   spawnBurst,
   applyHeroDamage,
 }: Pick<
@@ -504,8 +512,6 @@ export function updateBossProjectilesSystem({
 > & {
   deltaTime: number;
 }): void {
-  const { deltaTime } = arguments[0];
-
   for (const projectile of runtime.bossProjectiles) {
     if (!projectile.active) {
       continue;
@@ -524,10 +530,6 @@ export function updateBossProjectilesSystem({
         projectile.active = false;
         spawnBurst(projectile.x, bossArena.groundY - 6, '#45b857', 14);
 
-        /**
-         * reduz levemente a área "injusta" de dano ao tocar o chão
-         * para evitar sensação de morte gratuita perto da entrada da arena.
-         */
         if (
           hero.invulnerabilityTimer <= 0 &&
           Math.abs(hero.x + hero.width / 2 - projectile.x) <= 38 &&
@@ -547,9 +549,6 @@ export function updateBossProjectilesSystem({
         projectile.amplitude *
         deltaTime;
 
-      /**
-       * Mantém projéteis normais/ultimate circulando apenas dentro da área útil da arena.
-       */
       if (
         projectile.x + projectile.radius < bossArena.startX + 24 ||
         projectile.x - projectile.radius > bossArena.endX + 120 ||
@@ -580,18 +579,6 @@ export function updateBossProjectilesSystem({
   );
 }
 
-type SpecialExplosionRuntime = {
-  x: number;
-  y: number;
-  radius: number;
-  maxRadius: number;
-  life: number;
-  maxLife: number;
-  damage: number;
-  appliedDamage: boolean;
-  theme?: 'heroSpecial' | 'heroMegaSpecial';
-};
-
 function createSpecialExplosion(
   runtime: EngineRuntime,
   bullet: Bullet,
@@ -615,7 +602,7 @@ function createSpecialExplosion(
     damage: bullet.explosionDamage ?? (isMega ? 8 : 4),
     appliedDamage: false,
     theme: isMega ? 'heroMegaSpecial' : 'heroSpecial',
-  } as SpecialExplosionRuntime);
+  });
 
   spawnBurst(x, y, isMega ? '#ff7d2e' : '#ffb15c', isMega ? 64 : 32);
   spawnBurst(x, y, isMega ? '#ffd6a1' : '#82e8ff', isMega ? 28 : 14);

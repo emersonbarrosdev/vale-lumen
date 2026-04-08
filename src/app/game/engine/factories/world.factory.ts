@@ -25,15 +25,11 @@ export function createWorldState(
       width: getCollectibleWidth(item.type),
       height: getCollectibleHeight(item.type),
       collected: false,
-      vy: 0,
-      falling: false,
-      settled: false,
     })),
     chests: phaseData.chests.map((chest) => ({
       ...chest,
       active: true,
       breakTimer: 0,
-      rewardGranted: false,
     })),
     hazards: (phaseData.hazards ?? []).map((hazard) => ({
       ...hazard,
@@ -48,8 +44,10 @@ function getCollectibleWidth(type: Collectible['type']): number {
   switch (type) {
     case 'coin':
       return 18;
-    case 'specialCoin':
-      return 24;
+    case 'lifeFragment':
+      return 18;
+    case 'specialSpark':
+      return 20;
     case 'heart':
       return 22;
     case 'ray':
@@ -67,8 +65,10 @@ function getCollectibleHeight(type: Collectible['type']): number {
   switch (type) {
     case 'coin':
       return 18;
-    case 'specialCoin':
-      return 24;
+    case 'lifeFragment':
+      return 18;
+    case 'specialSpark':
+      return 20;
     case 'heart':
       return 22;
     case 'ray':

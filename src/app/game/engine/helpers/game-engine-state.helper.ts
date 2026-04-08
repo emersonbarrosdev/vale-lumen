@@ -20,7 +20,7 @@ export function syncSpecialHudState(
     runtime.specialCharge = 100;
     runtime.specialSegmentsReady = 3;
     runtime.ignitionReady = true;
-    runtime.specialHudLabel = 'Super Especial';
+    runtime.specialHudLabel = 'Ignição';
     return;
   }
 
@@ -32,24 +32,29 @@ export function resetHeroTransientCombatState(
   hero: Hero,
   runtime: EngineRuntime,
 ): void {
-    hero.castTimer = 0;
-    hero.castDuration = 0;
-    hero.castAim = 'forward';
-    hero.hurtTimer = 0;
-    hero.invulnerabilityTimer = 0;
-    hero.shieldActive = false;
-    hero.shieldGraceTimer = 0;
-    hero.specialCasting = false;
-    hero.megaCasting = false;
-    hero.megaVisualTimer = 0;
-    hero.aimingUp = false;
-    hero.coyoteTimer = 0;
-    hero.jumpBufferTimer = 0;
+  hero.castTimer = 0;
+  hero.castDuration = 0;
+  hero.castAim = 'forward';
+  hero.hurtTimer = 0;
+  hero.invulnerabilityTimer = 0;
+  hero.shieldActive = false;
+  hero.shieldGraceTimer = 0;
+  hero.specialCasting = false;
+  hero.megaCasting = false;
+  hero.megaVisualTimer = 0;
+  hero.aimingUp = false;
+  hero.crouching = false;
+  hero.coyoteTimer = 0;
+  hero.jumpBufferTimer = 0;
 
-    runtime.bullets = [];
-    runtime.bossProjectiles = [];
-    runtime.enemyProjectiles = [];
-    runtime.specialExplosions = [];
-    runtime.specialStrikes = [];
-    runtime.megaComboTimer = 0;
+  runtime.bullets = [];
+  runtime.bossProjectiles = [];
+  runtime.enemyProjectiles = [];
+  runtime.specialExplosions = [];
+  runtime.specialStrikes = [];
+  runtime.megaComboTimer = 0;
+  runtime.specialFlashTimer = 0;
+  runtime.specialSequenceActive = false;
+  runtime.specialPulseTimer = 0;
+  runtime.specialPulsesRemaining = 0;
 }

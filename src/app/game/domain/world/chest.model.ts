@@ -9,5 +9,4 @@ export interface ChestData {
 export interface Chest extends ChestData {
   active: boolean;
   breakTimer: number;
-  rewardGranted: boolean;
 }

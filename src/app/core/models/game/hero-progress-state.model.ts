@@ -9,11 +9,19 @@ export interface HeroProgressState {
   specialGaugeCurrent: number;
   baseAttack: number;
   magicPower: number;
+
   doubleJumpUnlocked: boolean;
   dashUnlocked: boolean;
   dashCharges: number;
   shieldUnlocked: boolean;
+
   relicSlots: number;
   cosmeticsUnlocked: string[];
   relicsUnlocked: string[];
+
+  /**
+   * Progressão de arma / recompensas por fase
+   */
+  weakFlameCoreUnlocked: boolean;
+  simpleChargedShotUnlocked: boolean;
 }

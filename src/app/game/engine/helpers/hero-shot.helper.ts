@@ -48,6 +48,30 @@ export function createForwardBullet(hero: Hero): Bullet {
   };
 }
 
+export function createSimpleChargedBullet(hero: Hero): Bullet {
+  return {
+    x:
+      hero.direction === 1
+        ? hero.x + hero.width + 4
+        : hero.x - 28,
+    y: hero.crouching ? hero.y + 20 : hero.y + 10,
+    width: 24,
+    height: 10,
+    vx: hero.direction * 820,
+    vy: 0,
+    active: true,
+    kind: 'special',
+    spriteType: 'heroSpecialShot',
+    damage: 2,
+    ownerWeapon: 'arcaneGun',
+    muzzleFlash: true,
+    firedWhileRunning: false,
+    direction: hero.direction,
+    maxTravelDistance: 420,
+    distanceTraveled: 0,
+  };
+}
+
 export function createSpecialBullet(
   hero: Hero,
   canvasWidth: number,

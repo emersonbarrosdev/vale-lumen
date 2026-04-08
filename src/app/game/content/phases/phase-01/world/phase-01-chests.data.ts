@@ -10,37 +10,36 @@ export function getPhase01Chests(): ChestData[] {
 
     /**
      * TRECHO CENTRAL
-     * removido do chão e levado para plataforma do primeiro trecho alto
+     * recompensa intermediária cedo na fase
      */
     { x: 2012, y: 390, width: 40, height: 28, rare: false },
 
     /**
      * TRECHO DAS PLATAFORMAS QUE CAEM
-     * mantido como recompensa de risco
+     * risco maior, então continua raro
      */
     { x: 5376, y: 374, width: 40, height: 28, rare: true },
 
     /**
      * SEGUNDA METADE
-     * removido do chão e levado para plataforma média acessível
+     * reforça exploração da rota média
      */
     { x: 7664, y: 396, width: 40, height: 28, rare: false },
 
     /**
      * PLATAFORMA ALTA DE RECOMPENSA
-     * mantido em ponto elevado
+     * ponto alto da segunda metade
      */
     { x: 8308, y: 248, width: 40, height: 28, rare: true },
 
     /**
      * TRECHO FINAL INTERMEDIÁRIO
-     * removido do chão e levado para plataforma média antes da alta final
      */
     { x: 10946, y: 410, width: 40, height: 28, rare: false },
 
     /**
      * PLATAFORMA ALTA FINAL
-     * mantido no ponto alto como grande recompensa
+     * última grande recompensa opcional antes do boss
      */
     { x: 11336, y: 216, width: 42, height: 30, rare: true },
   ];

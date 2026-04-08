@@ -2,7 +2,11 @@ import { Hero } from '../../domain/hero/hero.model';
 import { GameStateService } from '../../services/game-state.service';
 
 export function createHero(gameState: GameStateService): Hero {
-  const currentHp = Math.max(1, gameState.heroProgress.currentHp || 1);
+  const maxHp = Math.max(1, gameState.heroProgress.maxHp || 1);
+  const currentHp = Math.max(
+    1,
+    Math.min(maxHp, gameState.heroProgress.currentHp || maxHp),
+  );
 
   return {
     x: 48,
@@ -17,7 +21,7 @@ export function createHero(gameState: GameStateService): Hero {
     onGround: false,
 
     hp: currentHp,
-    maxHp: 1,
+    maxHp,
 
     shootCooldown: 0,
     dashCooldown: 0,
@@ -47,5 +51,8 @@ export function createHero(gameState: GameStateService): Hero {
 
     coyoteTimer: 0,
     jumpBufferTimer: 0,
+
+    attackHoldTimer: 0,
+    chargedShotPending: false,
   };
 }

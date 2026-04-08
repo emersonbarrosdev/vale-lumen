@@ -38,21 +38,17 @@ export function breakChestSystem({
   chest.active = false;
   chest.breakTimer = 0.58;
 
-  if (!chest.rewardGranted) {
-    chest.rewardGranted = true;
-
-    if (chest.rare) {
-      addSpecialCharge(runtime, 100);
-      hero.hp = Math.min(hero.maxHp, hero.hp + 25);
-      runtime.score += 150;
-    } else {
-      addSpecialCharge(runtime, 50);
-      hero.hp = Math.min(hero.maxHp, hero.hp + 20);
-      runtime.score += 80;
-    }
-
-    syncSpecialHudState(runtime);
+  if (chest.rare) {
+    addSpecialCharge(runtime, 100);
+    hero.hp = Math.min(hero.maxHp, hero.hp + 25);
+    runtime.score += 150;
+  } else {
+    addSpecialCharge(runtime, 50);
+    hero.hp = Math.min(hero.maxHp, hero.hp + 20);
+    runtime.score += 80;
   }
+
+  syncSpecialHudState(runtime);
 
   const centerX = chest.x + chest.width / 2;
   const centerY = chest.y + chest.height / 2;
