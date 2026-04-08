@@ -18,6 +18,17 @@ export class PhaseFlowService {
 
   startNewRun(): PhaseDefinition {
     this.gameState.resetRun();
+
+    const overridePhase = this.gameState.secretBossPhaseOverride;
+
+    if (overridePhase === 1) {
+      const phaseOne =
+        PHASE_REGISTRY.find((phase) => phase.order === 1) ?? PHASE_REGISTRY[0];
+
+      this.gameState.setCurrentPhase(phaseOne.order, phaseOne.id);
+      return phaseOne;
+    }
+
     return PHASE_REGISTRY[0];
   }
 

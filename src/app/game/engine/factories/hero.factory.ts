@@ -34,7 +34,7 @@ export function createHero(gameState: GameStateService): Hero {
 
     hurtTimer: 0,
     landingTimer: 0,
-    name: 'Kael',
+    name: gameState.secretFlameHairEnabled ? 'Kael Flame' : 'Kael',
 
     shieldActive: false,
     shieldGraceTimer: 0,

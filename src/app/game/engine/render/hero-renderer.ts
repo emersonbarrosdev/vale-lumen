@@ -36,6 +36,11 @@ const MEGA_COLORS = {
   hair: '#ff8b3d',
 };
 
+const SECRET_FLAME_HAIR = {
+  hair: '#ff6a00',
+  hairGlow: 'rgba(255, 120, 0, 0.42)',
+};
+
 type HeroPalette = typeof BASE_COLORS;
 
 export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
@@ -50,6 +55,7 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
     return;
   }
 
+  const secretFlameHairEnabled = hero.name === 'Kael Flame';
   const t = hero.animationTime;
   const speedAbs = Math.abs(hero.vx);
 
@@ -183,7 +189,7 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
     ctx.rotate(-0.08);
   }
 
-  drawMohawk(ctx, palette);
+  drawMohawk(ctx, palette, secretFlameHairEnabled);
 
   ctx.fillStyle = palette.body;
   ctx.beginPath();
@@ -521,16 +527,40 @@ function drawChestAura(
   ctx.stroke();
 }
 
-function drawMohawk(ctx: CanvasRenderingContext2D, palette: HeroPalette): void {
-  ctx.fillStyle = palette.hair;
+function drawMohawk(
+  ctx: CanvasRenderingContext2D,
+  palette: HeroPalette,
+  secretFlameHairEnabled: boolean,
+): void {
+  if (secretFlameHairEnabled) {
+    const aura = ctx.createRadialGradient(0, -10, 2, 0, -10, 18);
+    aura.addColorStop(0, SECRET_FLAME_HAIR.hairGlow);
+    aura.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(0, -10, 18, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-  const spikes = [
-    { x: -7.4, y: 1, h: 6.8, w: 4, rot: -1.8 },
-    { x: -8.2, y: -3.6, h: 9.4, w: 5, rot: -1.2 },
-    { x: -5.6, y: -7.8, h: 11.8, w: 6, rot: -0.6 },
-    { x: 0, y: -9.1, h: 13.6, w: 7, rot: 0 },
-    { x: 4.6, y: -7.9, h: 11.2, w: 5, rot: 0.5 },
-  ];
+  ctx.fillStyle = secretFlameHairEnabled
+    ? SECRET_FLAME_HAIR.hair
+    : palette.hair;
+
+  const spikes = secretFlameHairEnabled
+    ? [
+        { x: -7.8, y: 1.2, h: 8.8, w: 4.3, rot: -1.9 },
+        { x: -8.8, y: -4.6, h: 12.4, w: 5.4, rot: -1.25 },
+        { x: -6.0, y: -10.6, h: 15.4, w: 6.3, rot: -0.62 },
+        { x: 0, y: -13.2, h: 18.8, w: 7.8, rot: 0 },
+        { x: 5.4, y: -10.9, h: 15.2, w: 5.7, rot: 0.56 },
+      ]
+    : [
+        { x: -7.4, y: 1, h: 6.8, w: 4, rot: -1.8 },
+        { x: -8.2, y: -3.6, h: 9.4, w: 5, rot: -1.2 },
+        { x: -5.6, y: -7.8, h: 11.8, w: 6, rot: -0.6 },
+        { x: 0, y: -9.1, h: 13.6, w: 7, rot: 0 },
+        { x: 4.6, y: -7.9, h: 11.2, w: 5, rot: 0.5 },
+      ];
 
   spikes.forEach((s) => {
     ctx.save();

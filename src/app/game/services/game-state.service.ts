@@ -56,6 +56,9 @@ export class GameStateService {
   totalRunElapsedMs = 0;
   lastRunElapsedMs = 0;
 
+  secretFlameHairEnabled = false;
+  secretBossPhaseOverride: number | null = null;
+
   readonly phaseTimeLimitMs = 10 * 60 * 1000;
   readonly phaseTimeWarningMs = 9 * 60 * 1000;
 
@@ -224,6 +227,20 @@ export class GameStateService {
     this.heroProgress.currentHp = this.heroProgress.maxHp;
     this.heroProgress.manaCurrent = this.heroProgress.manaMax;
     this.heroProgress.specialGaugeCurrent = 0;
+  }
+
+  clearSecretSelections(): void {
+    this.secretFlameHairEnabled = false;
+    this.secretBossPhaseOverride = null;
+  }
+
+  enableSecretFlameHair(): void {
+    this.secretFlameHairEnabled = true;
+  }
+
+  setSecretBossPhaseOverride(phase: number | null): void {
+    this.secretBossPhaseOverride =
+      typeof phase === 'number' && phase > 0 ? Math.floor(phase) : null;
   }
 
   setCurrentScore(score: number): void {

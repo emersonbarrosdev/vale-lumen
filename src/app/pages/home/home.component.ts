@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  HostListener,
   Inject,
   OnDestroy,
   PLATFORM_ID,
@@ -10,6 +11,11 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AudioService } from '../../game/services/audio.service';
 import { PhaseFlowService } from '../../game/services/phase-flow.service';
+import {
+  SecretCodeDirection,
+  SecretCodeService,
+} from '../../game/services/secret-code.service';
+import { GameStateService } from '../../game/services/game-state.service';
 
 @Component({
   selector: 'app-home',
@@ -35,6 +41,8 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     private readonly router: Router,
     private readonly phaseFlowService: PhaseFlowService,
     private readonly audioService: AudioService,
+    private readonly secretCodeService: SecretCodeService,
+    private readonly gameState: GameStateService,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
@@ -60,6 +68,22 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     this.phaseFlowService.startNewRun();
     this.audioService.playSfx('ui-confirm');
     this.router.navigateByUrl('/phase-loading');
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  handleWindowKeydown(event: KeyboardEvent): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    const direction = this.mapKeyboardDirection(event.key);
+
+    if (!direction) {
+      return;
+    }
+
+    event.preventDefault();
+    this.consumeSecretInput(direction);
   }
 
   private startGamepadLoop(): void {
@@ -89,6 +113,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     const confirmActive = this.isButtonPressed(gamepad, 2) || this.isButtonPressed(gamepad, 9);
 
     if (upActive && !this.dpadUpConsumed) {
+      this.consumeSecretInput('up');
       this.moveSelection(-1);
       this.dpadUpConsumed = true;
     } else if (!upActive) {
@@ -96,6 +121,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     }
 
     if (downActive && !this.dpadDownConsumed) {
+      this.consumeSecretInput('down');
       this.moveSelection(1);
       this.dpadDownConsumed = true;
     } else if (!downActive) {
@@ -103,6 +129,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     }
 
     if (leftActive && !this.dpadLeftConsumed) {
+      this.consumeSecretInput('left');
       this.moveSelection(-1);
       this.dpadLeftConsumed = true;
     } else if (!leftActive) {
@@ -110,6 +137,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     }
 
     if (rightActive && !this.dpadRightConsumed) {
+      this.consumeSecretInput('right');
       this.moveSelection(1);
       this.dpadRightConsumed = true;
     } else if (!rightActive) {
@@ -121,6 +149,50 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       this.activateSelectedItem();
     } else if (!confirmActive) {
       this.confirmConsumed = false;
+    }
+  }
+
+  private consumeSecretInput(direction: SecretCodeDirection): void {
+    const match = this.secretCodeService.pushInput(direction);
+
+    if (!match) {
+      return;
+    }
+
+    if (match.action === 'unlockFlameHair') {
+      this.gameState.enableSecretFlameHair();
+      this.audioService.playSfx('ui-confirm');
+      return;
+    }
+
+    if (match.action === 'jumpToBossPhase' && match.bossPhase === 1) {
+      this.gameState.setSecretBossPhaseOverride(1);
+      this.audioService.playSfx('ui-confirm');
+    }
+  }
+
+  private mapKeyboardDirection(key: string): SecretCodeDirection | null {
+    const normalized = key.toLowerCase();
+
+    switch (normalized) {
+      case 'arrowup':
+      case 'w':
+        return 'up';
+
+      case 'arrowdown':
+      case 's':
+        return 'down';
+
+      case 'arrowleft':
+      case 'a':
+        return 'left';
+
+      case 'arrowright':
+      case 'd':
+        return 'right';
+
+      default:
+        return null;
     }
   }
 

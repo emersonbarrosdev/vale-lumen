@@ -12,7 +12,7 @@ import { Router } from '@angular/router';
 import { Subscription, combineLatest } from 'rxjs';
 import { CANVAS_CONFIG } from '../../../../core/config/canvas.config';
 import { buildPlayablePhaseData } from '../../../content/phases/registry/phase-playable.factory';
-import { InputAction } from '../../../domain/input/input-action.model';
+import { InputAction, InputSourceType } from '../../../domain/input/input-action.model';
 import { GameEngine } from '../../../engine/game-engine';
 import {
   MobileControlsComponent,
@@ -163,10 +163,6 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
 
       const allowTouchControls = this.gameState.settings.showTouchControls;
 
-      // Regra pedida:
-      // - mobile -> touch
-      // - se gamepad estiver conectado, ele vence
-      // - desktop sem gamepad -> teclado
       const nextShowMobileControls =
         shouldShowTouchControls &&
         allowTouchControls &&

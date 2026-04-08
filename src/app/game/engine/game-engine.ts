@@ -146,6 +146,7 @@ export class GameEngine {
     );
 
     placeHeroAtRespawn(this.hero, this.runtime, true);
+    this.applySecretBossStartIfNeeded();
 
     this.runtime.cameraX = calculateCameraX(
       this.hero,
@@ -414,6 +415,62 @@ export class GameEngine {
       this.runtime.score += 1200;
       startEnding(this.runtime, 'victory');
     }
+  }
+
+  private applySecretBossStartIfNeeded(): void {
+    if (this.gameState.secretBossPhaseOverride !== 1) {
+      return;
+    }
+
+    const arenaStartX = this.bossArena.startX;
+    const arenaEndX = this.bossArena.endX;
+    const safeHeroX = Math.max(48, arenaStartX + 120);
+    const groundY = this.bossArena.groundY;
+
+    this.runtime.checkpointIndex = Math.max(0, this.runtime.checkpointXs.length - 1);
+    this.runtime.respawnX = safeHeroX;
+    this.runtime.respawnY = groundY - this.hero.height;
+
+    this.hero.x = safeHeroX;
+    this.hero.y = groundY - this.hero.height;
+    this.hero.vx = 0;
+    this.hero.vy = 0;
+    this.hero.onGround = true;
+    this.hero.coyoteTimer = 0;
+    this.hero.jumpBufferTimer = 0;
+    this.hero.castTimer = 0;
+    this.hero.castDuration = 0;
+    this.hero.specialCasting = false;
+    this.hero.megaCasting = false;
+    this.hero.aimingUp = false;
+    this.hero.crouching = false;
+
+    this.runtime.bossIntroShown = true;
+    this.runtime.bossIntroPending = false;
+
+    this.boss.active = true;
+    this.boss.x = Math.min(
+      Math.max(this.bossArena.bossX, arenaStartX + 40),
+      arenaEndX - this.boss.width - 40,
+    );
+    this.boss.y = groundY - this.boss.height;
+    this.boss.vy = 0;
+    this.boss.onGround = true;
+    this.boss.jumpCooldown = Math.max(this.boss.jumpCooldown, 0.8);
+    this.boss.secondaryCooldown = Math.max(this.boss.secondaryCooldown, 1.2);
+    this.boss.castTimer = 0;
+    this.boss.armSwing = 0;
+    this.boss.squashTimer = 0;
+    this.boss.introPulse = 0;
+    this.boss.hitFlash = 0;
+
+    this.runtime.cameraX = calculateCameraX(
+      this.hero,
+      this.canvas.width,
+      this.worldWidth,
+    );
+
+    this.gameState.setSecretBossPhaseOverride(null);
   }
 
   private updateRespawnTimer(deltaTime: number): void {
