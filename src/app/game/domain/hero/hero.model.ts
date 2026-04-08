@@ -4,6 +4,7 @@ export type HeroState =
   | 'jump'
   | 'fall'
   | 'cast'
+  | 'crouch'
   | 'hurt';
 
 export type HeroCastAim = 'forward' | 'up';
@@ -42,40 +43,15 @@ export interface Hero {
 
   shieldActive: boolean;
 
-  /**
-   * Depois de perder o escudo, durante esse tempo
-   * ele não pode perder vida.
-   */
   shieldGraceTimer: number;
 
-  /**
-   * Ativo enquanto o especial comum está sendo executado.
-   */
   specialCasting: boolean;
-
-  /**
-   * Ativo enquanto o super especial está sendo executado.
-   */
   megaCasting: boolean;
-
-  /**
-   * Tempo visual do brilho/mudança do cabelo durante o super.
-   */
   megaVisualTimer: number;
 
-  /**
-   * Mantém o herói olhando e apontando a arma para cima
-   * enquanto o jogador segura a ação correspondente.
-   */
   aimingUp: boolean;
+  crouching: boolean;
 
-  /**
-   * Permite pular alguns frames após sair da borda.
-   */
   coyoteTimer: number;
-
-  /**
-   * Guarda o input de pulo por poucos frames antes de tocar o chão.
-   */
   jumpBufferTimer: number;
 }

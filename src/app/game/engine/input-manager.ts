@@ -276,11 +276,6 @@ export class InputManager {
       return;
     }
 
-    /**
-     * Dá prioridade mais estável para horizontal.
-     * Isso ajuda a evitar entrada “nervosa” quando o jogador
-     * quer correr e acaba encostando um pouco na diagonal.
-     */
     if (absX >= absY - 0.04 && absX >= deadzone) {
       if (absX > absY + dominanceGap || absX >= absY) {
         if (x <= -deadzone) {
@@ -297,10 +292,6 @@ export class InputManager {
       }
     }
 
-    /**
-     * Vertical só entra quando realmente dominante.
-     * Isso evita “andar e mirar pra cima” sem querer.
-     */
     if (absY > absX + dominanceGap) {
       if (y <= -deadzone) {
         currentTokens.set(

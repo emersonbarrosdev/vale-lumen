@@ -82,6 +82,14 @@ export class GameStateService {
       description: 'Move o herói para a direita.',
     },
     {
+      label: 'Agachar',
+      primary: 'S',
+      secondary: '↓',
+      gamepad: 'Direcional ↓ / Analógico ↓',
+      touch: 'Botão DOWN',
+      description: 'Faz o herói agachar no chão e permite atirar agachado.',
+    },
+    {
       label: 'Pular',
       primary: 'W / Espaço',
       gamepad: 'X (PS5) / A (Xbox)',

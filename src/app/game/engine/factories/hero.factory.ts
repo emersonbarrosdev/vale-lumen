@@ -12,12 +12,7 @@ export function createHero(gameState: GameStateService): Hero {
     vx: 0,
     vy: 0,
     speed: 260,
-
-    /**
-     * Leve folga para travessia sem deixar o herói “leve demais”.
-     */
     jumpForce: 800,
-
     direction: 1,
     onGround: false,
 
@@ -48,6 +43,7 @@ export function createHero(gameState: GameStateService): Hero {
     megaCasting: false,
     megaVisualTimer: 0,
     aimingUp: false,
+    crouching: false,
 
     coyoteTimer: 0,
     jumpBufferTimer: 0,

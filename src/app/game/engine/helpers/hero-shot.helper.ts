@@ -24,6 +24,7 @@ export function createUpwardBullet(hero: Hero): Bullet {
 export function createForwardBullet(hero: Hero): Bullet {
   const firedWhileRunning =
     hero.onGround &&
+    !hero.crouching &&
     Math.abs(hero.vx) > 70;
 
   return {
@@ -31,7 +32,7 @@ export function createForwardBullet(hero: Hero): Bullet {
       hero.direction === 1
         ? hero.x + hero.width + 8
         : hero.x - 14,
-    y: hero.y + 15,
+    y: hero.crouching ? hero.y + 26 : hero.y + 15,
     width: 10,
     height: 4,
     vx: hero.direction * 690,

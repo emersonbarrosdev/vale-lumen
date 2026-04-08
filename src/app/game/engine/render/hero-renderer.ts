@@ -58,23 +58,27 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   const isJump = hero.state === 'jump';
   const isFall = hero.state === 'fall';
   const isCast = hero.state === 'cast';
+  const isCrouch = hero.state === 'crouch';
   const isAir = isJump || isFall;
 
   const isAimingUp = hero.aimingUp && !isCast;
   const isUpShot = (isCast && hero.castAim === 'up') || isAimingUp;
   const isSpecialShot = hero.specialCasting;
   const isMegaShot = hero.megaCasting || hero.megaVisualTimer > 0;
+  const isCrouchShot =
+    hero.crouching &&
+    isCast &&
+    hero.castAim === 'forward' &&
+    !isSpecialShot &&
+    !isMegaShot;
 
-  /**
-   * Se estiver correndo no chão e usando o tiro normal para frente,
-   * mantém a pose de corrida e só aplica um "aim" leve.
-   */
   const isRunShot =
     isCast &&
     hero.castAim === 'forward' &&
     !isSpecialShot &&
     !isMegaShot &&
     !isAir &&
+    !hero.crouching &&
     speedAbs > 70;
 
   const palette: HeroPalette = isMegaShot
@@ -86,39 +90,50 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   const runCycleBase = t * 14;
   const runCycle = (isRun || isRunShot) ? runCycleBase : 0;
 
-  const bob = isRunShot
-    ? Math.sin(runCycle * 2) * 1.5 + Math.cos(runCycle) * 0.25
-    : isRun
-      ? Math.sin(runCycle * 2) * 1.8 + Math.cos(runCycle) * 0.35
-      : isCast || isAimingUp
-        ? Math.sin(t * 10) * 0.04
-        : Math.sin(t * 2.5) * 0.4;
-
-  const lean = isIdle
-    ? (isAimingUp ? -0.015 : 0)
+  const bob = isCrouchShot || isCrouch
+    ? Math.sin(t * 8) * 0.16
     : isRunShot
-      ? 0.18 + Math.sin(runCycle) * 0.025
-      : isCast || isAimingUp
-        ? (isUpShot ? -0.025 : isMegaShot ? 0 : -0.06)
-        : isRun
-          ? 0.22 + Math.sin(runCycle) * 0.03
-          : isAir
-            ? 0.24
-            : 0.04;
+      ? Math.sin(runCycle * 2) * 1.5 + Math.cos(runCycle) * 0.25
+      : isRun
+        ? Math.sin(runCycle * 2) * 1.8 + Math.cos(runCycle) * 0.35
+        : isCast || isAimingUp
+          ? Math.sin(t * 10) * 0.04
+          : Math.sin(t * 2.5) * 0.4;
+
+  const lean = isCrouchShot || isCrouch
+    ? -0.12
+    : isIdle
+      ? (isAimingUp ? -0.015 : 0)
+      : isRunShot
+        ? 0.18 + Math.sin(runCycle) * 0.025
+        : isCast || isAimingUp
+          ? (isUpShot ? -0.025 : isMegaShot ? 0 : -0.06)
+          : isRun
+            ? 0.22 + Math.sin(runCycle) * 0.03
+            : isAir
+              ? 0.24
+              : 0.04;
 
   ctx.save();
-  ctx.translate(hero.x + hero.width / 2, hero.y + hero.height / 2 + bob + 10);
-  ctx.scale(hero.direction * 1.1, 0.98);
-
-  drawLeg(
-    ctx,
-    runCycle + Math.PI,
-    isRun || isRunShot,
-    isAir,
-    isIdle,
-    false,
-    palette,
+  ctx.translate(
+    hero.x + hero.width / 2,
+    hero.y + hero.height / 2 + bob + (hero.crouching ? 18 : 10),
   );
+  ctx.scale(hero.direction * 1.1, hero.crouching ? 0.82 : 0.98);
+
+  if (!hero.crouching) {
+    drawLeg(
+      ctx,
+      runCycle + Math.PI,
+      isRun || isRunShot,
+      isAir,
+      isIdle,
+      false,
+      palette,
+    );
+  } else {
+    drawCrouchLeg(ctx, false, palette);
+  }
 
   ctx.save();
   ctx.rotate(lean);
@@ -133,9 +148,150 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
     isUpShot,
     isMegaShot,
     isRunShot,
+    hero.crouching,
     palette,
   );
 
+  if (hero.crouching) {
+    drawCrouchBody(ctx, palette);
+  } else {
+    drawStandingBody(ctx, palette);
+  }
+
+  ctx.save();
+  const headTranslateX = hero.crouching
+    ? (isUpShot ? -0.8 : 0.6)
+    : isUpShot
+      ? -1.8
+      : isRunShot
+        ? 3.2
+        : (isRun || isAir ? 4.2 : isCast ? 1.2 : 0);
+
+  const headTranslateY = hero.crouching
+    ? -23.8
+    : isUpShot
+      ? -34.8
+      : -35.8 + (isAir ? -1.8 : 0) + ((isRun || isRunShot) ? Math.sin(runCycle) * 0.35 : 0);
+
+  ctx.translate(headTranslateX, headTranslateY);
+
+  if (isUpShot) {
+    ctx.rotate(-0.28);
+  } else if (isRun || isRunShot) {
+    ctx.rotate(Math.sin(runCycle) * 0.04);
+  } else if (hero.crouching) {
+    ctx.rotate(-0.08);
+  }
+
+  drawMohawk(ctx, palette);
+
+  ctx.fillStyle = palette.body;
+  ctx.beginPath();
+  ctx.arc(0, 0, hero.crouching ? 7.7 : 8.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = palette.glow;
+  if (isUpShot) {
+    ctx.beginPath();
+    ctx.arc(0.6, -3.8, 2.05, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.arc(hero.crouching ? 2.5 : 3.0, hero.crouching ? -0.4 : -0.8, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  if (hero.shieldActive || hero.shieldGraceTimer > 0) {
+    drawProtectionRunes(ctx, hero.shieldGraceTimer > 0);
+  }
+
+  if (isSpecialShot) {
+    drawSpecialAura(ctx, palette, false);
+  }
+
+  if (isMegaShot) {
+    drawSpecialAura(ctx, palette, true);
+    drawChestAura(ctx, palette);
+  }
+
+  if (isUpShot) {
+    drawArmFront(
+      ctx,
+      runCycle + Math.PI,
+      isRun || isRunShot,
+      isIdle,
+      isAir,
+      isCast || isAimingUp,
+      isUpShot,
+      isMegaShot,
+      isRunShot,
+      hero.crouching,
+      palette,
+    );
+    drawWeapon(
+      ctx,
+      isRun || isRunShot,
+      isAir,
+      isCast || isAimingUp,
+      isUpShot,
+      isSpecialShot || isMegaShot,
+      isRunShot,
+      hero.crouching,
+      runCycle,
+      palette,
+    );
+  } else {
+    drawWeapon(
+      ctx,
+      isRun || isRunShot,
+      isAir,
+      isCast || isAimingUp,
+      isUpShot,
+      isSpecialShot || isMegaShot,
+      isRunShot,
+      hero.crouching,
+      runCycle,
+      palette,
+    );
+    drawArmFront(
+      ctx,
+      runCycle + Math.PI,
+      isRun || isRunShot,
+      isIdle,
+      isAir,
+      isCast || isAimingUp,
+      isUpShot,
+      isMegaShot,
+      isRunShot,
+      hero.crouching,
+      palette,
+    );
+  }
+
+  ctx.restore();
+
+  if (!hero.crouching) {
+    drawLeg(
+      ctx,
+      runCycle,
+      isRun || isRunShot,
+      isAir,
+      isIdle,
+      true,
+      palette,
+    );
+  } else {
+    drawCrouchLeg(ctx, true, palette);
+  }
+
+  ctx.restore();
+}
+
+function drawStandingBody(
+  ctx: CanvasRenderingContext2D,
+  palette: HeroPalette,
+): void {
   ctx.fillStyle = palette.body;
   ctx.beginPath();
   ctx.moveTo(-6, -27.5);
@@ -193,120 +349,40 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.quadraticCurveTo(0, -32.2, -2.5, -31.2);
   ctx.closePath();
   ctx.fill();
+}
 
-  ctx.save();
-  const headTranslateX = isUpShot
-    ? -1.8
-    : isRunShot
-      ? 3.2
-      : (isRun || isAir ? 4.2 : isCast ? 1.2 : 0);
-
-  const headTranslateY = isUpShot
-    ? -34.8
-    : -35.8 + (isAir ? -1.8 : 0) + ((isRun || isRunShot) ? Math.sin(runCycle) * 0.35 : 0);
-
-  ctx.translate(headTranslateX, headTranslateY);
-
-  if (isUpShot) {
-    ctx.rotate(-0.28);
-  } else if (isRun || isRunShot) {
-    ctx.rotate(Math.sin(runCycle) * 0.04);
-  }
-
-  drawMohawk(ctx, palette);
-
+function drawCrouchBody(
+  ctx: CanvasRenderingContext2D,
+  palette: HeroPalette,
+): void {
   ctx.fillStyle = palette.body;
   ctx.beginPath();
-  ctx.arc(0, 0, 8.5, 0, Math.PI * 2);
+  ctx.moveTo(-9, -16.5);
+  ctx.quadraticCurveTo(-2, -24, 8, -20);
+  ctx.quadraticCurveTo(12, -12, 9, -3);
+  ctx.quadraticCurveTo(2, 3.5, -9, 0.2);
+  ctx.quadraticCurveTo(-12, -8, -9, -16.5);
   ctx.fill();
 
-  ctx.fillStyle = palette.glow;
-  if (isUpShot) {
-    ctx.beginPath();
-    ctx.arc(0.6, -3.8, 2.05, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    ctx.beginPath();
-    ctx.arc(3.0, -0.8, 2.2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
+  ctx.strokeStyle = palette.glow;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-6, -18);
+  ctx.quadraticCurveTo(-8.5, -14, -8, -7);
+  ctx.stroke();
 
-  if (hero.shieldActive || hero.shieldGraceTimer > 0) {
-    drawProtectionRunes(ctx, hero.shieldGraceTimer > 0);
-  }
-
-  if (isSpecialShot) {
-    drawSpecialAura(ctx, palette, false);
-  }
-
-  if (isMegaShot) {
-    drawSpecialAura(ctx, palette, true);
-    drawChestAura(ctx, palette);
-  }
-
-  if (isUpShot) {
-    drawArmFront(
-      ctx,
-      runCycle + Math.PI,
-      isRun || isRunShot,
-      isIdle,
-      isAir,
-      isCast || isAimingUp,
-      isUpShot,
-      isMegaShot,
-      isRunShot,
-      palette,
-    );
-    drawWeapon(
-      ctx,
-      isRun || isRunShot,
-      isAir,
-      isCast || isAimingUp,
-      isUpShot,
-      isSpecialShot || isMegaShot,
-      isRunShot,
-      runCycle,
-      palette,
-    );
-  } else {
-    drawWeapon(
-      ctx,
-      isRun || isRunShot,
-      isAir,
-      isCast || isAimingUp,
-      isUpShot,
-      isSpecialShot || isMegaShot,
-      isRunShot,
-      runCycle,
-      palette,
-    );
-    drawArmFront(
-      ctx,
-      runCycle + Math.PI,
-      isRun || isRunShot,
-      isIdle,
-      isAir,
-      isCast || isAimingUp,
-      isUpShot,
-      isMegaShot,
-      isRunShot,
-      palette,
-    );
-  }
-
-  ctx.restore();
-
-  drawLeg(
-    ctx,
-    runCycle,
-    isRun || isRunShot,
-    isAir,
-    isIdle,
-    true,
-    palette,
-  );
-
+  ctx.save();
+  ctx.fillStyle = palette.body;
+  ctx.strokeStyle = palette.glow;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-8.5, -16.5);
+  ctx.quadraticCurveTo(-12.2, -14.2, -11.7, -8.2);
+  ctx.quadraticCurveTo(-11.2, -2.4, -6.8, -3.7);
+  ctx.quadraticCurveTo(-3.8, -4.3, -4.9, -8.6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -519,6 +595,28 @@ function drawLeg(
   ctx.restore();
 }
 
+function drawCrouchLeg(
+  ctx: CanvasRenderingContext2D,
+  isFront: boolean,
+  palette: HeroPalette,
+): void {
+  ctx.save();
+  ctx.translate(isFront ? 4.2 : -4.2, 0);
+  ctx.fillStyle = palette.body;
+
+  ctx.beginPath();
+  ctx.moveTo(-7, 0.5);
+  ctx.quadraticCurveTo(-4, 4.4, 1, 5.2);
+  ctx.quadraticCurveTo(7.5, 5.4, 10.5, 8.5);
+  ctx.lineTo(9.3, 11.7);
+  ctx.quadraticCurveTo(3.8, 10.7, -1.5, 9.8);
+  ctx.quadraticCurveTo(-6.5, 8.8, -9.6, 5.8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
 function drawArmBack(
   ctx: CanvasRenderingContext2D,
   cycle: number,
@@ -529,6 +627,7 @@ function drawArmBack(
   isUpShot: boolean,
   isMegaShot: boolean,
   isRunShot: boolean,
+  isCrouching: boolean,
   palette: HeroPalette,
 ): void {
   ctx.save();
@@ -538,7 +637,12 @@ function drawArmBack(
   let armRot = 0;
   let elbowRot = 0;
 
-  if (isRunShot) {
+  if (isCrouching) {
+    shoulderX = -4.2;
+    shoulderY = -11.2;
+    armRot = isCast ? -0.48 : 0.22;
+    elbowRot = isCast ? 0.08 : 0.42;
+  } else if (isRunShot) {
     shoulderX = -2.6;
     shoulderY = -21.1;
     armRot = Math.sin(cycle) * 0.48 - 0.22;
@@ -585,6 +689,7 @@ function drawArmFront(
   isUpShot: boolean,
   isMegaShot: boolean,
   isRunShot: boolean,
+  isCrouching: boolean,
   palette: HeroPalette,
 ): void {
   ctx.save();
@@ -594,7 +699,12 @@ function drawArmFront(
   let armRot = 0;
   let elbowRot = 0;
 
-  if (isRunShot) {
+  if (isCrouching) {
+    shoulderX = 4.8;
+    shoulderY = -11.1;
+    armRot = isCast ? -0.9 : -0.22;
+    elbowRot = isCast ? -0.22 : 0.3;
+  } else if (isRunShot) {
     shoulderX = 4.8;
     shoulderY = -20.9;
     armRot = -0.54 + Math.sin(cycle) * 0.12;
@@ -669,6 +779,7 @@ function drawWeapon(
   isUpShot: boolean,
   isSpecialShot: boolean,
   isRunShot: boolean,
+  isCrouching: boolean,
   runCycle: number,
   palette: HeroPalette,
 ): void {
@@ -678,7 +789,11 @@ function drawWeapon(
   let weaponY = -18.2;
   let weaponRot = -0.06;
 
-  if (isRunShot) {
+  if (isCrouching) {
+    weaponX = 15.4;
+    weaponY = -9.2;
+    weaponRot = -0.02;
+  } else if (isRunShot) {
     weaponX = 13.1;
     weaponY = -19.0 + Math.sin(runCycle) * 0.14;
     weaponRot = -0.14 + Math.sin(runCycle) * 0.02;

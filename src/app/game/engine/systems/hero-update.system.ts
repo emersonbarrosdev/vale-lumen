@@ -67,8 +67,17 @@ export function updateHeroSystem({
     hero.megaCasting = false;
   }
 
+  const wantsToCrouch =
+    hero.onGround &&
+    !isLockedInSpecialCast &&
+    hero.hurtTimer <= 0 &&
+    input.isActionPressed('moveDown');
+
+  hero.crouching = wantsToCrouch;
+
   const lookingUp =
     !isLockedInSpecialCast &&
+    !hero.crouching &&
     input.isActionPressed('upAttack');
 
   hero.aimingUp =
@@ -77,13 +86,8 @@ export function updateHeroSystem({
     !hero.specialCasting &&
     !hero.megaCasting;
 
-  /**
-   * Movimento lateral sempre orgânico.
-   * O tiro comum não trava mais a corrida.
-   * Só o especial/mega bloqueia o movimento.
-   */
   const movementLocked =
-    hero.hurtTimer > 0 || isLockedInSpecialCast;
+    hero.hurtTimer > 0 || isLockedInSpecialCast || hero.crouching;
 
   const movingLeft =
     !hero.aimingUp &&
@@ -107,7 +111,11 @@ export function updateHeroSystem({
 
   hero.vx += (targetVx - hero.vx) * runBlend;
 
-  if (!movingLeft && !movingRight && Math.abs(hero.vx) < 4) {
+  if ((hero.crouching || (!movingLeft && !movingRight)) && Math.abs(hero.vx) < 4) {
+    hero.vx = 0;
+  }
+
+  if (hero.crouching && Math.abs(hero.vx) < 12) {
     hero.vx = 0;
   }
 
@@ -132,6 +140,7 @@ export function updateHeroSystem({
 
   if (
     !isLockedInSpecialCast &&
+    !hero.crouching &&
     attackJustPressed &&
     specialJustPressed &&
     runtime.ignitionReady
@@ -157,15 +166,15 @@ export function updateHeroSystem({
       hero.castAim = 'up';
     } else {
       fireBullet('forward');
-      hero.shootCooldown = 0.2;
-
-      /**
-       * Cast visual curto para não causar “tranco” na corrida.
-       */
-      hero.castTimer = Math.max(hero.castTimer, 0.08);
-      hero.castDuration = Math.max(hero.castDuration, 0.08);
+      hero.shootCooldown = hero.crouching ? 0.22 : 0.2;
+      hero.castTimer = Math.max(hero.castTimer, hero.crouching ? 0.12 : 0.08);
+      hero.castDuration = Math.max(hero.castDuration, hero.crouching ? 0.12 : 0.08);
       hero.castAim = 'forward';
-      runtime.megaComboTimer = runtime.ignitionReady ? 0.14 : 0;
+      runtime.megaComboTimer = hero.crouching
+        ? 0
+        : runtime.ignitionReady
+          ? 0.14
+          : 0;
     }
 
     hero.specialCasting = false;
@@ -174,6 +183,7 @@ export function updateHeroSystem({
 
   if (
     !isLockedInSpecialCast &&
+    !hero.crouching &&
     specialJustPressed &&
     runtime.ignitionReady &&
     runtime.megaComboTimer > 0
@@ -188,6 +198,7 @@ export function updateHeroSystem({
     hero.aimingUp = false;
   } else if (
     !isLockedInSpecialCast &&
+    !hero.crouching &&
     specialJustPressed &&
     runtime.specialSegmentsReady >= 1
   ) {
@@ -206,17 +217,10 @@ export function updateHeroSystem({
   let gravityThisFrame =
     hero.vy > 0 ? gravity + fallBoost : gravity;
 
-  /**
-   * Topo do pulo mais agradável e controlável.
-   */
   if (hero.vy < 0 && Math.abs(hero.vy) < 140 && jumpHeld) {
     gravityThisFrame *= PEAK_GRAVITY_FACTOR;
   }
 
-  /**
-   * Soltar o botão antes do pico corta o pulo
-   * e deixa o controle mais preciso.
-   */
   if (hero.vy < 0 && !jumpHeld) {
     gravityThisFrame *= JUMP_CUT_MULTIPLIER;
   }
@@ -302,25 +306,21 @@ function tryConsumeJump(hero: Hero): void {
     return;
   }
 
-  /**
-   * Pulo do chão ou ainda na janelinha após sair da borda.
-   */
   if (hero.onGround || hero.coyoteTimer > 0) {
     hero.vy = -hero.jumpForce;
     hero.jumpBufferTimer = 0;
     hero.coyoteTimer = 0;
     hero.onGround = false;
+    hero.crouching = false;
     hero.jumpsRemaining = Math.max(0, hero.maxJumps - 1);
     return;
   }
 
-  /**
-   * Pulo aéreo adicional.
-   */
   if (!hero.onGround && hero.jumpsRemaining > 0) {
     hero.vy = -hero.jumpForce;
     hero.jumpBufferTimer = 0;
     hero.coyoteTimer = 0;
+    hero.crouching = false;
     hero.jumpsRemaining -= 1;
     hero.onGround = false;
   }
@@ -333,12 +333,22 @@ function updateHeroState(hero: Hero): void {
   }
 
   if (hero.castTimer > 0) {
+    if (hero.crouching && hero.castAim === 'forward') {
+      hero.state = 'crouch';
+      return;
+    }
+
     hero.state = 'cast';
     return;
   }
 
   if (!hero.onGround) {
     hero.state = hero.vy < 0 ? 'jump' : 'fall';
+    return;
+  }
+
+  if (hero.crouching) {
+    hero.state = 'crouch';
     return;
   }
 
@@ -476,10 +486,6 @@ function resolveTunnelCeilingCollision(
     const heroTop = hero.y;
     const roofBottom = tunnel.ceilingY + tunnel.thickness;
 
-    /**
-     * Pequena correção lateral para “escapar” de quina de teto,
-     * inspirada no tipo de forgiveness usado em platformers modernos.
-     */
     if (heroTop <= roofBottom && heroTop >= tunnel.ceilingY - 18) {
       const leftEscape = Math.abs(heroRight - tunnel.x);
       const rightEscape = Math.abs(heroLeft - (tunnel.x + tunnel.width));

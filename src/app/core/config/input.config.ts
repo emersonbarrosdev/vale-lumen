@@ -19,6 +19,7 @@ export const INPUT_CONFIG: InputConfig = {
   preventDefaultKeys: [
     ' ',
     'w',
+    's',
     'e',
     'arrowup',
     'arrowdown',
@@ -62,15 +63,12 @@ export const INPUT_CONFIG: InputConfig = {
     // leitura analógica real feita no InputManager com snap cardinal refinado
   },
 
-  /**
-   * Deadzone um pouco menor para resposta mais natural,
-   * sem deixar o analógico “duro” demais.
-   */
   gamepadDeadzone: 0.34,
 
   touchEnabledActions: [
     'moveLeft',
     'moveRight',
+    'moveDown',
     'jump',
     'attack',
     'upAttack',
