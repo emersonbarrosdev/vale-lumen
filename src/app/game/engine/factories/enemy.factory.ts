@@ -9,30 +9,108 @@ export function createEnemies(
     type: enemy.type,
     x: enemy.x,
     y: enemy.y,
-    width: enemy.type === 'vigia' ? 58 : 44,
-    height: enemy.type === 'vigia' ? 72 : 50,
-    speed:
-      enemy.type === 'vigia'
-        ? 48 + phaseData.definition.difficulty * 2
-        : 84 + phaseData.definition.difficulty * 2,
+    width: getEnemyWidth(enemy.type),
+    height: getEnemyHeight(enemy.type),
+    speed: getEnemySpeed(enemy.type, phaseData.definition.difficulty),
     direction: -1,
     patrolLeft: enemy.patrolLeft,
     patrolRight: enemy.patrolRight,
-    hp:
-      enemy.type === 'vigia'
-        ? 4 + Math.floor(phaseData.definition.difficulty / 2)
-        : 2 + Math.floor(phaseData.definition.difficulty / 3),
+    hp: getEnemyHp(enemy.type, phaseData.definition.difficulty),
     active: true,
     hitFlash: 0,
     hoverOffset: Math.random() * Math.PI * 2,
     baseX: enemy.x,
     baseY: enemy.y,
     respawnTimer: 0,
-    respawnDelay: enemy.type === 'vigia' ? 42 : 33,
+    respawnDelay: getEnemyRespawnDelay(enemy.type),
     shootCooldown:
       enemy.type === 'vigia'
         ? randomRange(0.55, 2.2)
         : 999,
     shotDirection: Math.random() > 0.5 ? 1 : -1,
   }));
+}
+
+function getEnemyWidth(type: Enemy['type']): number {
+  switch (type) {
+    case 'vigia':
+      return 58;
+    case 'corvoCorrompido':
+      return 38;
+    case 'gosmaPequena':
+      /**
+       * Antes: 34
+       * Agora: dobro da largura
+       */
+      return 68;
+    case 'errante':
+    default:
+      return 44;
+  }
+}
+
+function getEnemyHeight(type: Enemy['type']): number {
+  switch (type) {
+    case 'vigia':
+      return 72;
+    case 'corvoCorrompido':
+      return 28;
+    case 'gosmaPequena':
+      /**
+       * Antes: 22
+       * Agora: um pouco mais alta para facilitar o acerto agachado
+       */
+      return 30;
+    case 'errante':
+    default:
+      return 50;
+  }
+}
+
+function getEnemySpeed(
+  type: Enemy['type'],
+  difficulty: number,
+): number {
+  switch (type) {
+    case 'vigia':
+      return 48 + difficulty * 2;
+    case 'corvoCorrompido':
+      return 88 + difficulty * 2;
+    case 'gosmaPequena':
+      return 22;
+    case 'errante':
+    default:
+      return 84 + difficulty * 2;
+  }
+}
+
+function getEnemyHp(
+  type: Enemy['type'],
+  difficulty: number,
+): number {
+  switch (type) {
+    case 'vigia':
+      return 4 + Math.floor(difficulty / 2);
+    case 'corvoCorrompido':
+      return 1;
+    case 'gosmaPequena':
+      return 2;
+    case 'errante':
+    default:
+      return 2 + Math.floor(difficulty / 3);
+  }
+}
+
+function getEnemyRespawnDelay(type: Enemy['type']): number {
+  switch (type) {
+    case 'vigia':
+      return 42;
+    case 'corvoCorrompido':
+      return 26;
+    case 'gosmaPequena':
+      return 30;
+    case 'errante':
+    default:
+      return 33;
+  }
 }

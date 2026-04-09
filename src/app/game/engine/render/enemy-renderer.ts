@@ -12,31 +12,23 @@ export function drawEnemies(
 
     const pulse =
       Math.sin(performance.now() / 260 + enemy.hoverOffset) * 0.5 + 0.5;
+
     const bob =
       Math.sin(performance.now() / 300 + enemy.hoverOffset) *
-      getEnemyBobAmount(enemy);
+      getEnemyBob(enemy);
 
     ctx.save();
     ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2 + bob);
     ctx.scale(enemy.direction, 1);
 
-    switch (enemy.type) {
-      case 'vigia':
-        drawVigiaEnemy(ctx, enemy, pulse);
-        break;
-
-      case 'corvoCorrompido':
-        drawCorruptedCrowEnemy(ctx, enemy, pulse);
-        break;
-
-      case 'gosmaPequena':
-        drawSmallGooEnemy(ctx, enemy, pulse);
-        break;
-
-      case 'errante':
-      default:
-        drawErranteEnemy(ctx, enemy, pulse);
-        break;
+    if (enemy.type === 'vigia') {
+      drawVigia(ctx, enemy, pulse);
+    } else if (enemy.type === 'corvoCorrompido') {
+      drawCorruptedCrow(ctx, enemy, pulse);
+    } else if (enemy.type === 'gosmaPequena') {
+      drawSmallRadioactiveGoo(ctx, enemy, pulse);
+    } else {
+      drawErrante(ctx, enemy, pulse);
     }
 
     ctx.restore();
@@ -101,24 +93,21 @@ export function drawEnemyProjectiles(
   }
 }
 
-function getEnemyBobAmount(enemy: Enemy): number {
+function getEnemyBob(enemy: Enemy): number {
   switch (enemy.type) {
     case 'vigia':
       return 2;
-
     case 'corvoCorrompido':
-      return 4.5;
-
+      return 4;
     case 'gosmaPequena':
-      return 0.8;
-
+      return 0.2;
     case 'errante':
     default:
       return 1;
   }
 }
 
-function drawVigiaEnemy(
+function drawVigia(
   ctx: CanvasRenderingContext2D,
   enemy: Enemy,
   pulse: number,
@@ -215,7 +204,7 @@ function drawVigiaEnemy(
   ctx.fill();
 }
 
-function drawErranteEnemy(
+function drawErrante(
   ctx: CanvasRenderingContext2D,
   enemy: Enemy,
   pulse: number,
@@ -267,38 +256,36 @@ function drawErranteEnemy(
   ctx.fillRect(14, -2, 6, 16);
 }
 
-function drawCorruptedCrowEnemy(
+function drawCorruptedCrow(
   ctx: CanvasRenderingContext2D,
   enemy: Enemy,
   pulse: number,
 ): void {
-  const wingPhase = Math.sin(performance.now() * 0.02 + enemy.hoverOffset);
+  const flap = Math.sin(performance.now() * 0.018 + enemy.hoverOffset) * 5;
 
-  const aura = ctx.createRadialGradient(0, 0, 2, 0, 0, 30);
-  aura.addColorStop(0, 'rgba(138, 255, 168, 0.18)');
+  const aura = ctx.createRadialGradient(0, -2, 1, 0, -2, 24);
+  aura.addColorStop(0, 'rgba(115, 255, 172, 0.20)');
   aura.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = aura;
   ctx.beginPath();
-  ctx.arc(0, 0, 28, 0, Math.PI * 2);
+  ctx.arc(0, -2, 24, 0, Math.PI * 2);
   ctx.fill();
 
-  const wingLift = 9 + wingPhase * 5;
-
-  ctx.strokeStyle = enemy.hitFlash > 0 ? '#dce7de' : '#161a20';
-  ctx.lineWidth = 6;
+  ctx.strokeStyle = enemy.hitFlash > 0 ? '#d8e7db' : '#10151a';
+  ctx.lineWidth = 5;
   ctx.lineCap = 'round';
 
   ctx.beginPath();
-  ctx.moveTo(-2, -2);
-  ctx.quadraticCurveTo(-16, -wingLift, -28, -2);
+  ctx.moveTo(-2, 0);
+  ctx.quadraticCurveTo(-14, -11 - flap, -26, -1);
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(3, -2);
-  ctx.quadraticCurveTo(18, -wingLift, 31, -1);
+  ctx.moveTo(2, 0);
+  ctx.quadraticCurveTo(15, -11 - flap, 28, 0);
   ctx.stroke();
 
-  ctx.fillStyle = enemy.hitFlash > 0 ? '#dce7de' : '#0f1318';
+  ctx.fillStyle = enemy.hitFlash > 0 ? '#d8e7db' : '#141a20';
   ctx.beginPath();
   ctx.ellipse(0, 2, 11, 8, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -307,99 +294,110 @@ function drawCorruptedCrowEnemy(
   ctx.ellipse(8, -3, 6.5, 5.5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#1f252d';
+  ctx.fillStyle = '#84ffb2';
   ctx.beginPath();
-  ctx.moveTo(-8, 1);
-  ctx.lineTo(-18, 10);
-  ctx.lineTo(-4, 8);
-  ctx.closePath();
+  ctx.arc(10, -4, 2.2 + pulse * 0.35, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#89ffaf';
+  ctx.fillStyle = '#f5fff7';
   ctx.beginPath();
-  ctx.arc(10, -4, 2.6 + pulse * 0.45, 0, Math.PI * 2);
+  ctx.arc(10.5, -4.5, 0.9, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#f1fff4';
+  ctx.fillStyle = '#97d866';
   ctx.beginPath();
-  ctx.arc(10.6, -4.6, 1, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#93d65c';
-  ctx.beginPath();
-  ctx.moveTo(14, -2);
-  ctx.lineTo(22, 1);
+  ctx.moveTo(13, -2);
+  ctx.lineTo(21, 1);
   ctx.lineTo(13, 4);
   ctx.closePath();
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(137, 255, 175, 0.3)';
-  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = 'rgba(132, 255, 178, 0.28)';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(-20, -1);
-  ctx.lineTo(-27, 5);
-  ctx.moveTo(19, -1);
-  ctx.lineTo(28, 5);
+  ctx.moveTo(-18, 3);
+  ctx.lineTo(-25, 8);
+  ctx.moveTo(18, 3);
+  ctx.lineTo(25, 8);
   ctx.stroke();
 }
 
-function drawSmallGooEnemy(
+function drawSmallRadioactiveGoo(
   ctx: CanvasRenderingContext2D,
   enemy: Enemy,
   pulse: number,
 ): void {
-  const squash = 1 + Math.sin(performance.now() * 0.012 + enemy.hoverOffset) * 0.06;
+  const wobble = Math.sin(performance.now() * 0.006 + enemy.hoverOffset) * 0.05;
 
   ctx.save();
-  ctx.scale(1.05, squash);
+  ctx.scale(1.8, 0.85 + wobble);
 
-  const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 24);
-  glow.addColorStop(0, 'rgba(132, 255, 160, 0.26)');
-  glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow;
+  const aura = ctx.createRadialGradient(0, 8, 2, 0, 8, 30);
+  aura.addColorStop(0, 'rgba(180, 255, 70, 0.28)');
+  aura.addColorStop(0.45, 'rgba(92, 255, 71, 0.16)');
+  aura.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = aura;
   ctx.beginPath();
-  ctx.arc(0, 2, 20, 0, Math.PI * 2);
+  ctx.arc(0, 8, 28, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = enemy.hitFlash > 0 ? '#d8ffdf' : '#2e7d32';
-  ctx.beginPath();
-  ctx.moveTo(-16, 10);
-  ctx.quadraticCurveTo(-18, -10, -7, -14);
-  ctx.quadraticCurveTo(0, -19, 7, -14);
-  ctx.quadraticCurveTo(18, -10, 16, 10);
-  ctx.quadraticCurveTo(0, 17, -16, 10);
-  ctx.fill();
-
-  ctx.fillStyle = '#49b84f';
-  ctx.beginPath();
-  ctx.moveTo(-11, 8);
-  ctx.quadraticCurveTo(-10, -4, -3, -7);
-  ctx.quadraticCurveTo(0, -9, 4, -7);
-  ctx.quadraticCurveTo(10, -4, 11, 8);
-  ctx.quadraticCurveTo(0, 12, -11, 8);
-  ctx.fill();
-
-  ctx.fillStyle = '#d6ffd9';
-  ctx.beginPath();
-  ctx.ellipse(-5, -1, 2.2, 3, 0, 0, Math.PI * 2);
-  ctx.fill();
+  const core = ctx.createLinearGradient(-18, -6, 18, 12);
+  core.addColorStop(0, enemy.hitFlash > 0 ? '#d7ffd8' : '#3b6e12');
+  core.addColorStop(0.45, enemy.hitFlash > 0 ? '#c9ffd0' : '#7aff2f');
+  core.addColorStop(1, enemy.hitFlash > 0 ? '#e8ffee' : '#9bff44');
+  ctx.fillStyle = core;
 
   ctx.beginPath();
-  ctx.ellipse(5, -1, 2.2, 3, 0, 0, Math.PI * 2);
+  ctx.moveTo(-20, 10);
+  ctx.quadraticCurveTo(-19, -2, -12, -6);
+  ctx.quadraticCurveTo(-7, -10, -2, -7);
+  ctx.quadraticCurveTo(4, -12, 10, -8);
+  ctx.quadraticCurveTo(18, -3, 19, 10);
+  ctx.quadraticCurveTo(10, 15, 2, 14);
+  ctx.quadraticCurveTo(-8, 16, -20, 10);
   ctx.fill();
 
-  ctx.fillStyle = '#0b1a0c';
+  ctx.fillStyle = 'rgba(215, 255, 150, 0.4)';
   ctx.beginPath();
-  ctx.arc(-5, 0, 1.1 + pulse * 0.15, 0, Math.PI * 2);
-  ctx.arc(5, 0, 1.1 + pulse * 0.15, 0, Math.PI * 2);
+  ctx.ellipse(-8, -2, 3.5, 2.1, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(2, -4, 2.8, 1.8, 0.1, 0, Math.PI * 2);
+  ctx.ellipse(10, -1, 2.4, 1.4, 0.3, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(214, 255, 217, 0.38)';
-  ctx.lineWidth = 1.2;
+  ctx.fillStyle = '#17320d';
   ctx.beginPath();
-  ctx.moveTo(-7, -8);
-  ctx.quadraticCurveTo(-2, -12, 2, -10);
+  ctx.arc(-5, 2, 1.6 + pulse * 0.1, 0, Math.PI * 2);
+  ctx.arc(6, 3, 1.4 + pulse * 0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(220, 255, 170, 0.22)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-8, 9);
+  ctx.lineTo(-12, 14);
+  ctx.moveTo(-1, 10);
+  ctx.lineTo(-2, 16);
+  ctx.moveTo(7, 9);
+  ctx.lineTo(11, 15);
   ctx.stroke();
+
+  const dripXs = [-15, -7, 1, 10, 16];
+  for (const dripX of dripXs) {
+    const dripLength = 2 + Math.abs(Math.sin(performance.now() * 0.004 + dripX)) * 4;
+
+    ctx.strokeStyle = 'rgba(122, 255, 47, 0.55)';
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(dripX, 10);
+    ctx.lineTo(dripX, 10 + dripLength);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(190, 255, 120, 0.68)';
+    ctx.beginPath();
+    ctx.arc(dripX, 10 + dripLength + 1.2, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 }

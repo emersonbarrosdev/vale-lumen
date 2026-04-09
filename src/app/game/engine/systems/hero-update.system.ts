@@ -16,15 +16,18 @@ export interface HeroUpdateParams {
   platforms: Platform[];
   hazards: Hazard[];
   tunnels: Tunnel[];
-  fireBullet: (kind: 'forward' | 'upward') => void;
+  fireBullet: (kind: 'forward' | 'upward' | 'chargedForward') => void;
+  playJumpSfx: () => void;
   activateSpecial: () => void;
   activateMegaSpecial: () => void;
+  simpleChargedShotUnlocked: boolean;
 }
 
 const COYOTE_TIME = 0.09;
 const JUMP_BUFFER_TIME = 0.11;
 const JUMP_CUT_MULTIPLIER = 1.45;
 const PEAK_GRAVITY_FACTOR = 0.56;
+const SIMPLE_CHARGE_HOLD_TIME = 0.32;
 
 export function updateHeroSystem({
   hero,
@@ -38,8 +41,10 @@ export function updateHeroSystem({
   hazards,
   tunnels,
   fireBullet,
+  playJumpSfx,
   activateSpecial,
   activateMegaSpecial,
+  simpleChargedShotUnlocked,
 }: HeroUpdateParams): void {
   const wasOnGround = hero.onGround;
   const isLockedInSpecialCast =
@@ -58,6 +63,7 @@ export function updateHeroSystem({
   hero.megaVisualTimer = Math.max(0, hero.megaVisualTimer - deltaTime);
   hero.coyoteTimer = Math.max(0, hero.coyoteTimer - deltaTime);
   hero.jumpBufferTimer = Math.max(0, hero.jumpBufferTimer - deltaTime);
+  hero.attackHoldTimer = Math.max(0, hero.attackHoldTimer);
   runtime.megaComboTimer = Math.max(0, runtime.megaComboTimer - deltaTime);
 
   if (hero.castTimer <= 0) {
@@ -133,9 +139,10 @@ export function updateHeroSystem({
     hero.coyoteTimer = COYOTE_TIME;
   }
 
-  tryConsumeJump(hero);
+  tryConsumeJump(hero, playJumpSfx);
 
   const attackJustPressed = input.isActionJustPressed('attack');
+  const attackPressed = input.isActionPressed('attack');
   const specialJustPressed = input.isActionJustPressed('special');
 
   if (
@@ -153,32 +160,18 @@ export function updateHeroSystem({
     hero.specialCasting = false;
     hero.megaCasting = true;
     hero.aimingUp = false;
-  } else if (
-    !isLockedInSpecialCast &&
-    attackJustPressed &&
-    hero.shootCooldown <= 0
-  ) {
-    if (hero.aimingUp) {
-      fireBullet('upward');
-      hero.shootCooldown = 0.26;
-      hero.castTimer = 0.16;
-      hero.castDuration = 0.16;
-      hero.castAim = 'up';
-    } else {
-      fireBullet('forward');
-      hero.shootCooldown = hero.crouching ? 0.22 : 0.2;
-      hero.castTimer = Math.max(hero.castTimer, hero.crouching ? 0.12 : 0.08);
-      hero.castDuration = Math.max(hero.castDuration, hero.crouching ? 0.12 : 0.08);
-      hero.castAim = 'forward';
-      runtime.megaComboTimer = hero.crouching
-        ? 0
-        : runtime.ignitionReady
-          ? 0.14
-          : 0;
-    }
-
-    hero.specialCasting = false;
-    hero.megaCasting = false;
+    hero.attackHoldTimer = 0;
+    hero.chargedShotPending = false;
+  } else {
+    handleAttackInput({
+      hero,
+      attackJustPressed,
+      attackPressed,
+      simpleChargedShotUnlocked,
+      deltaTime,
+      fireBullet,
+      runtime,
+    });
   }
 
   if (
@@ -237,7 +230,7 @@ export function updateHeroSystem({
 
   if (hero.onGround) {
     hero.coyoteTimer = COYOTE_TIME;
-    tryConsumeJump(hero);
+    tryConsumeJump(hero, playJumpSfx);
   }
 
   if (hero.x < 0) {
@@ -249,6 +242,101 @@ export function updateHeroSystem({
   }
 
   updateHeroState(hero);
+}
+
+interface HandleAttackInputParams {
+  hero: Hero;
+  attackJustPressed: boolean;
+  attackPressed: boolean;
+  simpleChargedShotUnlocked: boolean;
+  deltaTime: number;
+  fireBullet: (kind: 'forward' | 'upward' | 'chargedForward') => void;
+  runtime: EngineRuntime;
+}
+
+function handleAttackInput({
+  hero,
+  attackJustPressed,
+  attackPressed,
+  simpleChargedShotUnlocked,
+  deltaTime,
+  fireBullet,
+  runtime,
+}: HandleAttackInputParams): void {
+  const canChargeThisShot =
+    simpleChargedShotUnlocked &&
+    !hero.aimingUp &&
+    !hero.crouching;
+
+  if (!canChargeThisShot) {
+    if (attackJustPressed && hero.shootCooldown <= 0) {
+      if (hero.aimingUp) {
+        fireBullet('upward');
+        hero.shootCooldown = 0.26;
+        hero.castTimer = 0.16;
+        hero.castDuration = 0.16;
+        hero.castAim = 'up';
+      } else {
+        fireBullet('forward');
+        hero.shootCooldown = hero.crouching ? 0.22 : 0.2;
+        hero.castTimer = Math.max(hero.castTimer, hero.crouching ? 0.12 : 0.08);
+        hero.castDuration = Math.max(hero.castDuration, hero.crouching ? 0.12 : 0.08);
+        hero.castAim = 'forward';
+        runtime.megaComboTimer = hero.crouching
+          ? 0
+          : runtime.ignitionReady
+            ? 0.14
+            : 0;
+      }
+
+      hero.specialCasting = false;
+      hero.megaCasting = false;
+      hero.attackHoldTimer = 0;
+      hero.chargedShotPending = false;
+    }
+
+    return;
+  }
+
+  if (attackJustPressed && hero.shootCooldown <= 0) {
+    hero.attackHoldTimer = 0;
+    hero.chargedShotPending = true;
+  }
+
+  if (attackPressed && hero.chargedShotPending && hero.shootCooldown <= 0) {
+    hero.attackHoldTimer += deltaTime;
+
+    if (hero.attackHoldTimer >= SIMPLE_CHARGE_HOLD_TIME) {
+      fireBullet('chargedForward');
+      hero.shootCooldown = 0.34;
+      hero.castTimer = 0.18;
+      hero.castDuration = 0.18;
+      hero.castAim = 'forward';
+      hero.specialCasting = false;
+      hero.megaCasting = false;
+      hero.attackHoldTimer = 0;
+      hero.chargedShotPending = false;
+      runtime.megaComboTimer = 0;
+      return;
+    }
+  }
+
+  if (!attackPressed && hero.chargedShotPending && hero.shootCooldown <= 0) {
+    fireBullet('forward');
+    hero.shootCooldown = 0.2;
+    hero.castTimer = Math.max(hero.castTimer, 0.08);
+    hero.castDuration = Math.max(hero.castDuration, 0.08);
+    hero.castAim = 'forward';
+    hero.specialCasting = false;
+    hero.megaCasting = false;
+    hero.attackHoldTimer = 0;
+    hero.chargedShotPending = false;
+    runtime.megaComboTimer = runtime.ignitionReady ? 0.14 : 0;
+  }
+
+  if (!attackPressed && !hero.chargedShotPending) {
+    hero.attackHoldTimer = 0;
+  }
 }
 
 function updateFallingPlatforms(
@@ -301,7 +389,10 @@ function updateFallingPlatforms(
   }
 }
 
-function tryConsumeJump(hero: Hero): void {
+function tryConsumeJump(
+  hero: Hero,
+  playJumpSfx: () => void,
+): void {
   if (hero.jumpBufferTimer <= 0) {
     return;
   }
@@ -313,6 +404,7 @@ function tryConsumeJump(hero: Hero): void {
     hero.onGround = false;
     hero.crouching = false;
     hero.jumpsRemaining = Math.max(0, hero.maxJumps - 1);
+    playJumpSfx();
     return;
   }
 
@@ -323,6 +415,7 @@ function tryConsumeJump(hero: Hero): void {
     hero.crouching = false;
     hero.jumpsRemaining -= 1;
     hero.onGround = false;
+    playJumpSfx();
   }
 }
 

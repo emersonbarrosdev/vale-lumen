@@ -48,6 +48,10 @@ export function createForwardBullet(hero: Hero): Bullet {
   };
 }
 
+/**
+ * Upgrade da fase 1, utilizável só a partir da fase 2.
+ * Continua sendo um tiro "simples", sem explosão.
+ */
 export function createSimpleChargedBullet(hero: Hero): Bullet {
   return {
     x:

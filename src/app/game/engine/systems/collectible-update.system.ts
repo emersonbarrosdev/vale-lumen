@@ -7,6 +7,7 @@ export interface CollectibleUpdateParams {
   collectibles: Collectible[];
   runtime: EngineRuntime;
   spawnBurst: (x: number, y: number, color: string, amount: number) => void;
+  playCollectibleSfx: (trackId: 'coin-pickup' | 'spark-pickup' | 'heart-pickup') => void;
 }
 
 export function updateCollectiblesSystem({
@@ -14,6 +15,7 @@ export function updateCollectiblesSystem({
   collectibles,
   runtime,
   spawnBurst,
+  playCollectibleSfx,
 }: CollectibleUpdateParams): void {
   for (const item of collectibles) {
     if (item.collected) {
@@ -34,12 +36,14 @@ export function updateCollectiblesSystem({
         runtime.collectedCoins += 1;
         runtime.score += 100;
         spawnBurst(centerX, centerY, '#ffd45a', 10);
+        playCollectibleSfx('coin-pickup');
         break;
 
       case 'lifeFragment':
         runtime.score += 85;
         runtime.lives += 1;
         spawnBurst(centerX, centerY, '#ff9aa2', 14);
+        playCollectibleSfx('heart-pickup');
         break;
 
       case 'specialSpark':
@@ -47,30 +51,35 @@ export function updateCollectiblesSystem({
         runtime.score += 120;
         addSpecialCharge(runtime, 16);
         spawnBurst(centerX, centerY, '#8eeaff', 14);
+        playCollectibleSfx('spark-pickup');
         break;
 
       case 'ray':
         runtime.collectedSparks += 1;
         addSpecialCharge(runtime, 10);
         spawnBurst(centerX, centerY, '#8eeaff', 10);
+        playCollectibleSfx('spark-pickup');
         break;
 
       case 'flameVial':
         addSpecialCharge(runtime, 25);
         runtime.score += 40;
         spawnBurst(centerX, centerY, '#ff9b42', 12);
+        playCollectibleSfx('spark-pickup');
         break;
 
       case 'heart':
         runtime.lives += 1;
         runtime.score += 60;
         spawnBurst(centerX, centerY, '#ff7b7b', 12);
+        playCollectibleSfx('heart-pickup');
         break;
 
       case 'shieldOrb':
         hero.shieldActive = true;
         runtime.score += 80;
         spawnBurst(centerX, centerY, '#82e8ff', 16);
+        playCollectibleSfx('spark-pickup');
         break;
 
       default:

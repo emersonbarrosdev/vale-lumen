@@ -1,5 +1,6 @@
 import { EnemyProjectile } from '../../domain/enemies/enemy-projectile.model';
 import { Enemy } from '../../domain/enemies/enemy.model';
+import { Platform } from '../../domain/world/platform.model';
 
 export function updateEnemyBaseTimers(
   enemy: Enemy,
@@ -27,6 +28,47 @@ export function updateEnemyPatrol(
   }
 }
 
+/**
+ * Variante usada só para a gosma:
+ * além da patrulha, checa se existe chão à frente.
+ */
+export function updateGroundEnemyPatrolWithEdgeCheck(
+  enemy: Enemy,
+  deltaTime: number,
+  platforms: Platform[],
+): void {
+  const nextX = enemy.x + enemy.direction * enemy.speed * deltaTime;
+
+  if (enemy.x <= enemy.patrolLeft) {
+    enemy.x = enemy.patrolLeft;
+    enemy.direction = 1;
+    return;
+  }
+
+  if (enemy.x + enemy.width >= enemy.patrolRight) {
+    enemy.x = enemy.patrolRight - enemy.width;
+    enemy.direction = -1;
+    return;
+  }
+
+  if (!hasGroundAhead(enemy, nextX, platforms)) {
+    enemy.direction *= -1;
+    return;
+  }
+
+  enemy.x = nextX;
+
+  if (enemy.x <= enemy.patrolLeft) {
+    enemy.x = enemy.patrolLeft;
+    enemy.direction = 1;
+  }
+
+  if (enemy.x + enemy.width >= enemy.patrolRight) {
+    enemy.x = enemy.patrolRight - enemy.width;
+    enemy.direction = -1;
+  }
+}
+
 export function updateEnemyRespawnTimer(
   enemy: Enemy,
   deltaTime: number,
@@ -40,10 +82,21 @@ export function respawnEnemyBase(
   randomRange: (min: number, max: number) => number,
 ): void {
   enemy.active = true;
-  enemy.hp =
-    enemy.type === 'vigia'
-      ? 4 + Math.floor(phaseDifficulty / 2)
-      : 2 + Math.floor(phaseDifficulty / 3);
+
+  switch (enemy.type) {
+    case 'vigia':
+      enemy.hp = 4 + Math.floor(phaseDifficulty / 2);
+      break;
+    case 'gosmaPequena':
+      enemy.hp = 2;
+      break;
+    case 'corvoCorrompido':
+      enemy.hp = 1;
+      break;
+    default:
+      enemy.hp = 2 + Math.floor(phaseDifficulty / 3);
+      break;
+  }
 
   enemy.x = enemy.baseX;
   enemy.y = enemy.baseY;
@@ -145,4 +198,32 @@ export function rectsOverlap(
     a.y < b.y + b.height &&
     a.y + a.height > b.y
   );
+}
+
+function hasGroundAhead(
+  enemy: Enemy,
+  nextX: number,
+  platforms: Platform[],
+): boolean {
+  const probeX =
+    enemy.direction === 1
+      ? nextX + enemy.width + 6
+      : nextX - 6;
+
+  const feetY = enemy.y + enemy.height + 6;
+
+  for (const platform of platforms) {
+    if (platform.active === false) {
+      continue;
+    }
+
+    const insideX = probeX >= platform.x && probeX <= platform.x + platform.width;
+    const nearTop = feetY >= platform.y && feetY <= platform.y + 26;
+
+    if (insideX && nearTop) {
+      return true;
+    }
+  }
+
+  return false;
 }

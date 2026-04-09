@@ -22,8 +22,9 @@ export function drawBackground(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   cameraX: number,
+  effectsIntensity = 0.8,
 ): void {
-  drawBackgroundLayer(ctx, canvas, cameraX);
+  drawBackgroundLayer(ctx, canvas, cameraX, effectsIntensity);
 }
 
 export function drawPlatforms(

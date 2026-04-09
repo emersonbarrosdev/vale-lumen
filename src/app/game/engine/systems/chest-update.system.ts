@@ -12,6 +12,7 @@ export interface BreakChestSystemParams {
   runtime: EngineRuntime;
   hero: Hero;
   spawnBurst: (x: number, y: number, color: string, amount: number) => void;
+  playChestOpenSfx: (trackId: 'chest-open-common' | 'chest-open-rare') => void;
 }
 
 export function updateChestsSystem({
@@ -30,6 +31,7 @@ export function breakChestSystem({
   runtime,
   hero,
   spawnBurst,
+  playChestOpenSfx,
 }: BreakChestSystemParams): void {
   if (!chest.active) {
     return;
@@ -42,10 +44,12 @@ export function breakChestSystem({
     addSpecialCharge(runtime, 100);
     hero.hp = Math.min(hero.maxHp, hero.hp + 25);
     runtime.score += 150;
+    playChestOpenSfx('chest-open-rare');
   } else {
     addSpecialCharge(runtime, 50);
     hero.hp = Math.min(hero.maxHp, hero.hp + 20);
     runtime.score += 80;
+    playChestOpenSfx('chest-open-common');
   }
 
   syncSpecialHudState(runtime);

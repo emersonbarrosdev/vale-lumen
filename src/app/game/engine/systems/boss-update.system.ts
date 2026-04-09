@@ -29,6 +29,7 @@ export interface BossUpdateSystemParams {
   randomRange: (min: number, max: number) => number;
   applyHeroDamage: (damage?: number) => void;
   spawnBurst: (x: number, y: number, color: string, amount: number) => void;
+  playBossSpecialSfx: () => void;
 }
 
 export function updateBossSystem({
@@ -44,6 +45,7 @@ export function updateBossSystem({
   randomRange,
   applyHeroDamage,
   spawnBurst,
+  playBossSpecialSfx,
 }: BossUpdateSystemParams): void {
   const activatedNow = tryActivateBossBase({
     boss,
@@ -92,6 +94,7 @@ export function updateBossSystem({
     runtime,
     bossHpRatio,
     randomRange,
+    playBossSpecialSfx,
   });
 
   if (hero.invulnerabilityTimer <= 0 && rectsOverlap(hero, boss)) {
@@ -118,6 +121,7 @@ function resolveBossAttackPattern(params: {
   runtime: EngineRuntime;
   bossHpRatio: number;
   randomRange: (min: number, max: number) => number;
+  playBossSpecialSfx: () => void;
 }): void {
   const {
     boss,
@@ -125,6 +129,7 @@ function resolveBossAttackPattern(params: {
     runtime,
     bossHpRatio,
     randomRange,
+    playBossSpecialSfx,
   } = params;
 
   if (!boss.special50Used && bossHpRatio <= 0.5) {
@@ -132,6 +137,7 @@ function resolveBossAttackPattern(params: {
     boss.special50Used = true;
     boss.castTimer = 0.9;
     boss.secondaryCooldown = 1.2;
+    playBossSpecialSfx();
     return;
   }
 
@@ -140,6 +146,7 @@ function resolveBossAttackPattern(params: {
     boss.special15Used = true;
     boss.castTimer = 0.9;
     boss.secondaryCooldown = 1;
+    playBossSpecialSfx();
     return;
   }
 
@@ -162,6 +169,7 @@ function resolveBossAttackPattern(params: {
 
     boss.secondaryCooldown = bossHpRatio <= 0.3 ? 1.15 : 1.7;
     boss.castTimer = 0.58;
+    playBossSpecialSfx();
   } else {
     runtime.bossProjectiles.push(
       ...createBossWaveProjectiles(boss, bossHpRatio <= 0.3),
@@ -169,6 +177,7 @@ function resolveBossAttackPattern(params: {
 
     boss.secondaryCooldown = bossHpRatio <= 0.3 ? 1.1 : 1.65;
     boss.castTimer = 0.45;
+    playBossSpecialSfx();
   }
 
   runtime.bossAttackPatternIndex += 1;

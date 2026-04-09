@@ -21,15 +21,18 @@ export class PhaseFlowService {
 
     const overridePhase = this.gameState.secretBossPhaseOverride;
 
-    if (overridePhase === 1) {
-      const phaseOne =
-        PHASE_REGISTRY.find((phase) => phase.order === 1) ?? PHASE_REGISTRY[0];
+    if (overridePhase && overridePhase > 0) {
+      const targetPhase =
+        PHASE_REGISTRY.find((phase) => phase.order === overridePhase) ??
+        PHASE_REGISTRY[0];
 
-      this.gameState.setCurrentPhase(phaseOne.order, phaseOne.id);
-      return phaseOne;
+      this.gameState.setCurrentPhase(targetPhase.order, targetPhase.id);
+      return targetPhase;
     }
 
-    return PHASE_REGISTRY[0];
+    const firstPhase = PHASE_REGISTRY[0];
+    this.gameState.setCurrentPhase(firstPhase.order, firstPhase.id);
+    return firstPhase;
   }
 
   getCurrentPhaseDefinition(): PhaseDefinition {
@@ -99,7 +102,9 @@ export class PhaseFlowService {
     });
 
     /**
-     * Aplica recompensa/progressão da fase concluída
+     * Importante:
+     * o upgrade da fase concluída só vale para a próxima fase.
+     * Ex.: terminou a fase 1 -> entra na fase 2 com o upgrade.
      */
     this.gameState.applyPhaseProgression(currentPhase.order);
 

@@ -11,8 +11,9 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription, combineLatest } from 'rxjs';
 import { CANVAS_CONFIG } from '../../../../core/config/canvas.config';
+import { EngineCallbacks } from '../../../../core/models/game/engine-callbacks.model';
 import { buildPlayablePhaseData } from '../../../content/phases/registry/phase-playable.factory';
-import { InputAction, InputSourceType } from '../../../domain/input/input-action.model';
+import { BossDialog } from '../../../domain/bosses/boss-dialog.model';
 import { GameEngine } from '../../../engine/game-engine';
 import {
   MobileControlsComponent,
@@ -89,13 +90,13 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
     this.audioService.playMusic(phaseDefinition.audio.explorationMusicId);
     this.deviceInputService.refresh();
 
-    this.engine = new GameEngine(context, canvas, this.gameState, phaseData, {
-      onGameOver: (score) => {
+    const callbacks: EngineCallbacks = {
+      onGameOver: (score: number) => {
         this.audioService.stopMusic();
         this.phaseFlowService.registerDeath(score);
         this.router.navigateByUrl('/game-over');
       },
-      onVictory: (score) => {
+      onVictory: (score: number) => {
         this.audioService.stopMusic();
 
         const result = this.phaseFlowService.completeCurrentPhase(score);
@@ -107,13 +108,22 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
 
         this.router.navigateByUrl('/phase-clear');
       },
-      onBossIntro: (dialog) => {
+      onBossIntro: (dialog: BossDialog) => {
         this.audioService.playSfx('boss-intro');
         this.audioService.playMusic(phaseDefinition.audio.bossMusicId);
         this.waitingBossDialogClose = true;
         this.bossDialogService.open(dialog);
       },
-    });
+    };
+
+    this.engine = new GameEngine(
+      context,
+      canvas,
+      this.gameState,
+      this.audioService,
+      phaseData,
+      callbacks,
+    );
 
     this.dialogSubscription = this.bossDialogService.dialog$.subscribe((dialog) => {
       if (!dialog && this.waitingBossDialogClose) {

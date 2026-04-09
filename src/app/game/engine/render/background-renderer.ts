@@ -2,7 +2,10 @@ export function drawBackground(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   cameraX: number,
+  effectsIntensity = 0.8,
 ): void {
+  const fx = clamp01(effectsIntensity);
+
   const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
   skyGradient.addColorStop(0, '#04060a');
   skyGradient.addColorStop(0.18, '#0a1017');
@@ -13,10 +16,10 @@ export function drawBackground(
   ctx.fillStyle = skyGradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  drawSkyVoidClouds(ctx, canvas, cameraX);
-  drawFarStormGlow(ctx, canvas, cameraX);
-  drawLightningCuts(ctx, canvas, cameraX);
-  drawGreenStormSparks(ctx, canvas, cameraX);
+  drawSkyVoidClouds(ctx, canvas, cameraX, fx);
+  drawFarStormGlow(ctx, canvas, cameraX, fx);
+  drawLightningCuts(ctx, canvas, cameraX, fx);
+  drawGreenStormSparks(ctx, canvas, cameraX, fx);
 
   drawMountainLayer(
     ctx,
@@ -47,15 +50,18 @@ export function drawBackground(
 
   drawRuinSilhouettes(ctx, cameraX, canvas.width);
   drawDeadForest(ctx, cameraX, canvas.width);
-  drawForegroundFog(ctx, canvas);
-  drawAbyssGlow(ctx, canvas);
+  drawForegroundFog(ctx, canvas, fx);
+  drawAbyssGlow(ctx, canvas, fx);
 }
 
 function drawSkyVoidClouds(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   cameraX: number,
+  effectsIntensity: number,
 ): void {
+  const alphaBoost = 0.55 + effectsIntensity * 0.8;
+
   const clouds = [
     { x: 140, y: 92, rx: 180, ry: 52, alpha: 0.05, parallax: 0.03 },
     { x: 620, y: 148, rx: 220, ry: 64, alpha: 0.04, parallax: 0.025 },
@@ -65,12 +71,12 @@ function drawSkyVoidClouds(
   for (const cloud of clouds) {
     const x = ((cloud.x - cameraX * cloud.parallax) % (canvas.width + 420)) - 120;
 
-    ctx.fillStyle = `rgba(8, 10, 14, ${cloud.alpha})`;
+    ctx.fillStyle = `rgba(8, 10, 14, ${cloud.alpha * alphaBoost})`;
     ctx.beginPath();
     ctx.ellipse(x, cloud.y, cloud.rx, cloud.ry, 0.08, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = `rgba(20, 25, 32, ${cloud.alpha * 0.5})`;
+    ctx.fillStyle = `rgba(20, 25, 32, ${cloud.alpha * 0.5 * alphaBoost})`;
     ctx.beginPath();
     ctx.ellipse(
       x + 40,
@@ -89,7 +95,11 @@ function drawFarStormGlow(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   cameraX: number,
+  effectsIntensity: number,
 ): void {
+  const orangeAlpha = 0.45 + effectsIntensity * 0.9;
+  const greenAlpha = 0.5 + effectsIntensity * 0.95;
+
   const orangeGlow = ctx.createRadialGradient(
     220 - cameraX * 0.02,
     130,
@@ -98,8 +108,8 @@ function drawFarStormGlow(
     130,
     220,
   );
-  orangeGlow.addColorStop(0, 'rgba(142, 34, 28, 0.1)');
-  orangeGlow.addColorStop(0.4, 'rgba(84, 18, 22, 0.06)');
+  orangeGlow.addColorStop(0, `rgba(142, 34, 28, ${0.1 * orangeAlpha})`);
+  orangeGlow.addColorStop(0.4, `rgba(84, 18, 22, ${0.06 * orangeAlpha})`);
   orangeGlow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = orangeGlow;
   ctx.fillRect(0, 0, canvas.width, 280);
@@ -112,8 +122,8 @@ function drawFarStormGlow(
     160,
     170,
   );
-  greenGlow.addColorStop(0, 'rgba(80, 255, 160, 0.06)');
-  greenGlow.addColorStop(0.5, 'rgba(36, 132, 92, 0.04)');
+  greenGlow.addColorStop(0, `rgba(80, 255, 160, ${0.06 * greenAlpha})`);
+  greenGlow.addColorStop(0.5, `rgba(36, 132, 92, ${0.04 * greenAlpha})`);
   greenGlow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = greenGlow;
   ctx.fillRect(0, 0, canvas.width, 320);
@@ -123,25 +133,25 @@ function drawLightningCuts(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   cameraX: number,
+  effectsIntensity: number,
 ): void {
-  /**
-   * Menos elementos e movimento mais leve
-   * para reduzir custo e sensação de microtravada inicial.
-   */
   const time = performance.now() * 0.00065;
+  const strikeCount = effectsIntensity >= 0.9 ? 4 : effectsIntensity >= 0.55 ? 3 : 2;
 
-  const strikes = [
+  const baseStrikes = [
     { baseX: 260, topY: 36, len: 116, amp: 18, alpha: 0.12, parallax: 0.02 },
     { baseX: 980, topY: 48, len: 126, amp: 16, alpha: 0.1, parallax: 0.016 },
+    { baseX: 520, topY: 24, len: 108, amp: 15, alpha: 0.09, parallax: 0.022 },
+    { baseX: 1320, topY: 30, len: 132, amp: 20, alpha: 0.1, parallax: 0.018 },
   ];
 
-  for (let index = 0; index < strikes.length; index += 1) {
-    const strike = strikes[index];
+  for (let index = 0; index < strikeCount; index += 1) {
+    const strike = baseStrikes[index];
     const pulse = Math.sin(time + index * 1.6) * 0.5 + 0.5;
     const x = ((strike.baseX - cameraX * strike.parallax) % (canvas.width + 140)) - 70;
 
-    ctx.strokeStyle = `rgba(182, 216, 255, ${strike.alpha * (0.35 + pulse * 0.65)})`;
-    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = `rgba(182, 216, 255, ${strike.alpha * (0.35 + pulse * 0.65) * (0.55 + effectsIntensity * 0.85)})`;
+    ctx.lineWidth = 1.3 + effectsIntensity * 0.8;
     ctx.lineCap = 'round';
 
     ctx.beginPath();
@@ -164,25 +174,37 @@ function drawGreenStormSparks(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   cameraX: number,
+  effectsIntensity: number,
 ): void {
   const time = performance.now() * 0.0012;
+  const sparkCount =
+    effectsIntensity <= 0.15
+      ? 2
+      : effectsIntensity <= 0.35
+        ? 4
+        : effectsIntensity <= 0.65
+          ? 8
+          : effectsIntensity <= 0.85
+            ? 12
+            : 16;
 
-  for (let index = 0; index < 8; index += 1) {
-    const baseX = ((index * 150) - cameraX * 0.02) % (canvas.width + 90);
+  for (let index = 0; index < sparkCount; index += 1) {
+    const spacing = 150 - Math.floor(effectsIntensity * 35);
+    const baseX = ((index * spacing) - cameraX * 0.02) % (canvas.width + 90);
     const x = baseX < 0 ? baseX + canvas.width + 90 : baseX;
-    const y = 120 + (index % 4) * 54 + Math.sin(time + index) * 6;
-    const size = 1.1 + (index % 2) * 0.5;
+    const y = 120 + (index % 4) * 54 + Math.sin(time + index) * (4 + effectsIntensity * 4);
+    const size = 0.8 + (index % 2) * 0.45 + effectsIntensity * 0.5;
     const alpha =
-      0.08 + (Math.sin(time * 1.2 + index * 1.8) * 0.5 + 0.5) * 0.1;
+      0.04 + (Math.sin(time * 1.2 + index * 1.8) * 0.5 + 0.5) * (0.06 + effectsIntensity * 0.12);
 
-    const glow = ctx.createRadialGradient(x, y, 0.5, x, y, 10);
+    const glow = ctx.createRadialGradient(x, y, 0.5, x, y, 8 + effectsIntensity * 6);
     glow.addColorStop(0, `rgba(144, 255, 186, ${alpha + 0.12})`);
     glow.addColorStop(0.4, `rgba(65, 218, 132, ${alpha})`);
     glow.addColorStop(1, 'rgba(0,0,0,0)');
 
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.arc(x, y, 6 + effectsIntensity * 4, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = `rgba(184, 255, 212, ${alpha + 0.16})`;
@@ -263,12 +285,13 @@ function drawDeadForest(
 function drawForegroundFog(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
+  effectsIntensity: number,
 ): void {
   const haze = ctx.createLinearGradient(0, 410, 0, canvas.height);
   haze.addColorStop(0, 'rgba(26, 18, 24, 0)');
-  haze.addColorStop(0.36, 'rgba(36, 18, 22, 0.05)');
-  haze.addColorStop(0.7, 'rgba(20, 16, 18, 0.1)');
-  haze.addColorStop(1, 'rgba(6, 6, 8, 0.2)');
+  haze.addColorStop(0.36, `rgba(36, 18, 22, ${0.03 + effectsIntensity * 0.04})`);
+  haze.addColorStop(0.7, `rgba(20, 16, 18, ${0.06 + effectsIntensity * 0.06})`);
+  haze.addColorStop(1, `rgba(6, 6, 8, ${0.12 + effectsIntensity * 0.12})`);
   ctx.fillStyle = haze;
   ctx.fillRect(0, 390, canvas.width, canvas.height - 390);
 }
@@ -276,13 +299,18 @@ function drawForegroundFog(
 function drawAbyssGlow(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
+  effectsIntensity: number,
 ): void {
   const abyss = ctx.createLinearGradient(0, 598, 0, canvas.height);
   abyss.addColorStop(0, 'rgba(255, 120, 56, 0)');
-  abyss.addColorStop(0.08, 'rgba(134, 30, 22, 0.08)');
-  abyss.addColorStop(0.22, 'rgba(56, 12, 16, 0.18)');
-  abyss.addColorStop(0.52, 'rgba(10, 4, 8, 0.42)');
+  abyss.addColorStop(0.08, `rgba(134, 30, 22, ${0.04 + effectsIntensity * 0.06})`);
+  abyss.addColorStop(0.22, `rgba(56, 12, 16, ${0.09 + effectsIntensity * 0.12})`);
+  abyss.addColorStop(0.52, `rgba(10, 4, 8, ${0.22 + effectsIntensity * 0.22})`);
   abyss.addColorStop(1, 'rgba(0, 0, 0, 0.86)');
   ctx.fillStyle = abyss;
   ctx.fillRect(0, 598, canvas.width, canvas.height - 598);
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }

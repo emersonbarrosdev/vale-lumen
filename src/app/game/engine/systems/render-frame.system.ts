@@ -56,6 +56,7 @@ export interface RenderFrameWithHudParams {
   lives: number;
   coins: number;
   specialHudLabel: string;
+  effectsVolume: number;
 
   paused: boolean;
   bossIntroPending: boolean;
@@ -95,6 +96,7 @@ export function renderFrameWithHud({
   lives,
   coins,
   specialHudLabel,
+  effectsVolume,
 
   paused,
   bossIntroPending,
@@ -107,7 +109,12 @@ export function renderFrameWithHud({
 }: RenderFrameWithHudParams): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawBackground(ctx, canvas, cameraX);
+  drawBackground(
+    ctx,
+    canvas,
+    cameraX,
+    Math.max(0, Math.min(1, effectsVolume / 100)),
+  );
 
   ctx.save();
   ctx.translate(-cameraX, 0);

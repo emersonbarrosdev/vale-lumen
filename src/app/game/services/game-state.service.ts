@@ -318,10 +318,11 @@ export class GameStateService {
     this.heroProgress.level = Math.max(this.heroProgress.level, phaseNumber);
 
     /**
-     * Fase 1 — Núcleo da Chama Fraca
-     * libera o tiro carregado simples
+     * Regras:
+     * - concluiu a fase 1 -> entra na fase 2 com o Núcleo da Chama Fraca
+     * - upgrades de uma fase sempre valem para a próxima
      */
-    if (phaseNumber >= 1) {
+    if (phaseNumber === 1) {
       this.heroProgress.weakFlameCoreUnlocked = true;
       this.heroProgress.simpleChargedShotUnlocked = true;
     }

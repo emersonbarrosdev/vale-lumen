@@ -18,6 +18,7 @@ import { Hazard } from '../domain/world/hazard.model';
 import { PhasePlayableData } from '../domain/world/phase-playable-data.model';
 import { Platform } from '../domain/world/platform.model';
 import { Tunnel } from '../domain/world/tunnel.model';
+import { AudioService } from '../services/audio.service';
 import { GameStateService } from '../services/game-state.service';
 import { createBoss } from './factories/boss.factory';
 import { createEnemies } from './factories/enemy.factory';
@@ -32,6 +33,7 @@ import {
   createForwardBullet,
   createMegaSpecialBullet,
   createMegaSpecialStrike,
+  createSimpleChargedBullet,
   createSpecialBullet,
   createUpwardBullet,
 } from './helpers/hero-shot.helper';
@@ -76,6 +78,7 @@ export class GameEngine {
   private readonly input: InputManager;
   private readonly callbacks: EngineCallbacks;
   private readonly gameState: GameStateService;
+  private readonly audioService: AudioService;
   private readonly phaseData: PhasePlayableData;
   private readonly runtimeRules: PhaseRuntimeRules;
   private readonly bossRuntimeRules: PhaseBossRuntimeRules;
@@ -106,12 +109,14 @@ export class GameEngine {
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
     gameState: GameStateService,
+    audioService: AudioService,
     phaseData: PhasePlayableData,
     callbacks: EngineCallbacks,
   ) {
     this.ctx = ctx;
     this.canvas = canvas;
     this.gameState = gameState;
+    this.audioService = audioService;
     this.phaseData = phaseData;
     this.callbacks = callbacks;
     this.bossArena = phaseData.bossArena;
@@ -236,6 +241,9 @@ export class GameEngine {
         breakChest: this.breakChest,
         killEnemy: this.killEnemy,
         deltaTime,
+        playEnemyHitSfx: this.playEnemyHitSfx,
+        playEnemyDeathSfx: this.playEnemyDeathSfx,
+        playBossHitSfx: this.playBossHitSfx,
       });
       this.updateCamera();
       return;
@@ -253,8 +261,12 @@ export class GameEngine {
       hazards: this.hazards,
       tunnels: this.tunnels,
       fireBullet: this.fireBullet,
+      playJumpSfx: this.playJumpSfx,
       activateSpecial: this.activateSpecial,
       activateMegaSpecial: this.activateMegaSpecial,
+      simpleChargedShotUnlocked:
+        this.gameState.heroProgress.simpleChargedShotUnlocked &&
+        this.gameState.currentPhase >= 2,
     });
 
     this.updateProgressScore();
@@ -283,6 +295,10 @@ export class GameEngine {
       spawnBurst: this.spawnBurst,
       breakChest: this.breakChest,
       killEnemy: this.killEnemy,
+      playEnemyHitSfx: this.playEnemyHitSfx,
+      playEnemyDeathSfx: this.playEnemyDeathSfx,
+      playBossHitSfx: this.playBossHitSfx,
+      playHeroSpecialExplosionSfx: this.playHeroSpecialExplosionSfx,
     });
 
     updateEnemyProjectilesSystem({
@@ -306,6 +322,7 @@ export class GameEngine {
       deltaTime,
       randomRange: this.randomRange,
       applyHeroDamage: this.applyHeroDamage,
+      platforms: this.platforms,
     });
 
     updateCollectiblesSystem({
@@ -313,6 +330,7 @@ export class GameEngine {
       collectibles: this.collectibles,
       runtime: this.runtime,
       spawnBurst: this.spawnBurst,
+      playCollectibleSfx: this.playCollectibleSfx,
     });
 
     updateChestsSystem({
@@ -333,6 +351,7 @@ export class GameEngine {
       randomRange: this.randomRange,
       applyHeroDamage: this.applyHeroDamage,
       spawnBurst: this.spawnBurst,
+      playBossSpecialSfx: this.playBossSpecialSfx,
     });
 
     updateBossProjectilesSystem({
@@ -367,6 +386,9 @@ export class GameEngine {
       breakChest: this.breakChest,
       killEnemy: this.killEnemy,
       deltaTime,
+      playEnemyHitSfx: this.playEnemyHitSfx,
+      playEnemyDeathSfx: this.playEnemyDeathSfx,
+      playBossHitSfx: this.playBossHitSfx,
     });
 
     updateSpecialStrikesSystem(this.runtime, deltaTime);
@@ -444,6 +466,8 @@ export class GameEngine {
     this.hero.megaCasting = false;
     this.hero.aimingUp = false;
     this.hero.crouching = false;
+    this.hero.attackHoldTimer = 0;
+    this.hero.chargedShotPending = false;
 
     this.runtime.bossIntroShown = true;
     this.runtime.bossIntroPending = false;
@@ -536,13 +560,60 @@ export class GameEngine {
     }
   }
 
-  private readonly fireBullet = (kind: 'forward' | 'upward'): void => {
+  private readonly fireBullet = (
+    kind: 'forward' | 'upward' | 'chargedForward',
+  ): void => {
     const bullet =
       kind === 'upward'
         ? createUpwardBullet(this.hero)
-        : createForwardBullet(this.hero);
+        : kind === 'chargedForward'
+          ? createSimpleChargedBullet(this.hero)
+          : createForwardBullet(this.hero);
 
     this.runtime.bullets.push(bullet);
+
+    if (kind === 'chargedForward') {
+      this.audioService.playSfx('hero-special-shot');
+      return;
+    }
+
+    this.audioService.playSfx('hero-shot');
+  };
+
+  private readonly playJumpSfx = (): void => {
+    this.audioService.playSfx('hero-jump');
+  };
+
+  private readonly playCollectibleSfx = (
+    trackId: 'coin-pickup' | 'spark-pickup' | 'heart-pickup',
+  ): void => {
+    this.audioService.playSfx(trackId);
+  };
+
+  private readonly playChestOpenSfx = (
+    trackId: 'chest-open-common' | 'chest-open-rare',
+  ): void => {
+    this.audioService.playSfx(trackId);
+  };
+
+  private readonly playBossSpecialSfx = (): void => {
+    this.audioService.playSfx('boss-special');
+  };
+
+  private readonly playEnemyHitSfx = (): void => {
+    this.audioService.playSfx('enemy-hit');
+  };
+
+  private readonly playEnemyDeathSfx = (): void => {
+    this.audioService.playSfx('enemy-death');
+  };
+
+  private readonly playBossHitSfx = (): void => {
+    this.audioService.playSfx('boss-hit');
+  };
+
+  private readonly playHeroSpecialExplosionSfx = (): void => {
+    this.audioService.playSfx('hero-special-explosion');
   };
 
   private readonly activateSpecial = (): void => {
@@ -556,6 +627,8 @@ export class GameEngine {
     this.runtime.bullets.push(
       createSpecialBullet(this.hero, this.canvas.width),
     );
+
+    this.audioService.playSfx('hero-special-shot');
 
     this.runtime.enemyProjectiles = [];
     this.runtime.bossProjectiles = [];
@@ -583,6 +656,8 @@ export class GameEngine {
       createMegaSpecialStrike(this.hero, this.canvas.width),
     );
 
+    this.audioService.playSfx('hero-special-shot');
+
     this.runtime.enemyProjectiles = [];
     this.runtime.bossProjectiles = [];
   };
@@ -593,6 +668,7 @@ export class GameEngine {
       runtime: this.runtime,
       hero: this.hero,
       spawnBurst: this.spawnBurst,
+      playChestOpenSfx: this.playChestOpenSfx,
     });
   };
 
@@ -697,6 +773,7 @@ export class GameEngine {
     );
 
     if (this.runtime.lives <= 0) {
+      this.audioService.playSfx('game-over');
       startEnding(this.runtime, 'game-over');
       return;
     }
@@ -750,6 +827,7 @@ export class GameEngine {
       specialHudLabel: this.runtime.specialHudLabel,
       lives: this.runtime.lives,
       coins: this.runtime.collectedCoins,
+      effectsVolume: this.gameState.effectsVolume,
 
       paused: this.runtime.paused,
       bossIntroPending: this.runtime.bossIntroPending,

@@ -32,6 +32,10 @@ export interface ProjectileSystemParams {
     burstAmount: number,
   ) => void;
   applyHeroDamage: (damage?: number) => void;
+  playEnemyHitSfx: () => void;
+  playEnemyDeathSfx: () => void;
+  playBossHitSfx: () => void;
+  playHeroSpecialExplosionSfx: () => void;
 }
 
 export function updateSpecialSequenceSystem({
@@ -97,6 +101,10 @@ export function updateBulletsSystem({
   spawnBurst,
   breakChest,
   killEnemy,
+  playEnemyHitSfx,
+  playEnemyDeathSfx,
+  playBossHitSfx,
+  playHeroSpecialExplosionSfx,
 }: Pick<
   ProjectileSystemParams,
   | 'runtime'
@@ -112,6 +120,10 @@ export function updateBulletsSystem({
   | 'spawnBurst'
   | 'breakChest'
   | 'killEnemy'
+  | 'playEnemyHitSfx'
+  | 'playEnemyDeathSfx'
+  | 'playBossHitSfx'
+  | 'playHeroSpecialExplosionSfx'
 > & {
   deltaTime: number;
 }): void {
@@ -143,7 +155,14 @@ export function updateBulletsSystem({
       ) {
         const edgeX = bullet.vx >= 0 ? viewportRight : viewportLeft;
         bullet.x = edgeX - bullet.width / 2;
-        createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
+        createSpecialExplosion(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
+          playHeroSpecialExplosionSfx,
+        );
       }
 
       bullet.active = false;
@@ -160,7 +179,14 @@ export function updateBulletsSystem({
         (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
         bullet.explosionOnImpact
       ) {
-        createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
+        createSpecialExplosion(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
+          playHeroSpecialExplosionSfx,
+        );
       }
 
       bullet.active = false;
@@ -180,7 +206,14 @@ export function updateBulletsSystem({
           (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
           bullet.explosionOnImpact
         ) {
-          createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
+          createSpecialExplosion(
+            runtime,
+            bullet,
+            spawnBurst,
+            worldWidth,
+            canvasHeight,
+            playHeroSpecialExplosionSfx,
+          );
         }
 
         bullet.active = false;
@@ -201,12 +234,24 @@ export function updateBulletsSystem({
         continue;
       }
 
+      if (enemy.type === 'gosmaPequena') {
+        spawnBurst(
+          bullet.x + bullet.width / 2,
+          bullet.y + bullet.height / 2,
+          '#72ff67',
+          bullet.kind === 'megaSpecial' ? 8 : 4,
+        );
+        continue;
+      }
+
       enemy.hp -= bullet.damage;
       enemy.hitFlash = bullet.kind === 'megaSpecial' ? 0.18 : 0.1;
 
       const enemyWasDestroyed = enemy.hp <= 0;
 
       if (enemyWasDestroyed) {
+        playEnemyDeathSfx();
+
         killEnemy(
           enemy,
           enemy.type === 'vigia' ? 100 : 50,
@@ -214,6 +259,8 @@ export function updateBulletsSystem({
           bullet.kind === 'megaSpecial' ? 22 : bullet.kind === 'special' ? 18 : 10,
         );
       } else {
+        playEnemyHitSfx();
+
         spawnBurst(
           enemy.x + enemy.width / 2,
           enemy.y + enemy.height / 2,
@@ -232,7 +279,14 @@ export function updateBulletsSystem({
           (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
           bullet.explosionOnImpact
         ) {
-          createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
+          createSpecialExplosion(
+            runtime,
+            bullet,
+            spawnBurst,
+            worldWidth,
+            canvasHeight,
+            playHeroSpecialExplosionSfx,
+          );
         }
 
         bullet.active = false;
@@ -257,7 +311,14 @@ export function updateBulletsSystem({
           (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
           bullet.explosionOnImpact
         ) {
-          createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
+          createSpecialExplosion(
+            runtime,
+            bullet,
+            spawnBurst,
+            worldWidth,
+            canvasHeight,
+            playHeroSpecialExplosionSfx,
+          );
         }
 
         bullet.active = false;
@@ -280,7 +341,14 @@ export function updateBulletsSystem({
           (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
           bullet.explosionOnImpact
         ) {
-          createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
+          createSpecialExplosion(
+            runtime,
+            bullet,
+            spawnBurst,
+            worldWidth,
+            canvasHeight,
+            playHeroSpecialExplosionSfx,
+          );
         }
 
         bullet.active = false;
@@ -304,12 +372,21 @@ export function updateBulletsSystem({
         (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
         bullet.explosionOnImpact
       ) {
-        createSpecialExplosion(runtime, bullet, spawnBurst, worldWidth, canvasHeight);
+        createSpecialExplosion(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
+          playHeroSpecialExplosionSfx,
+        );
       }
 
       bullet.active = false;
       boss.hp -= bullet.damage;
       boss.hitFlash = bullet.kind === 'megaSpecial' ? 0.22 : 0.12;
+      playBossHitSfx();
+
       spawnBurst(
         boss.x + boss.width / 2,
         boss.y + 74,
@@ -332,6 +409,9 @@ export function updateSpecialExplosionsSystem({
   breakChest,
   killEnemy,
   deltaTime,
+  playEnemyHitSfx,
+  playEnemyDeathSfx,
+  playBossHitSfx,
 }: {
   runtime: EngineRuntime;
   boss: Boss;
@@ -347,6 +427,9 @@ export function updateSpecialExplosionsSystem({
     burstAmount: number,
   ) => void;
   deltaTime: number;
+  playEnemyHitSfx: () => void;
+  playEnemyDeathSfx: () => void;
+  playBossHitSfx: () => void;
 }): void {
   for (const explosion of runtime.specialExplosions) {
     explosion.life -= deltaTime;
@@ -363,6 +446,10 @@ export function updateSpecialExplosionsSystem({
           continue;
         }
 
+        if (enemy.type === 'gosmaPequena') {
+          continue;
+        }
+
         const enemyCenterX = enemy.x + enemy.width / 2;
         const enemyCenterY = enemy.y + enemy.height / 2;
 
@@ -371,6 +458,8 @@ export function updateSpecialExplosionsSystem({
           enemy.hitFlash = isMega ? 0.2 : 0.16;
 
           if (enemy.hp <= 0) {
+            playEnemyDeathSfx();
+
             killEnemy(
               enemy,
               enemy.type === 'vigia' ? 100 : 50,
@@ -378,6 +467,8 @@ export function updateSpecialExplosionsSystem({
               isMega ? 34 : 22,
             );
           } else {
+            playEnemyHitSfx();
+
             spawnBurst(
               enemyCenterX,
               enemyCenterY,
@@ -426,6 +517,8 @@ export function updateSpecialExplosionsSystem({
         if (pointInExplosion(bossCenterX, bossCenterY, explosion)) {
           boss.hp = Math.max(0, boss.hp - explosion.damage);
           boss.hitFlash = isMega ? 0.22 : 0.18;
+          playBossHitSfx();
+
           spawnBurst(
             bossCenterX,
             bossCenterY,
@@ -585,6 +678,7 @@ function createSpecialExplosion(
   spawnBurst: (x: number, y: number, color: string, amount: number) => void,
   worldWidth: number,
   canvasHeight: number,
+  playHeroSpecialExplosionSfx: () => void,
 ): void {
   const rawX = bullet.x + bullet.width / 2;
   const rawY = bullet.y + bullet.height / 2;
@@ -603,6 +697,8 @@ function createSpecialExplosion(
     appliedDamage: false,
     theme: isMega ? 'heroMegaSpecial' : 'heroSpecial',
   });
+
+  playHeroSpecialExplosionSfx();
 
   spawnBurst(x, y, isMega ? '#ff7d2e' : '#ffb15c', isMega ? 64 : 32);
   spawnBurst(x, y, isMega ? '#ffd6a1' : '#82e8ff', isMega ? 28 : 14);

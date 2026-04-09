@@ -13,6 +13,8 @@ import { GameStateService } from './game-state.service';
 export class AudioService {
   private readonly musicMap = new Map<string, Howl>();
   private readonly sfxMap = new Map<string, Howl>();
+  private readonly musicVolumeMap = new Map<string, number>();
+  private readonly sfxVolumeMap = new Map<string, number>();
   private currentMusicId: string | null = null;
 
   constructor(private readonly gameState: GameStateService) {
@@ -23,6 +25,8 @@ export class AudioService {
 
   private preloadMusic(catalog: MusicTrack[]): void {
     for (const track of catalog) {
+      this.musicVolumeMap.set(track.id, track.volume);
+
       this.musicMap.set(
         track.id,
         new Howl({
@@ -37,6 +41,8 @@ export class AudioService {
 
   private preloadSfx(catalog: SfxTrack[]): void {
     for (const track of catalog) {
+      this.sfxVolumeMap.set(track.id, track.volume);
+
       this.sfxMap.set(
         track.id,
         new Howl({
@@ -70,11 +76,13 @@ export class AudioService {
       }
     }
 
+    const baseVolume = this.musicVolumeMap.get(trackId) ?? 1;
+
     nextTrack.volume(0);
     nextTrack.play();
     nextTrack.fade(
       0,
-      AUDIO_CONFIG.defaultMusicVolume * (this.gameState.musicVolume / 100),
+      baseVolume * (this.gameState.musicVolume / 100),
       fadeMs,
     );
 
@@ -109,17 +117,20 @@ export class AudioService {
       return;
     }
 
-    sfx.volume((this.gameState.effectsVolume / 100) * 0.9);
+    const baseVolume = this.sfxVolumeMap.get(trackId) ?? 1;
+    sfx.volume(baseVolume * (this.gameState.effectsVolume / 100));
     sfx.play();
   }
 
   refreshVolumes(): void {
-    for (const music of this.musicMap.values()) {
-      music.volume(this.gameState.musicVolume / 100);
+    for (const [trackId, music] of this.musicMap.entries()) {
+      const baseVolume = this.musicVolumeMap.get(trackId) ?? 1;
+      music.volume(baseVolume * (this.gameState.musicVolume / 100));
     }
 
-    for (const sfx of this.sfxMap.values()) {
-      sfx.volume(this.gameState.effectsVolume / 100);
+    for (const [trackId, sfx] of this.sfxMap.entries()) {
+      const baseVolume = this.sfxVolumeMap.get(trackId) ?? 1;
+      sfx.volume(baseVolume * (this.gameState.effectsVolume / 100));
     }
   }
 }

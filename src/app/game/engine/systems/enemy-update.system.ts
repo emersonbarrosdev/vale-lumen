@@ -1,5 +1,6 @@
 import { Enemy } from '../../domain/enemies/enemy.model';
 import { Hero } from '../../domain/hero/hero.model';
+import { Platform } from '../../domain/world/platform.model';
 import {
   rectsOverlap,
   respawnEnemyBase,
@@ -7,6 +8,7 @@ import {
   updateEnemyBaseTimers,
   updateEnemyPatrol,
   updateEnemyRespawnTimer,
+  updateGroundEnemyPatrolWithEdgeCheck,
 } from '../helpers/enemy-runtime.helper';
 import { EngineRuntime } from '../runtime/engine-runtime.model';
 
@@ -21,6 +23,7 @@ export interface EnemyUpdateSystemParams {
   deltaTime: number;
   randomRange: (min: number, max: number) => number;
   applyHeroDamage: (damage?: number) => void;
+  platforms?: Platform[];
 }
 
 export function updateEnemiesSystem({
@@ -34,6 +37,7 @@ export function updateEnemiesSystem({
   deltaTime,
   randomRange,
   applyHeroDamage,
+  platforms = [],
 }: EnemyUpdateSystemParams): void {
   for (const enemy of enemies) {
     if (!enemy.active) {
@@ -56,6 +60,7 @@ export function updateEnemiesSystem({
       deltaTime,
       randomRange,
       applyHeroDamage,
+      platforms,
     });
   }
 }
@@ -91,6 +96,7 @@ function handleActiveEnemy(params: {
   deltaTime: number;
   randomRange: (min: number, max: number) => number;
   applyHeroDamage: (damage?: number) => void;
+  platforms: Platform[];
 }): void {
   const {
     enemy,
@@ -101,10 +107,24 @@ function handleActiveEnemy(params: {
     deltaTime,
     randomRange,
     applyHeroDamage,
+    platforms,
   } = params;
 
   updateEnemyBaseTimers(enemy, deltaTime);
-  updateEnemyPatrol(enemy, deltaTime);
+
+  /**
+   * Só a gosma recebe a lógica nova.
+   * Todos os outros ficam como antes.
+   */
+  if (enemy.type === 'gosmaPequena') {
+    enemy.speed = 22;
+    updateGroundEnemyPatrolWithEdgeCheck(enemy, deltaTime, platforms);
+
+    const crawlBob = Math.sin(enemy.hoverOffset * 1.25) * 1.5;
+    enemy.y = enemy.baseY + Math.max(0, crawlBob);
+  } else {
+    updateEnemyPatrol(enemy, deltaTime);
+  }
 
   if (enemy.type === 'vigia') {
     tryFireCaptainProjectileBase({
