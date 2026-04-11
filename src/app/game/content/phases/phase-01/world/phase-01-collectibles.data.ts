@@ -81,6 +81,22 @@ export function getPhase01Collectibles(): CollectibleData[] {
     { type: 'specialSpark', x: 11420, y: 212 },
 
     /**
+     * TRECHO FINAL ANTES DO BOSS
+     * mais moedas no último percurso para não ficar vazio
+     */
+    { type: 'coin', x: 11610, y: 586 },
+    { type: 'coin', x: 11654, y: 574 },
+    { type: 'coin', x: 11698, y: 586 },
+
+    { type: 'coin', x: 11790, y: 586 },
+    { type: 'coin', x: 11834, y: 574 },
+    { type: 'coin', x: 11878, y: 586 },
+
+    { type: 'coin', x: 11986, y: 586 },
+    { type: 'coin', x: 12030, y: 574 },
+    { type: 'coin', x: 12074, y: 586 },
+
+    /**
      * PRÉ-BOSS
      * último fragmento opcional antes da arena
      */

@@ -211,8 +211,14 @@ export class GameEngine {
     }
 
     if (this.input.isActionJustPressed('pause')) {
-      this.runtime.paused = !this.runtime.paused;
-    }
+  this.runtime.paused = !this.runtime.paused;
+
+  if (this.runtime.paused) {
+    this.audioService.pauseCurrentMusic();
+  } else {
+    this.audioService.resumeCurrentMusic();
+  }
+}
 
     if (this.runtime.paused || this.runtime.bossIntroPending) {
       return;

@@ -2,6 +2,8 @@ import { Bullet } from '../../domain/combat/bullet.model';
 import { SpecialStrike } from '../../domain/combat/special-strike.model';
 import { Hero } from '../../domain/hero/hero.model';
 
+const HERO_BULLET_LONG_TRAVEL_DISTANCE = 99999;
+
 export function createUpwardBullet(hero: Hero): Bullet {
   return {
     x: hero.x + hero.width / 2 + 0.5,
@@ -18,6 +20,8 @@ export function createUpwardBullet(hero: Hero): Bullet {
     muzzleFlash: true,
     firedWhileRunning: false,
     direction: hero.direction,
+    maxTravelDistance: HERO_BULLET_LONG_TRAVEL_DISTANCE,
+    distanceTraveled: 0,
   };
 }
 
@@ -45,12 +49,14 @@ export function createForwardBullet(hero: Hero): Bullet {
     muzzleFlash: true,
     firedWhileRunning,
     direction: hero.direction,
+    maxTravelDistance: HERO_BULLET_LONG_TRAVEL_DISTANCE,
+    distanceTraveled: 0,
   };
 }
 
 /**
  * Upgrade da fase 1, utilizável só a partir da fase 2.
- * Continua sendo um tiro "simples", sem explosão.
+ * Continua sendo um tiro "simples", sem explosão de especial.
  */
 export function createSimpleChargedBullet(hero: Hero): Bullet {
   return {
@@ -71,7 +77,7 @@ export function createSimpleChargedBullet(hero: Hero): Bullet {
     muzzleFlash: true,
     firedWhileRunning: false,
     direction: hero.direction,
-    maxTravelDistance: 420,
+    maxTravelDistance: HERO_BULLET_LONG_TRAVEL_DISTANCE,
     distanceTraveled: 0,
   };
 }

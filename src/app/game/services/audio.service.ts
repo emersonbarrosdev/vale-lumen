@@ -16,11 +16,24 @@ export class AudioService {
   private readonly musicVolumeMap = new Map<string, number>();
   private readonly sfxVolumeMap = new Map<string, number>();
   private currentMusicId: string | null = null;
+  private musicPaused = false;
 
   constructor(private readonly gameState: GameStateService) {
     this.preloadMusic(MUSIC_CATALOG);
     this.preloadSfx(SFX_CATALOG);
     Howler.volume(1);
+    Howler.autoUnlock = true;
+  }
+
+  private resolveMusicVolume(trackId: string): number {
+    return this.musicVolumeMap.get(trackId) ?? 0.3;
+  }
+
+  private resolveSfxVolume(trackId: string): number {
+    const baseVolume = this.sfxVolumeMap.get(trackId) ?? 1;
+    const effectsVolume = this.gameState.effectsVolume / 100;
+
+    return baseVolume * effectsVolume;
   }
 
   private preloadMusic(catalog: MusicTrack[]): void {
@@ -32,7 +45,7 @@ export class AudioService {
         new Howl({
           src: [track.src],
           loop: track.loop,
-          volume: track.volume * (this.gameState.musicVolume / 100),
+          volume: track.volume,
           html5: true,
         }),
       );
@@ -48,21 +61,31 @@ export class AudioService {
         new Howl({
           src: [track.src],
           loop: false,
-          volume: track.volume * (this.gameState.effectsVolume / 100),
+          volume: this.resolveSfxVolume(track.id),
           html5: false,
         }),
       );
     }
   }
 
-  playMusic(trackId: string, fadeMs = AUDIO_CONFIG.fadeDurationMs): void {
-    if (this.currentMusicId === trackId) {
-      return;
-    }
-
+  playMusic(trackId: string, fadeMs: number = AUDIO_CONFIG.fadeDurationMs): void {
     const nextTrack = this.musicMap.get(trackId);
 
     if (!nextTrack) {
+      return;
+    }
+
+    const resolvedVolume = this.resolveMusicVolume(trackId);
+    const isSameTrack = this.currentMusicId === trackId;
+
+    if (isSameTrack) {
+      nextTrack.volume(resolvedVolume);
+
+      if (this.musicPaused) {
+        nextTrack.play();
+        this.musicPaused = false;
+      }
+
       return;
     }
 
@@ -70,26 +93,62 @@ export class AudioService {
       const currentTrack = this.musicMap.get(this.currentMusicId);
 
       if (currentTrack) {
-        const from = currentTrack.volume();
-        currentTrack.fade(from, 0, fadeMs);
-        setTimeout(() => currentTrack.stop(), fadeMs);
+        currentTrack.stop();
       }
     }
 
-    const baseVolume = this.musicVolumeMap.get(trackId) ?? 1;
+    nextTrack.stop();
+    nextTrack.volume(resolvedVolume);
 
-    nextTrack.volume(0);
+    nextTrack.once('playerror', () => {
+      nextTrack.once('unlock', () => {
+        nextTrack.volume(resolvedVolume);
+        nextTrack.play();
+      });
+    });
+
     nextTrack.play();
-    nextTrack.fade(
-      0,
-      baseVolume * (this.gameState.musicVolume / 100),
-      fadeMs,
-    );
 
     this.currentMusicId = trackId;
+    this.musicPaused = false;
   }
 
-  stopMusic(fadeMs = AUDIO_CONFIG.fadeDurationMs): void {
+  pauseCurrentMusic(): void {
+    if (!this.currentMusicId) {
+      return;
+    }
+
+    const currentTrack = this.musicMap.get(this.currentMusicId);
+
+    if (!currentTrack) {
+      return;
+    }
+
+    if (currentTrack.playing()) {
+      currentTrack.pause();
+      this.musicPaused = true;
+    }
+  }
+
+  resumeCurrentMusic(): void {
+    if (!this.currentMusicId) {
+      return;
+    }
+
+    const currentTrack = this.musicMap.get(this.currentMusicId);
+
+    if (!currentTrack) {
+      return;
+    }
+
+    if (this.musicPaused) {
+      currentTrack.volume(this.resolveMusicVolume(this.currentMusicId));
+      currentTrack.play();
+      this.musicPaused = false;
+    }
+  }
+
+  stopMusic(fadeMs: number = AUDIO_CONFIG.fadeDurationMs): void {
     if (!this.currentMusicId) {
       return;
     }
@@ -98,6 +157,14 @@ export class AudioService {
 
     if (!currentTrack) {
       this.currentMusicId = null;
+      this.musicPaused = false;
+      return;
+    }
+
+    if (fadeMs <= 0) {
+      currentTrack.stop();
+      this.currentMusicId = null;
+      this.musicPaused = false;
       return;
     }
 
@@ -107,6 +174,7 @@ export class AudioService {
     setTimeout(() => {
       currentTrack.stop();
       this.currentMusicId = null;
+      this.musicPaused = false;
     }, fadeMs);
   }
 
@@ -117,20 +185,17 @@ export class AudioService {
       return;
     }
 
-    const baseVolume = this.sfxVolumeMap.get(trackId) ?? 1;
-    sfx.volume(baseVolume * (this.gameState.effectsVolume / 100));
+    sfx.volume(this.resolveSfxVolume(trackId));
     sfx.play();
   }
 
   refreshVolumes(): void {
     for (const [trackId, music] of this.musicMap.entries()) {
-      const baseVolume = this.musicVolumeMap.get(trackId) ?? 1;
-      music.volume(baseVolume * (this.gameState.musicVolume / 100));
+      music.volume(this.resolveMusicVolume(trackId));
     }
 
     for (const [trackId, sfx] of this.sfxMap.entries()) {
-      const baseVolume = this.sfxVolumeMap.get(trackId) ?? 1;
-      sfx.volume(baseVolume * (this.gameState.effectsVolume / 100));
+      sfx.volume(this.resolveSfxVolume(trackId));
     }
   }
 }

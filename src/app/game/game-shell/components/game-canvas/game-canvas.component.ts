@@ -43,6 +43,8 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
   private dialogSubscription?: Subscription;
   private waitingBossDialogClose = false;
   private uiStateSubscription?: Subscription;
+  private unlockAudioHandler?: () => void;
+  private explorationMusicId = '';
 
   showMobileControls = false;
   mobileControlsBlocked = false;
@@ -78,6 +80,7 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
 
     const phaseDefinition = this.phaseFlowService.getCurrentPhaseDefinition();
     const phaseData = buildPlayablePhaseData(phaseDefinition);
+    this.explorationMusicId = phaseDefinition.audio.explorationMusicId;
 
     canvas.width = CANVAS_CONFIG.width;
     canvas.height = CANVAS_CONFIG.height;
@@ -87,8 +90,14 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
     context.imageSmoothingQuality = 'high';
 
     this.loadingOverlayService.hide();
-    this.audioService.playMusic(phaseDefinition.audio.explorationMusicId);
     this.deviceInputService.refresh();
+
+    /**
+     * Tenta tocar já na entrada da fase.
+     * Se o browser bloquear autoplay, a primeira interação abaixo destrava.
+     */
+    this.audioService.playMusic(this.explorationMusicId);
+    this.setupAudioUnlock(canvas);
 
     const callbacks: EngineCallbacks = {
       onGameOver: (score: number) => {
@@ -145,8 +154,10 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.dialogSubscription?.unsubscribe();
     this.uiStateSubscription?.unsubscribe();
+    this.removeAudioUnlock();
     this.engine?.clearVirtualInputs('touch');
     this.engine?.destroy();
+    this.audioService.stopMusic(0);
   }
 
   handleTouchActionStateChange(event: TouchActionStateChange): void {
@@ -154,6 +165,7 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    this.audioService.playMusic(this.explorationMusicId);
     this.engine?.setVirtualActionState(event.action, event.pressed);
   }
 
@@ -190,5 +202,30 @@ export class GameCanvasComponent implements AfterViewInit, OnDestroy {
       this.showMobileControls = nextShowMobileControls;
       this.mobileControlsBlocked = nextMobileControlsBlocked;
     });
+  }
+
+  private setupAudioUnlock(canvas: HTMLCanvasElement): void {
+    const handler = (): void => {
+      this.audioService.playMusic(this.explorationMusicId);
+      canvas.focus();
+      this.removeAudioUnlock();
+    };
+
+    this.unlockAudioHandler = handler;
+
+    window.addEventListener('pointerdown', handler, { passive: true });
+    window.addEventListener('keydown', handler, { passive: true });
+    window.addEventListener('touchstart', handler, { passive: true });
+  }
+
+  private removeAudioUnlock(): void {
+    if (!this.unlockAudioHandler) {
+      return;
+    }
+
+    window.removeEventListener('pointerdown', this.unlockAudioHandler);
+    window.removeEventListener('keydown', this.unlockAudioHandler);
+    window.removeEventListener('touchstart', this.unlockAudioHandler);
+    this.unlockAudioHandler = undefined;
   }
 }

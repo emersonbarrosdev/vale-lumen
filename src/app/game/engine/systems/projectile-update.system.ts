@@ -149,10 +149,7 @@ export function updateBulletsSystem({
       bullet.maxTravelDistance &&
       bullet.distanceTraveled >= bullet.maxTravelDistance
     ) {
-      if (
-        (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
-        bullet.explosionOnImpact
-      ) {
+      if (shouldCreateSpecialExplosionOnImpact(bullet)) {
         const edgeX = bullet.vx >= 0 ? viewportRight : viewportLeft;
         bullet.x = edgeX - bullet.width / 2;
         createSpecialExplosion(
@@ -162,6 +159,45 @@ export function updateBulletsSystem({
           worldWidth,
           canvasHeight,
           playHeroSpecialExplosionSfx,
+        );
+      } else {
+        createHeroBulletImpact(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
+        );
+      }
+
+      bullet.active = false;
+      continue;
+    }
+
+    if (
+      shouldDeactivateBulletBeforeViewportEnd(
+        bullet,
+        viewportLeft,
+        viewportRight,
+        canvasHeight,
+      )
+    ) {
+      if (shouldCreateSpecialExplosionOnImpact(bullet)) {
+        createSpecialExplosion(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
+          playHeroSpecialExplosionSfx,
+        );
+      } else {
+        createHeroBulletImpact(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
         );
       }
 
@@ -175,10 +211,7 @@ export function updateBulletsSystem({
       bullet.y < -240 ||
       bullet.y > canvasHeight + 240
     ) {
-      if (
-        (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
-        bullet.explosionOnImpact
-      ) {
+      if (shouldCreateSpecialExplosionOnImpact(bullet)) {
         createSpecialExplosion(
           runtime,
           bullet,
@@ -202,10 +235,7 @@ export function updateBulletsSystem({
       };
 
       if (rectsOverlap(bullet, roofRect)) {
-        if (
-          (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
-          bullet.explosionOnImpact
-        ) {
+        if (shouldCreateSpecialExplosionOnImpact(bullet)) {
           createSpecialExplosion(
             runtime,
             bullet,
@@ -213,6 +243,14 @@ export function updateBulletsSystem({
             worldWidth,
             canvasHeight,
             playHeroSpecialExplosionSfx,
+          );
+        } else {
+          createHeroBulletImpact(
+            runtime,
+            bullet,
+            spawnBurst,
+            worldWidth,
+            canvasHeight,
           );
         }
 
@@ -235,13 +273,16 @@ export function updateBulletsSystem({
       }
 
       if (enemy.type === 'gosmaPequena') {
-        spawnBurst(
-          bullet.x + bullet.width / 2,
-          bullet.y + bullet.height / 2,
+        createHeroBulletImpact(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
           '#72ff67',
-          bullet.kind === 'megaSpecial' ? 8 : 4,
         );
-        continue;
+        bullet.active = false;
+        break;
       }
 
       enemy.hp -= bullet.damage;
@@ -275,10 +316,7 @@ export function updateBulletsSystem({
         enemyWasDestroyed;
 
       if (!shouldContinueThroughEnemy) {
-        if (
-          (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
-          bullet.explosionOnImpact
-        ) {
+        if (shouldCreateSpecialExplosionOnImpact(bullet)) {
           createSpecialExplosion(
             runtime,
             bullet,
@@ -286,6 +324,14 @@ export function updateBulletsSystem({
             worldWidth,
             canvasHeight,
             playHeroSpecialExplosionSfx,
+          );
+        } else {
+          createHeroBulletImpact(
+            runtime,
+            bullet,
+            spawnBurst,
+            worldWidth,
+            canvasHeight,
           );
         }
 
@@ -307,10 +353,7 @@ export function updateBulletsSystem({
       }
 
       if (rectsOverlap(bullet, chest)) {
-        if (
-          (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
-          bullet.explosionOnImpact
-        ) {
+        if (shouldCreateSpecialExplosionOnImpact(bullet)) {
           createSpecialExplosion(
             runtime,
             bullet,
@@ -318,6 +361,14 @@ export function updateBulletsSystem({
             worldWidth,
             canvasHeight,
             playHeroSpecialExplosionSfx,
+          );
+        } else {
+          createHeroBulletImpact(
+            runtime,
+            bullet,
+            spawnBurst,
+            worldWidth,
+            canvasHeight,
           );
         }
 
@@ -337,10 +388,7 @@ export function updateBulletsSystem({
       }
 
       if (rectsOverlap(bullet, hazard)) {
-        if (
-          (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
-          bullet.explosionOnImpact
-        ) {
+        if (shouldCreateSpecialExplosionOnImpact(bullet)) {
           createSpecialExplosion(
             runtime,
             bullet,
@@ -348,6 +396,14 @@ export function updateBulletsSystem({
             worldWidth,
             canvasHeight,
             playHeroSpecialExplosionSfx,
+          );
+        } else {
+          createHeroBulletImpact(
+            runtime,
+            bullet,
+            spawnBurst,
+            worldWidth,
+            canvasHeight,
           );
         }
 
@@ -368,10 +424,7 @@ export function updateBulletsSystem({
       boss.hp > 0 &&
       rectsOverlap(bullet, boss)
     ) {
-      if (
-        (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
-        bullet.explosionOnImpact
-      ) {
+      if (shouldCreateSpecialExplosionOnImpact(bullet)) {
         createSpecialExplosion(
           runtime,
           bullet,
@@ -379,6 +432,14 @@ export function updateBulletsSystem({
           worldWidth,
           canvasHeight,
           playHeroSpecialExplosionSfx,
+        );
+      } else {
+        createHeroBulletImpact(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
         );
       }
 
@@ -669,6 +730,105 @@ export function updateBossProjectilesSystem({
 
   runtime.bossProjectiles = runtime.bossProjectiles.filter(
     (projectile) => projectile.active,
+  );
+}
+
+function shouldCreateSpecialExplosionOnImpact(bullet: Bullet): boolean {
+  return (
+    (bullet.kind === 'special' || bullet.kind === 'megaSpecial') &&
+    bullet.explosionOnImpact === true
+  );
+}
+
+function shouldDeactivateBulletBeforeViewportEnd(
+  bullet: Bullet,
+  viewportLeft: number,
+  viewportRight: number,
+  canvasHeight: number,
+): boolean {
+  const horizontalMargin = bullet.kind === 'megaSpecial' ? 96 : bullet.kind === 'special' ? 44 : 28;
+  const topMargin = bullet.kind === 'megaSpecial' ? 40 : bullet.kind === 'special' ? 28 : 18;
+  const bottomMargin = 22;
+
+  if (bullet.vx > 0 && bullet.x + bullet.width >= viewportRight - horizontalMargin) {
+    return true;
+  }
+
+  if (bullet.vx < 0 && bullet.x <= viewportLeft + horizontalMargin) {
+    return true;
+  }
+
+  if (bullet.vy < 0 && bullet.y <= topMargin) {
+    return true;
+  }
+
+  if (bullet.vy > 0 && bullet.y + bullet.height >= canvasHeight - bottomMargin) {
+    return true;
+  }
+
+  return false;
+}
+
+function createHeroBulletImpact(
+  runtime: EngineRuntime,
+  bullet: Bullet,
+  spawnBurst: (x: number, y: number, color: string, amount: number) => void,
+  worldWidth: number,
+  canvasHeight: number,
+  accentColor?: string,
+): void {
+  const x = Math.max(
+    0,
+    Math.min(worldWidth, bullet.x + bullet.width / 2),
+  );
+  const y = Math.max(
+    0,
+    Math.min(canvasHeight, bullet.y + bullet.height / 2),
+  );
+
+  const isChargedShot =
+    bullet.kind === 'special' &&
+    bullet.explosionOnImpact !== true;
+
+  const mainColor = accentColor ?? (isChargedShot ? '#ffb15c' : '#ff9f4a');
+  const sparkColor = isChargedShot ? '#fff0cc' : '#ffe1b0';
+  const softColor = isChargedShot ? '#82e8ff' : '#ffd47a';
+
+  spawnBurst(x, y, mainColor, isChargedShot ? 10 : 6);
+  spawnBurst(x, y, sparkColor, isChargedShot ? 6 : 4);
+  spawnBurst(x, y, softColor, isChargedShot ? 4 : 2);
+
+  runtime.burstParticles.push(
+    {
+      x,
+      y,
+      vx: -36,
+      vy: -14,
+      size: isChargedShot ? 4.5 : 3.2,
+      life: 0.08,
+      maxLife: 0.08,
+      color: sparkColor,
+    },
+    {
+      x,
+      y,
+      vx: 36,
+      vy: 14,
+      size: isChargedShot ? 4.5 : 3.2,
+      life: 0.08,
+      maxLife: 0.08,
+      color: sparkColor,
+    },
+    {
+      x,
+      y,
+      vx: 0,
+      vy: -42,
+      size: isChargedShot ? 3.8 : 2.8,
+      life: 0.06,
+      maxLife: 0.06,
+      color: mainColor,
+    },
   );
 }
 

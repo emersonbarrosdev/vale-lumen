@@ -194,54 +194,173 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  place-items: center;
   padding: 28px 22px;
   text-align: center;
 }
 
+.gear-button {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 58px;
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(244, 231, 199, 0.16);
+  border-radius: 50%;
+  background:
+    linear-gradient(180deg, rgba(24, 28, 39, 0.94) 0%, rgba(12, 15, 22, 0.98) 100%);
+  color: #f5dfb2;
+  font-size: 1.7rem;
+  cursor: pointer;
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.28),
+    0 0 18px rgba(255, 160, 80, 0.08);
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.gear-button:hover {
+  transform: rotate(20deg) scale(1.04);
+  border-color: rgba(255, 191, 117, 0.4);
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.34),
+    0 0 24px rgba(255, 160, 80, 0.14);
+}
+
 .brand-block {
-  margin-bottom: 22px;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
 }
 
 .overline {
-  margin: 0 0 10px;
+  margin: 0;
   color: #cfb58a;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-size: 0.66rem;
+  font-size: 0.76rem;
 }
 
 .title {
   margin: 0;
-  font-size: clamp(1rem, 5vw, 3rem);
-  line-height: 1;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  width: 100%;
+}
+
+.title-line {
+  display: inline-block;
   color: #f4e8cb;
+  font-size: clamp(1.6rem, 5vw, 3.5rem);
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   text-shadow:
     0 0 10px rgba(255, 205, 125, 0.08),
     0 0 28px rgba(255, 160, 80, 0.1);
+  opacity: 0;
+  transform: translateY(-34px) scale(0.9);
+  animation:
+    titleEntrance 0.95s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s forwards,
+    titleFloat 4.8s ease-in-out 1.15s infinite;
 }
 
 .subtitle {
-  max-width: 540px;
-  margin: 4px auto 0;
-  color: #c4c8d2;
-  font-size: 0.8rem;
-  line-height: 1.4;
+  max-width: 580px;
+  margin: 0.2rem auto 0;
+  color: #cbd0da;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  opacity: 0;
+  animation: subtitleReveal 0.6s ease-out 1.45s forwards;
 }
 
-.menu-panel {
+.press-start {
   margin-top: 3rem;
-  width: min(320px, 100%);
-  padding: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #f7dfae;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: clamp(0.85rem, 2vw, 1.05rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  animation:
+    pressStartReveal 0.5s ease-out 1.7s forwards,
+    pressStartBlink 1.05s steps(2, end) 2.2s infinite;
+  text-shadow:
+    0 0 8px rgba(255, 191, 117, 0.18),
+    0 0 18px rgba(255, 150, 80, 0.12);
+  transition: transform 0.2s ease;
+}
+
+.press-start:hover {
+  transform: scale(1.04);
+}
+
+.options-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(4, 6, 10, 0.58);
+  backdrop-filter: blur(5px);
+}
+
+.options-panel {
+  position: relative;
+  width: min(360px, 100%);
+  padding: 22px 18px 18px;
   border-radius: 20px;
   background:
-    linear-gradient(180deg, rgba(18, 21, 31, 0.94) 0%, rgba(11, 13, 20, 0.96) 100%);
+    linear-gradient(180deg, rgba(18, 21, 31, 0.96) 0%, rgba(11, 13, 20, 0.98) 100%);
   border: 1px solid rgba(244, 231, 199, 0.12);
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  animation: panelReveal 0.22s ease-out;
+}
+
+.options-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(244, 231, 199, 0.14);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(34, 39, 52, 0.96) 0%, rgba(18, 22, 31, 0.98) 100%);
+  color: #f6f7fa;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.options-close:hover,
+.options-close[data-gamepad-selected='true'] {
+  transform: translateY(-1px);
+  border-color: rgba(255, 191, 117, 0.45);
+}
+
+.options-title {
+  margin-bottom: 16px;
+  color: #f4e8cb;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.options-actions {
   display: grid;
   gap: 12px;
 }
@@ -285,7 +404,8 @@
   transition: opacity 0.22s ease;
 }
 
-.menu-btn:hover {
+.menu-btn:hover,
+.menu-btn[data-gamepad-selected='true'] {
   transform: translateY(-2px);
   border-color: rgba(255, 191, 117, 0.45);
   box-shadow:
@@ -293,7 +413,8 @@
     0 0 18px rgba(255, 150, 80, 0.08);
 }
 
-.menu-btn:hover .btn-glow {
+.menu-btn:hover .btn-glow,
+.menu-btn[data-gamepad-selected='true'] .btn-glow {
   opacity: 1;
 }
 
@@ -338,17 +459,101 @@
   }
 }
 
+@keyframes titleEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(-34px) scale(0.9);
+    letter-spacing: 0.18em;
+    filter: blur(8px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(5px) scale(1.035);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    letter-spacing: 0.08em;
+    filter: blur(0);
+  }
+}
+
+@keyframes titleFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.006);
+  }
+}
+
+@keyframes pressStartReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pressStartBlink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.18;
+  }
+}
+
+@keyframes subtitleReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panelReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 768px) {
+  .overline {
+    font-size: 0.8rem;
+  }
+
+  .title-line {
+    font-size: clamp(1.3rem, 7vw, 2.1rem);
+    line-height: 1.12;
+  }
+
   .subtitle {
-    font-size: 0.9rem;
+    font-size: 0.96rem;
+    max-width: 340px;
   }
 
-  .menu-panel {
-    padding: 16px;
-  }
-
-  .menu-btn {
-    min-height: 48px;
+  .gear-button {
+    top: 18px;
+    right: 18px;
+    width: 52px;
+    height: 52px;
+    font-size: 1.45rem;
   }
 
   .ruins-left,
@@ -356,5 +561,13 @@
   .dead-tree {
     opacity: 0.75;
     transform: scale(0.85);
+  }
+
+  .options-panel {
+    padding: 20px 16px 16px;
+  }
+
+  .menu-btn {
+    min-height: 48px;
   }
 }

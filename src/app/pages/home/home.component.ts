@@ -8,7 +8,7 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { AudioService } from '../../game/services/audio.service';
 import { PhaseFlowService } from '../../game/services/phase-flow.service';
 import {
@@ -20,7 +20,7 @@ import { GameStateService } from '../../game/services/game-state.service';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
@@ -34,6 +34,9 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   private dpadLeftConsumed = false;
   private dpadRightConsumed = false;
   private confirmConsumed = false;
+  private cancelConsumed = false;
+
+  optionsOpen = false;
 
   constructor(
     @Inject(PLATFORM_ID) platformId: object,
@@ -52,6 +55,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    this.audioService.playMusic('menu-theme');
     this.ensureSelection();
     this.startGamepadLoop();
   }
@@ -70,20 +74,85 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     this.router.navigateByUrl('/phase-loading');
   }
 
+  restartGame(): void {
+    this.phaseFlowService.startNewRun();
+    this.audioService.playSfx('ui-confirm');
+    this.router.navigateByUrl('/phase-loading');
+  }
+
+  openOptions(): void {
+    if (this.optionsOpen) {
+      return;
+    }
+
+    this.optionsOpen = true;
+    this.selectedIndex = 0;
+    this.audioService.playSfx('ui-confirm');
+
+    queueMicrotask(() => {
+      this.ensureSelection();
+    });
+  }
+
+  closeOptions(): void {
+    if (!this.optionsOpen) {
+      return;
+    }
+
+    this.optionsOpen = false;
+    this.selectedIndex = 0;
+    this.audioService.playSfx('ui-confirm');
+
+    queueMicrotask(() => {
+      this.ensureSelection();
+    });
+  }
+
+  toggleOptions(): void {
+    if (this.optionsOpen) {
+      this.closeOptions();
+      return;
+    }
+
+    this.openOptions();
+  }
+
+  goToSettings(): void {
+    this.audioService.playSfx('ui-confirm');
+    this.router.navigateByUrl('/settings');
+  }
+
+  goToCredits(): void {
+    this.audioService.playSfx('ui-confirm');
+    this.router.navigateByUrl('/credits');
+  }
+
   @HostListener('window:keydown', ['$event'])
   handleWindowKeydown(event: KeyboardEvent): void {
     if (!this.isBrowser) {
       return;
     }
 
+    const normalizedKey = event.key.toLowerCase();
     const direction = this.mapKeyboardDirection(event.key);
 
-    if (!direction) {
+    if (direction) {
+      event.preventDefault();
+      this.consumeSecretInput(direction);
       return;
     }
 
-    event.preventDefault();
-    this.consumeSecretInput(direction);
+    if (normalizedKey === 'escape' && this.optionsOpen) {
+      event.preventDefault();
+      this.closeOptions();
+      return;
+    }
+
+    if ((normalizedKey === 'enter' || normalizedKey === ' ') && !this.optionsOpen) {
+      event.preventDefault();
+      this.startGame();
+      return;
+    }
   }
 
   private startGamepadLoop(): void {
@@ -111,6 +180,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     const leftActive = this.isButtonPressed(gamepad, 14) || axisX <= -0.6;
     const rightActive = this.isButtonPressed(gamepad, 15) || axisX >= 0.6;
     const confirmActive = this.isButtonPressed(gamepad, 2) || this.isButtonPressed(gamepad, 9);
+    const cancelActive = this.isButtonPressed(gamepad, 1);
 
     if (upActive && !this.dpadUpConsumed) {
       this.consumeSecretInput('up');
@@ -146,9 +216,24 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
     if (confirmActive && !this.confirmConsumed) {
       this.confirmConsumed = true;
-      this.activateSelectedItem();
+
+      if (!this.optionsOpen) {
+        this.startGame();
+      } else {
+        this.activateSelectedItem();
+      }
     } else if (!confirmActive) {
       this.confirmConsumed = false;
+    }
+
+    if (cancelActive && !this.cancelConsumed) {
+      this.cancelConsumed = true;
+
+      if (this.optionsOpen) {
+        this.closeOptions();
+      }
+    } else if (!cancelActive) {
+      this.cancelConsumed = false;
     }
   }
 
@@ -197,6 +282,10 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   private moveSelection(step: -1 | 1): void {
+    if (!this.optionsOpen) {
+      return;
+    }
+
     const items = this.getFocusableMenuItems();
 
     if (!items.length) {
@@ -206,11 +295,11 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     this.selectedIndex += step;
 
     if (this.selectedIndex < 0) {
-      this.selectedIndex = 0;
+      this.selectedIndex = items.length - 1;
     }
 
     if (this.selectedIndex > items.length - 1) {
-      this.selectedIndex = items.length - 1;
+      this.selectedIndex = 0;
     }
 
     this.focusSelectedItem(items);
@@ -256,7 +345,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     const root = this.elementRef.nativeElement;
 
     return Array.from(
-      root.querySelectorAll<HTMLElement>('button, a[href]'),
+      root.querySelectorAll<HTMLElement>('[data-options-item="true"]'),
     ).filter((element) => !element.hasAttribute('disabled'));
   }
 
@@ -285,5 +374,6 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     this.dpadLeftConsumed = false;
     this.dpadRightConsumed = false;
     this.confirmConsumed = false;
+    this.cancelConsumed = false;
   }
 }

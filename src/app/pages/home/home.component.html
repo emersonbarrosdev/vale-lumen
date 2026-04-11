@@ -21,34 +21,87 @@
   </div>
 
   <div class="content">
+    <button
+      class="gear-button"
+      type="button"
+      aria-label="Abrir opções"
+      (click)="toggleOptions()"
+    >
+      ⚙
+    </button>
+
     <div class="brand-block">
       <p class="overline">A jornada começa entre cinzas e memória</p>
-      <h1 class="title">As Cinzas do Vale</h1>
+
+      <h1 class="title" aria-label="As Cinzas do Vale">
+        <span class="title-line">AS CINZAS DO VALE</span>
+      </h1>
+
       <p class="subtitle">
         O Coração caiu. O vale apodreceu. Ainda resta uma chama.
       </p>
+
+      <button class="press-start" type="button" (click)="startGame()">
+        Press Start
+      </button>
     </div>
+  </div>
 
-    <div class="menu-panel">
-      <button class="menu-btn primary" (click)="startGame()">
-        <span class="btn-glow"></span>
-        <span>Iniciar</span>
+  <div class="options-overlay" *ngIf="optionsOpen">
+    <div class="options-panel">
+      <button
+        class="options-close"
+        type="button"
+        aria-label="Fechar opções"
+        data-options-item="true"
+        (click)="closeOptions()"
+      >
+        ×
       </button>
 
-      <a class="menu-btn" routerLink="/settings">
-        <span class="btn-glow"></span>
-        <span>Configurações</span>
-      </a>
+      <div class="options-title">Opções</div>
 
-      <a class="menu-btn" routerLink="/credits">
-        <span class="btn-glow"></span>
-        <span>Créditos</span>
-      </a>
+      <div class="options-actions">
+        <button
+          class="menu-btn primary"
+          type="button"
+          data-options-item="true"
+          (click)="startGame()"
+        >
+          <span class="btn-glow"></span>
+          <span>Iniciar</span>
+        </button>
 
-      <button class="menu-btn danger" (click)="startGame()">
-        <span class="btn-glow"></span>
-        <span>Reiniciar</span>
-      </button>
+        <button
+          class="menu-btn"
+          type="button"
+          data-options-item="true"
+          (click)="goToSettings()"
+        >
+          <span class="btn-glow"></span>
+          <span>Configurações</span>
+        </button>
+
+        <button
+          class="menu-btn"
+          type="button"
+          data-options-item="true"
+          (click)="goToCredits()"
+        >
+          <span class="btn-glow"></span>
+          <span>Créditos</span>
+        </button>
+
+        <button
+          class="menu-btn danger"
+          type="button"
+          data-options-item="true"
+          (click)="restartGame()"
+        >
+          <span class="btn-glow"></span>
+          <span>Reiniciar</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>

@@ -1,6 +1,12 @@
 <ng-container *ngIf="dialog$ | async as dialog">
   <div class="boss-dialog-backdrop">
-    <div class="boss-dialog-card">
+    <div
+      class="boss-dialog-card"
+      tabindex="0"
+      aria-modal="true"
+      role="dialog"
+      aria-label="Diálogo do boss"
+    >
       <button
         class="boss-dialog-close"
         type="button"
