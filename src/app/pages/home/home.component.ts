@@ -34,7 +34,8 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   private dpadLeftConsumed = false;
   private dpadRightConsumed = false;
   private confirmConsumed = false;
-  private cancelConsumed = false;
+  private menuShortcutConsumed = false;
+  private closeConsumed = false;
 
   optionsOpen = false;
 
@@ -55,9 +56,9 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    this.audioService.playMusic('menu-theme');
     this.ensureSelection();
     this.startGamepadLoop();
+    this.audioService.playMusic('menu-theme');
   }
 
   ngOnDestroy(): void {
@@ -74,49 +75,6 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     this.router.navigateByUrl('/phase-loading');
   }
 
-  restartGame(): void {
-    this.phaseFlowService.startNewRun();
-    this.audioService.playSfx('ui-confirm');
-    this.router.navigateByUrl('/phase-loading');
-  }
-
-  openOptions(): void {
-    if (this.optionsOpen) {
-      return;
-    }
-
-    this.optionsOpen = true;
-    this.selectedIndex = 0;
-    this.audioService.playSfx('ui-confirm');
-
-    queueMicrotask(() => {
-      this.ensureSelection();
-    });
-  }
-
-  closeOptions(): void {
-    if (!this.optionsOpen) {
-      return;
-    }
-
-    this.optionsOpen = false;
-    this.selectedIndex = 0;
-    this.audioService.playSfx('ui-confirm');
-
-    queueMicrotask(() => {
-      this.ensureSelection();
-    });
-  }
-
-  toggleOptions(): void {
-    if (this.optionsOpen) {
-      this.closeOptions();
-      return;
-    }
-
-    this.openOptions();
-  }
-
   goToSettings(): void {
     this.audioService.playSfx('ui-confirm');
     this.router.navigateByUrl('/settings');
@@ -127,32 +85,63 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     this.router.navigateByUrl('/credits');
   }
 
+  restartGame(): void {
+    this.phaseFlowService.startNewRun();
+    this.audioService.playSfx('ui-confirm');
+    this.router.navigateByUrl('/phase-loading');
+  }
+
+  toggleOptions(): void {
+    this.optionsOpen = !this.optionsOpen;
+    this.audioService.playSfx('ui-move');
+    this.selectedIndex = 0;
+    queueMicrotask(() => this.ensureSelection());
+  }
+
+  openOptions(): void {
+    if (this.optionsOpen) {
+      return;
+    }
+
+    this.optionsOpen = true;
+    this.audioService.playSfx('ui-move');
+    this.selectedIndex = 0;
+    queueMicrotask(() => this.ensureSelection());
+  }
+
+  closeOptions(): void {
+    if (!this.optionsOpen) {
+      return;
+    }
+
+    this.optionsOpen = false;
+    this.audioService.playSfx('ui-move');
+    this.selectedIndex = 0;
+    queueMicrotask(() => this.ensureSelection());
+  }
+
   @HostListener('window:keydown', ['$event'])
   handleWindowKeydown(event: KeyboardEvent): void {
     if (!this.isBrowser) {
       return;
     }
 
-    const normalizedKey = event.key.toLowerCase();
-    const direction = this.mapKeyboardDirection(event.key);
+    const key = event.key.toLowerCase();
 
-    if (direction) {
-      event.preventDefault();
-      this.consumeSecretInput(direction);
-      return;
-    }
-
-    if (normalizedKey === 'escape' && this.optionsOpen) {
+    if (this.optionsOpen && (key === 'escape' || key === 'backspace')) {
       event.preventDefault();
       this.closeOptions();
       return;
     }
 
-    if ((normalizedKey === 'enter' || normalizedKey === ' ') && !this.optionsOpen) {
-      event.preventDefault();
-      this.startGame();
+    const direction = this.mapKeyboardDirection(event.key);
+
+    if (!direction) {
       return;
     }
+
+    event.preventDefault();
+    this.consumeSecretInput(direction);
   }
 
   private startGamepadLoop(): void {
@@ -180,7 +169,34 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     const leftActive = this.isButtonPressed(gamepad, 14) || axisX <= -0.6;
     const rightActive = this.isButtonPressed(gamepad, 15) || axisX >= 0.6;
     const confirmActive = this.isButtonPressed(gamepad, 2) || this.isButtonPressed(gamepad, 9);
-    const cancelActive = this.isButtonPressed(gamepad, 1);
+    const closeActive = this.isButtonPressed(gamepad, 1);
+    const menuShortcutActive = this.isMenuShortcutPressed(gamepad);
+
+    if (menuShortcutActive && !this.menuShortcutConsumed) {
+      this.menuShortcutConsumed = true;
+
+      if (this.optionsOpen) {
+        this.closeOptions();
+      } else {
+        this.openOptions();
+      }
+
+      return;
+    } else if (!menuShortcutActive) {
+      this.menuShortcutConsumed = false;
+    }
+
+    if (this.optionsOpen) {
+      if (closeActive && !this.closeConsumed) {
+        this.closeConsumed = true;
+        this.closeOptions();
+        return;
+      } else if (!closeActive) {
+        this.closeConsumed = false;
+      }
+    } else {
+      this.closeConsumed = false;
+    }
 
     if (upActive && !this.dpadUpConsumed) {
       this.consumeSecretInput('up');
@@ -216,24 +232,9 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
     if (confirmActive && !this.confirmConsumed) {
       this.confirmConsumed = true;
-
-      if (!this.optionsOpen) {
-        this.startGame();
-      } else {
-        this.activateSelectedItem();
-      }
+      this.activateSelectedItem();
     } else if (!confirmActive) {
       this.confirmConsumed = false;
-    }
-
-    if (cancelActive && !this.cancelConsumed) {
-      this.cancelConsumed = true;
-
-      if (this.optionsOpen) {
-        this.closeOptions();
-      }
-    } else if (!cancelActive) {
-      this.cancelConsumed = false;
     }
   }
 
@@ -282,10 +283,6 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   private moveSelection(step: -1 | 1): void {
-    if (!this.optionsOpen) {
-      return;
-    }
-
     const items = this.getFocusableMenuItems();
 
     if (!items.length) {
@@ -295,11 +292,11 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     this.selectedIndex += step;
 
     if (this.selectedIndex < 0) {
-      this.selectedIndex = items.length - 1;
+      this.selectedIndex = 0;
     }
 
     if (this.selectedIndex > items.length - 1) {
-      this.selectedIndex = 0;
+      this.selectedIndex = items.length - 1;
     }
 
     this.focusSelectedItem(items);
@@ -343,9 +340,12 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
   private getFocusableMenuItems(): HTMLElement[] {
     const root = this.elementRef.nativeElement;
+    const selector = this.optionsOpen
+      ? '[data-options-item="true"]'
+      : '.gear-button, .press-start';
 
     return Array.from(
-      root.querySelectorAll<HTMLElement>('[data-options-item="true"]'),
+      root.querySelectorAll<HTMLElement>(selector),
     ).filter((element) => !element.hasAttribute('disabled'));
   }
 
@@ -368,12 +368,44 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     return !!button && (button.pressed || button.value >= 0.5);
   }
 
+  private isMenuShortcutPressed(gamepad: Gamepad): boolean {
+    const gamepadId = gamepad.id.toLowerCase();
+
+    if (this.isPlayStationGamepad(gamepadId)) {
+      return (
+        this.isButtonPressed(gamepad, 17) ||
+        this.isButtonPressed(gamepad, 8)
+      );
+    }
+
+    if (this.isXboxGamepad(gamepadId)) {
+      return this.isButtonPressed(gamepad, 3);
+    }
+
+    return false;
+  }
+
+  private isPlayStationGamepad(gamepadId: string): boolean {
+    return (
+      gamepadId.includes('dualsense') ||
+      gamepadId.includes('dualshock') ||
+      gamepadId.includes('playstation') ||
+      gamepadId.includes('wireless controller') ||
+      gamepadId.includes('sony')
+    );
+  }
+
+  private isXboxGamepad(gamepadId: string): boolean {
+    return gamepadId.includes('xbox');
+  }
+
   private resetConsumptions(): void {
     this.dpadUpConsumed = false;
     this.dpadDownConsumed = false;
     this.dpadLeftConsumed = false;
     this.dpadRightConsumed = false;
     this.confirmConsumed = false;
-    this.cancelConsumed = false;
+    this.menuShortcutConsumed = false;
+    this.closeConsumed = false;
   }
 }

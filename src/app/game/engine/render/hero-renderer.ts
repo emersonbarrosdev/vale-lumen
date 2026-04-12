@@ -43,6 +43,12 @@ const SECRET_FLAME_HAIR = {
 
 type HeroPalette = typeof BASE_COLORS;
 
+/**
+ * Sobe o herói visualmente para ele ficar acima
+ * do contorno preto do chão.
+ */
+const HERO_VISUAL_GROUND_LIFT = 3;
+
 export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   const shouldBlink =
     hero.shieldGraceTimer > 0 &&
@@ -123,7 +129,7 @@ export function drawHero(ctx: CanvasRenderingContext2D, hero: Hero): void {
   ctx.save();
   ctx.translate(
     hero.x + hero.width / 2,
-    hero.y + hero.height / 2 + bob + (hero.crouching ? 18 : 10),
+    hero.y + hero.height / 2 + bob + (hero.crouching ? 18 : 10) - HERO_VISUAL_GROUND_LIFT,
   );
   ctx.scale(hero.direction * 1.1, hero.crouching ? 0.82 : 0.98);
 

@@ -2,6 +2,7 @@ import { Enemy } from '../../domain/enemies/enemy.model';
 import { Hero } from '../../domain/hero/hero.model';
 import { Platform } from '../../domain/world/platform.model';
 import {
+  findGroundBelowEnemy,
   rectsOverlap,
   respawnEnemyBase,
   tryFireCaptainProjectileBase,
@@ -112,16 +113,21 @@ function handleActiveEnemy(params: {
 
   updateEnemyBaseTimers(enemy, deltaTime);
 
-  /**
-   * Só a gosma recebe a lógica nova.
-   * Todos os outros ficam como antes.
-   */
   if (enemy.type === 'gosmaPequena') {
     enemy.speed = 22;
     updateGroundEnemyPatrolWithEdgeCheck(enemy, deltaTime, platforms);
 
-    const crawlBob = Math.sin(enemy.hoverOffset * 1.25) * 1.5;
-    enemy.y = enemy.baseY + Math.max(0, crawlBob);
+    const ground = findGroundBelowEnemy(enemy, platforms);
+    if (ground) {
+      enemy.y = ground.y - enemy.height;
+    }
+  } else if (enemy.type === 'errante') {
+    updateGroundEnemyPatrolWithEdgeCheck(enemy, deltaTime, platforms);
+
+    const ground = findGroundBelowEnemy(enemy, platforms);
+    if (ground) {
+      enemy.y = ground.y - enemy.height;
+    }
   } else {
     updateEnemyPatrol(enemy, deltaTime);
   }

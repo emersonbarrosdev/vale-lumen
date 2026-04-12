@@ -14,18 +14,28 @@ import { getPhase01Tunnels } from './world/phase-01-tunnels.data';
 export function buildPhase01PlayableData(
   definition: PhaseDefinition,
 ): PhasePlayableData {
-  const platforms = [...getPhase01Platforms()].sort((a, b) => a.x - b.x);
-  const enemies = [...getPhase01Enemies()].sort((a, b) => a.x - b.x);
-  const collectibles = [...getPhase01Collectibles()].sort((a, b) => a.x - b.x);
-  const chests = [...getPhase01Chests()].sort((a, b) => a.x - b.x);
-  const hazards = [...getPhase01Hazards()].sort((a, b) => a.x - b.x);
+  const platforms = [...getPhase01Platforms()]
+    .sort((a, b) => a.x - b.x || a.y - b.y);
+
+  const enemies = [...getPhase01Enemies()]
+    .sort((a, b) => a.x - b.x);
+
+  const collectibles = [...getPhase01Collectibles()]
+    .sort((a, b) => a.x - b.x || a.y - b.y);
+
+  const chests = [...getPhase01Chests()]
+    .sort((a, b) => a.x - b.x);
+
+  const hazards = [...getPhase01Hazards()]
+    .sort((a, b) => a.x - b.x);
 
   /**
    * Atualmente a fase 1 não usa túneis.
    * Mantemos a chamada para preservar o contrato da fase
    * e facilitar uma futura reativação sem mexer na factory.
    */
-  const tunnels = [...getPhase01Tunnels()].sort((a, b) => a.x - b.x);
+  const tunnels = [...getPhase01Tunnels()]
+    .sort((a, b) => a.x - b.x);
 
   return {
     definition: {

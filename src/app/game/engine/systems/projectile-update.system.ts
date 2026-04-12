@@ -3,10 +3,14 @@ import { Bullet } from '../../domain/combat/bullet.model';
 import { Enemy } from '../../domain/enemies/enemy.model';
 import { Hero } from '../../domain/hero/hero.model';
 import { Chest } from '../../domain/world/chest.model';
+import { CollectibleType } from '../../domain/world/collectible.model';
 import { Hazard } from '../../domain/world/hazard.model';
+import { Platform, PlatformRewardType } from '../../domain/world/platform.model';
 import { Tunnel } from '../../domain/world/tunnel.model';
 import { BossArenaData } from '../../domain/world/boss-arena.model';
 import { EngineRuntime } from '../runtime/engine-runtime.model';
+
+const EMBEDDED_QUESTION_BLOCK_SIZE = 22;
 
 export interface ProjectileSystemParams {
   runtime: EngineRuntime;
@@ -15,6 +19,7 @@ export interface ProjectileSystemParams {
   enemies: Enemy[];
   chests: Chest[];
   hazards: Hazard[];
+  platforms: Platform[];
   tunnels: Tunnel[];
   bossArena: BossArenaData;
   worldWidth: number;
@@ -24,6 +29,11 @@ export interface ProjectileSystemParams {
   deltaTime: number;
   randomRange: (min: number, max: number) => number;
   spawnBurst: (x: number, y: number, color: string, amount: number) => void;
+  spawnCollectibleFromBlock?: (
+    x: number,
+    y: number,
+    type: CollectibleType,
+  ) => void;
   breakChest: (chest: Chest) => void;
   killEnemy: (
     enemy: Enemy,
@@ -92,6 +102,7 @@ export function updateBulletsSystem({
   enemies,
   chests,
   hazards,
+  platforms,
   tunnels,
   worldWidth,
   canvasWidth,
@@ -99,6 +110,7 @@ export function updateBulletsSystem({
   cameraX,
   deltaTime,
   spawnBurst,
+  spawnCollectibleFromBlock,
   breakChest,
   killEnemy,
   playEnemyHitSfx,
@@ -112,12 +124,14 @@ export function updateBulletsSystem({
   | 'enemies'
   | 'chests'
   | 'hazards'
+  | 'platforms'
   | 'tunnels'
   | 'worldWidth'
   | 'canvasWidth'
   | 'canvasHeight'
   | 'cameraX'
   | 'spawnBurst'
+  | 'spawnCollectibleFromBlock'
   | 'breakChest'
   | 'killEnemy'
   | 'playEnemyHitSfx'
@@ -254,6 +268,81 @@ export function updateBulletsSystem({
           );
         }
 
+        bullet.active = false;
+        break;
+      }
+    }
+
+    if (!bullet.active) {
+      continue;
+    }
+
+    for (const platform of platforms) {
+      if (platform.active === false || platform.broken === true) {
+        continue;
+      }
+
+      if (!rectsOverlap(bullet, platform)) {
+        continue;
+      }
+
+      const embeddedQuestionRect = getEmbeddedQuestionBlockRect(platform);
+
+      if (
+        embeddedQuestionRect &&
+        platform.used !== true &&
+        rectsOverlap(bullet, embeddedQuestionRect)
+      ) {
+        if (platform.turnsIntoReward && platform.rewardType && spawnCollectibleFromBlock) {
+          platform.used = true;
+
+          spawnCollectibleFromBlock(
+            embeddedQuestionRect.x + embeddedQuestionRect.width / 2,
+            platform.y - 18,
+            normalizePlatformReward(platform.rewardType),
+          );
+
+          spawnBurst(
+            embeddedQuestionRect.x + embeddedQuestionRect.width / 2,
+            embeddedQuestionRect.y + embeddedQuestionRect.height / 2,
+            '#ffd45a',
+            12,
+          );
+
+          spawnBurst(
+            embeddedQuestionRect.x + embeddedQuestionRect.width / 2,
+            embeddedQuestionRect.y + embeddedQuestionRect.height / 2,
+            '#fff1b0',
+            8,
+          );
+        }
+
+        createHeroBulletImpact(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
+        );
+        bullet.active = false;
+        break;
+      }
+
+      const isNonDestructibleBlock =
+        platform.kind === 'brickBlock' ||
+        platform.kind === 'breakableBlock' ||
+        platform.kind === 'movingPlatform' ||
+        platform.kind === 'fallBridge' ||
+        platform.kind === 'stone';
+
+      if (isNonDestructibleBlock || platform.kind === undefined) {
+        createHeroBulletImpact(
+          runtime,
+          bullet,
+          spawnBurst,
+          worldWidth,
+          canvasHeight,
+        );
         bullet.active = false;
         break;
       }
@@ -731,6 +820,35 @@ export function updateBossProjectilesSystem({
   runtime.bossProjectiles = runtime.bossProjectiles.filter(
     (projectile) => projectile.active,
   );
+}
+
+function getEmbeddedQuestionBlockRect(
+  platform: Platform,
+): { x: number; y: number; width: number; height: number } | null {
+  const canHaveEmbeddedQuestionBlock =
+    platform.turnsIntoReward === true &&
+    platform.rewardType === 'bigCoin10' &&
+    platform.kind !== 'movingPlatform' &&
+    platform.kind !== 'fallBridge';
+
+  if (!canHaveEmbeddedQuestionBlock) {
+    return null;
+  }
+
+  return {
+    x: platform.x + Math.floor((platform.width - EMBEDDED_QUESTION_BLOCK_SIZE) / 2),
+    y: platform.y + Math.floor((platform.height - EMBEDDED_QUESTION_BLOCK_SIZE) / 2),
+    width: Math.min(EMBEDDED_QUESTION_BLOCK_SIZE, platform.width),
+    height: Math.min(EMBEDDED_QUESTION_BLOCK_SIZE, platform.height),
+  };
+}
+
+function normalizePlatformReward(type: PlatformRewardType): CollectibleType {
+  if (type === 'coin10') {
+    return 'bigCoin10';
+  }
+
+  return type;
 }
 
 function shouldCreateSpecialExplosionOnImpact(bullet: Bullet): boolean {

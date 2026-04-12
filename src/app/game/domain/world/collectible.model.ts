@@ -1,5 +1,7 @@
 export type CollectibleType =
   | 'coin'
+  | 'coin10'
+  | 'bigCoin10'
   | 'lifeFragment'
   | 'specialSpark'
   | 'heart'
@@ -17,4 +19,8 @@ export interface Collectible extends CollectibleData {
   width: number;
   height: number;
   collected: boolean;
+  spawnedDuringRun?: boolean;
+  spawnTimer?: number;
+  spawnVy?: number;
+  startY?: number;
 }

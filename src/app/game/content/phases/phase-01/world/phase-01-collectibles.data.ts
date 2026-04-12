@@ -3,103 +3,103 @@ import { CollectibleData } from '../../../../domain/world/collectible.model';
 export function getPhase01Collectibles(): CollectibleData[] {
   return [
     /**
-     * 1 CORAÇÃO ESCONDIDO OPCIONAL
-     * fora da visão inicial, incentivando curiosidade
+     * INÍCIO
      */
-    { type: 'heart', x: 0, y: 572 },
+    { type: 'coin', x: 316, y: 400 },
+    { type: 'coin', x: 372, y: 360 },
+    { type: 'coin', x: 448, y: 400 },
 
     /**
-     * PLATAFORMA INICIAL
-     * moedas comuns para ensinar coleta logo no começo
+     * TRECHO 1
      */
-    { type: 'coin', x: 330, y: 416 },
-    { type: 'coin', x: 374, y: 404 },
-    { type: 'coin', x: 418, y: 416 },
+    { type: 'coin', x: 1988, y: 366 },
+    { type: 'coin', x: 2058, y: 326 },
+    { type: 'coin', x: 2140, y: 366 },
+
+    { type: 'coin', x: 2344, y: 228 },
+    { type: 'coin', x: 2416, y: 188 },
+    { type: 'coin', x: 2490, y: 228 },
+    { type: 'specialSpark', x: 2556, y: 176 },
 
     /**
-     * PRIMEIRO TRECHO
+     * TRECHO CENTRAL
      */
-    { type: 'coin', x: 2012, y: 386 },
-    { type: 'coin', x: 2058, y: 374 },
-    { type: 'coin', x: 2104, y: 386 },
+    { type: 'coin', x: 3458, y: 382 },
+    { type: 'coin', x: 3520, y: 350 },
+    { type: 'lifeFragment', x: 3582, y: 338 },
+
+    { type: 'coin', x: 4492, y: 560 },
+    { type: 'coin', x: 4562, y: 530 },
+    { type: 'coin', x: 4632, y: 560 },
 
     /**
-     * PLATAFORMA ALTA DE RECOMPENSA
-     * moedas + primeira centelha visível em ponto alto
+     * BURACO GRANDE
+     * não mexido nas plataformas sobre buraco
      */
-    { type: 'coin', x: 2354, y: 264 },
-    { type: 'coin', x: 2398, y: 252 },
-    { type: 'coin', x: 2442, y: 240 },
-    { type: 'coin', x: 2486, y: 252 },
-    { type: 'specialSpark', x: 2532, y: 232 },
+    { type: 'coin', x: 5192, y: 504 },
+    { type: 'coin', x: 5250, y: 472 },
+    { type: 'coin', x: 5308, y: 504 },
 
-    /**
-     * TÚNEL
-     * um fragmento de vida em rota menos óbvia
-     */
-    { type: 'coin', x: 3492, y: 396 },
-    { type: 'coin', x: 3538, y: 384 },
-    { type: 'lifeFragment', x: 3590, y: 372 },
-
-    /**
-     * TRECHO LINEAR
-     */
-    { type: 'coin', x: 4522, y: 586 },
-    { type: 'coin', x: 4568, y: 574 },
-    { type: 'coin', x: 4614, y: 586 },
-
-    /**
-     * BURACO COM PLATAFORMAS QUE CAEM
-     * recompensa de risco com centelha de especial
-     */
-    { type: 'coin', x: 5162, y: 388 },
-    { type: 'coin', x: 5322, y: 388 },
-    { type: 'coin', x: 5482, y: 388 },
-    { type: 'specialSpark', x: 5642, y: 384 },
+    { type: 'coin', x: 5532, y: 402 },
+    { type: 'coin', x: 5590, y: 370 },
+    { type: 'coin', x: 5648, y: 402 },
 
     /**
      * RESPIRO
-     * fragmento de vida no lugar de vida inteira comum
      */
-    { type: 'lifeFragment', x: 7342, y: 580 },
+    { type: 'lifeFragment', x: 7342, y: 576 },
 
     /**
-     * PLATAFORMA MÉDIA
+     * BLOCO MÉDIO
      */
-    { type: 'coin', x: 7674, y: 394 },
-    { type: 'coin', x: 7720, y: 382 },
+    { type: 'coin', x: 7638, y: 372 },
+    { type: 'coin', x: 7720, y: 332 },
+    { type: 'coin', x: 7802, y: 372 },
+
+    { type: 'coin', x: 7868, y: 400 },
+    { type: 'coin', x: 7940, y: 360 },
 
     /**
-     * PLATAFORMA ALTA TIPO MARIO
+     * RECOMPENSA ALTA
      */
-    { type: 'coin', x: 11154, y: 220 },
-    { type: 'coin', x: 11198, y: 220 },
-    { type: 'coin', x: 11242, y: 220 },
-    { type: 'coin', x: 11286, y: 220 },
-    { type: 'coin', x: 11330, y: 220 },
-    { type: 'coin', x: 11374, y: 220 },
-    { type: 'specialSpark', x: 11420, y: 212 },
+    { type: 'coin', x: 8138, y: 216 },
+    { type: 'coin', x: 8218, y: 176 },
+    { type: 'coin', x: 8310, y: 216 },
+    { type: 'specialSpark', x: 8390, y: 164 },
 
     /**
-     * TRECHO FINAL ANTES DO BOSS
-     * mais moedas no último percurso para não ficar vazio
+     * SEGUNDO BURACO
      */
-    { type: 'coin', x: 11610, y: 586 },
-    { type: 'coin', x: 11654, y: 574 },
-    { type: 'coin', x: 11698, y: 586 },
+    { type: 'coin', x: 9088, y: 420 },
+    { type: 'coin', x: 9132, y: 388 },
 
-    { type: 'coin', x: 11790, y: 586 },
-    { type: 'coin', x: 11834, y: 574 },
-    { type: 'coin', x: 11878, y: 586 },
+    { type: 'coin', x: 9748, y: 380 },
+    { type: 'coin', x: 9830, y: 340 },
 
-    { type: 'coin', x: 11986, y: 586 },
-    { type: 'coin', x: 12030, y: 574 },
-    { type: 'coin', x: 12074, y: 586 },
+    /**
+     * TRECHO FINAL
+     */
+    { type: 'coin', x: 10934, y: 386 },
+    { type: 'coin', x: 11010, y: 348 },
+
+    { type: 'coin', x: 11130, y: 188 },
+    { type: 'coin', x: 11210, y: 148 },
+    { type: 'coin', x: 11300, y: 148 },
+    { type: 'coin', x: 11382, y: 188 },
+    { type: 'specialSpark', x: 11434, y: 132 },
 
     /**
      * PRÉ-BOSS
-     * último fragmento opcional antes da arena
      */
-    { type: 'lifeFragment', x: 12120, y: 578 },
+    { type: 'coin', x: 11600, y: 578 },
+    { type: 'coin', x: 11680, y: 548 },
+    { type: 'coin', x: 11760, y: 578 },
+
+    { type: 'coin', x: 11860, y: 548 },
+    { type: 'coin', x: 11940, y: 578 },
+    { type: 'coin', x: 12020, y: 548 },
+
+    { type: 'coin', x: 12100, y: 578 },
+    { type: 'coin', x: 12180, y: 548 },
   ];
 }

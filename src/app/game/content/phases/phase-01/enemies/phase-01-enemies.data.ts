@@ -5,7 +5,7 @@ export function getPhase01Enemies(): EnemyData[] {
     {
       type: 'gosmaPequena',
       x: 980,
-      y: 604,
+      y: 590,
       patrolLeft: 930,
       patrolRight: 1110,
     },
@@ -26,14 +26,14 @@ export function getPhase01Enemies(): EnemyData[] {
     {
       type: 'vigia',
       x: 2410,
-      y: 214,
+      y: 252,
       patrolLeft: 2350,
       patrolRight: 2508,
     },
     {
       type: 'gosmaPequena',
       x: 3520,
-      y: 604,
+      y: 590,
       patrolLeft: 3340,
       patrolRight: 3820,
     },
@@ -54,7 +54,7 @@ export function getPhase01Enemies(): EnemyData[] {
     {
       type: 'gosmaPequena',
       x: 6100,
-      y: 604,
+      y: 590,
       patrolLeft: 5960,
       patrolRight: 6500,
     },
@@ -75,14 +75,14 @@ export function getPhase01Enemies(): EnemyData[] {
     {
       type: 'vigia',
       x: 8240,
-      y: 184,
+      y: 224,
       patrolLeft: 8160,
       patrolRight: 8370,
     },
     {
       type: 'gosmaPequena',
       x: 9830,
-      y: 604,
+      y: 590,
       patrolLeft: 9530,
       patrolRight: 10140,
     },
@@ -96,16 +96,9 @@ export function getPhase01Enemies(): EnemyData[] {
     {
       type: 'vigia',
       x: 11300,
-      y: 148,
+      y: 194,
       patrolLeft: 11170,
       patrolRight: 11430,
-    },
-    {
-      type: 'gosmaPequena',
-      x: 12120,
-      y: 604,
-      patrolLeft: 11920,
-      patrolRight: 12620,
     },
   ];
 }

@@ -38,10 +38,6 @@ function getEnemyWidth(type: Enemy['type']): number {
     case 'corvoCorrompido':
       return 38;
     case 'gosmaPequena':
-      /**
-       * Antes: 34
-       * Agora: dobro da largura
-       */
       return 68;
     case 'errante':
     default:
@@ -56,10 +52,6 @@ function getEnemyHeight(type: Enemy['type']): number {
     case 'corvoCorrompido':
       return 28;
     case 'gosmaPequena':
-      /**
-       * Antes: 22
-       * Agora: um pouco mais alta para facilitar o acerto agachado
-       */
       return 30;
     case 'errante':
     default:

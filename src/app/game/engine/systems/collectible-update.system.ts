@@ -2,12 +2,14 @@ import { Collectible } from '../../domain/world/collectible.model';
 import { Hero } from '../../domain/hero/hero.model';
 import { EngineRuntime } from '../runtime/engine-runtime.model';
 
+const SPAWN_GRAVITY = 980;
+
 export interface CollectibleUpdateParams {
   hero: Hero;
   collectibles: Collectible[];
   runtime: EngineRuntime;
   spawnBurst: (x: number, y: number, color: string, amount: number) => void;
-  playCollectibleSfx: (trackId: 'coin-pickup' | 'spark-pickup' | 'heart-pickup') => void;
+  playCollectibleSfx: (trackId: 'coin-pickup' | 'spark-pickup' | 'heart-pickup' | 'extra-life') => void;
 }
 
 export function updateCollectiblesSystem({
@@ -20,6 +22,10 @@ export function updateCollectiblesSystem({
   for (const item of collectibles) {
     if (item.collected) {
       continue;
+    }
+
+    if (item.spawnedDuringRun) {
+      updateSpawnedCollectible(item);
     }
 
     if (!rectsOverlap(hero, item)) {
@@ -36,6 +42,21 @@ export function updateCollectiblesSystem({
         runtime.collectedCoins += 1;
         runtime.score += 100;
         spawnBurst(centerX, centerY, '#ffd45a', 10);
+        playCollectibleSfx('coin-pickup');
+
+        if (runtime.collectedCoins % 100 === 0) {
+          runtime.lives += 1;
+          runtime.score += 250;
+          spawnBurst(centerX, centerY - 8, '#9cff88', 18);
+          playCollectibleSfx('extra-life');
+        }
+        break;
+
+      case 'coin10':
+      case 'bigCoin10':
+        runtime.collectedCoins += 10;
+        runtime.score += 500;
+        spawnBurst(centerX, centerY, '#ffe27a', 16);
         playCollectibleSfx('coin-pickup');
         break;
 
@@ -88,6 +109,24 @@ export function updateCollectiblesSystem({
   }
 
   syncSpecialHudState(runtime);
+}
+
+function updateSpawnedCollectible(item: Collectible): void {
+  item.spawnTimer = (item.spawnTimer ?? 0) + 1 / 60;
+  item.spawnVy = (item.spawnVy ?? 0) + SPAWN_GRAVITY / 60;
+  item.y += (item.spawnVy ?? 0) / 60;
+
+  if (
+    item.startY !== undefined &&
+    item.spawnVy !== undefined &&
+    item.spawnTimer > 0.2 &&
+    item.spawnVy > 0 &&
+    item.y >= item.startY
+  ) {
+    item.y = item.startY;
+    item.spawnVy = 0;
+    item.spawnedDuringRun = false;
+  }
 }
 
 function addSpecialCharge(runtime: EngineRuntime, amount: number): void {

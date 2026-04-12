@@ -5,6 +5,8 @@ import { Hazard } from '../../domain/world/hazard.model';
 import { Platform } from '../../domain/world/platform.model';
 import { EngineRuntime } from '../runtime/engine-runtime.model';
 
+const HERO_RESPAWN_VISUAL_OFFSET = 2;
+
 export interface CheckpointUpdateSystemParams {
   hero: Hero;
   runtime: EngineRuntime;
@@ -95,6 +97,11 @@ export function placeHeroAtRespawn(
   hero.megaCasting = false;
   hero.megaVisualTimer = 0;
   hero.shieldGraceTimer = 0;
+  hero.coyoteTimer = 0;
+  hero.jumpBufferTimer = 0;
+  hero.crouching = false;
+  hero.attackHoldTimer = 0;
+  hero.chargedShotPending = false;
 }
 
 export function findSpawnPointNear(
@@ -124,7 +131,7 @@ export function findSpawnPointNear(
     for (const candidateX of candidateXs) {
       const candidate = {
         x: candidateX,
-        y: platform.y - hero.height,
+        y: platform.y - hero.height - HERO_RESPAWN_VISUAL_OFFSET,
       };
 
       if (!isSafeRespawnPoint(candidate, hero, platform, hazards, bossArena)) {
@@ -161,7 +168,7 @@ export function findSpawnPointNear(
           preferredGround.x + preferredGround.width - hero.width - 56,
         ),
       ),
-      y: preferredGround.y - hero.height,
+      y: preferredGround.y - hero.height - HERO_RESPAWN_VISUAL_OFFSET,
     };
   }
 

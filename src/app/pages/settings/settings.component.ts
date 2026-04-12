@@ -10,10 +10,12 @@ import {
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import {
   GameControlBinding,
   GameStateService,
 } from '../../game/services/game-state.service';
+import { AudioService } from '../../game/services/audio.service';
 
 @Component({
   selector: 'app-settings',
@@ -32,6 +34,7 @@ export class SettingsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   saved = false;
   private saveFeedbackTimeoutId: number | null = null;
+  private formSubscription: Subscription | null = null;
 
   private readonly isBrowser: boolean;
   private animationFrameId = 0;
@@ -47,6 +50,7 @@ export class SettingsComponent implements OnInit, AfterViewInit, OnDestroy {
     @Inject(PLATFORM_ID) platformId: object,
     private readonly elementRef: ElementRef<HTMLElement>,
     private readonly gameState: GameStateService,
+    private readonly audioService: AudioService,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
@@ -55,6 +59,14 @@ export class SettingsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.form.patchValue({
       musicVolume: this.gameState.musicVolume,
       effectsVolume: this.gameState.effectsVolume,
+    });
+
+    this.formSubscription = this.form.valueChanges.subscribe((value) => {
+      const musicVolume = value.musicVolume ?? this.gameState.musicVolume;
+      const effectsVolume = value.effectsVolume ?? this.gameState.effectsVolume;
+
+      this.gameState.saveSettings(musicVolume, effectsVolume);
+      this.audioService.refreshVolumes();
     });
   }
 
@@ -68,6 +80,8 @@ export class SettingsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.formSubscription?.unsubscribe();
+
     if (this.saveFeedbackTimeoutId !== null) {
       window.clearTimeout(this.saveFeedbackTimeoutId);
     }
@@ -81,7 +95,9 @@ export class SettingsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   save(): void {
     const { musicVolume, effectsVolume } = this.form.getRawValue();
+
     this.gameState.saveSettings(musicVolume, effectsVolume);
+    this.audioService.refreshVolumes();
     this.showSavedFeedback();
   }
 
@@ -113,7 +129,8 @@ export class SettingsComponent implements OnInit, AfterViewInit, OnDestroy {
     const downActive = this.isButtonPressed(gamepad, 13) || axisY >= 0.6;
     const leftActive = this.isButtonPressed(gamepad, 14) || axisX <= -0.6;
     const rightActive = this.isButtonPressed(gamepad, 15) || axisX >= 0.6;
-    const confirmActive = this.isButtonPressed(gamepad, 2) || this.isButtonPressed(gamepad, 9);
+    const confirmActive =
+      this.isButtonPressed(gamepad, 2) || this.isButtonPressed(gamepad, 9);
 
     if (upActive && !this.upConsumed) {
       this.moveSelection(-1);
@@ -249,7 +266,10 @@ export class SettingsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private getActiveGamepad(): Gamepad | null {
-    if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') {
+    if (
+      typeof navigator === 'undefined' ||
+      typeof navigator.getGamepads !== 'function'
+    ) {
       return null;
     }
 

@@ -33,32 +33,24 @@ function drawGooHazard(
   hazard: Hazard,
 ): void {
   const time = performance.now() * 0.0022;
-  const surfaceY = hazard.y + 10;
+  const surfaceY = hazard.y + 9;
 
-  /**
-   * fundo da lava/gosma preenchendo o buraco inteiro
-   * sem oval/sombra estranha
-   */
-  const body = ctx.createLinearGradient(
-    0,
-    hazard.y,
-    0,
-    hazard.y + hazard.height,
-  );
-  body.addColorStop(0, '#63ff8e');
-  body.addColorStop(0.16, '#35d86b');
-  body.addColorStop(0.46, '#178b3b');
-  body.addColorStop(1, '#082412');
+  const body = ctx.createLinearGradient(0, hazard.y, 0, hazard.y + hazard.height);
+  body.addColorStop(0, '#78ff8f');
+  body.addColorStop(0.18, '#4fdc72');
+  body.addColorStop(0.42, '#5e44a8');
+  body.addColorStop(0.72, '#2f205b');
+  body.addColorStop(1, '#10131c');
 
   ctx.fillStyle = body;
   ctx.beginPath();
   ctx.moveTo(hazard.x, hazard.y + hazard.height);
   ctx.lineTo(hazard.x, surfaceY);
 
-  for (let offset = 0; offset <= hazard.width; offset += 14) {
+  for (let offset = 0; offset <= hazard.width; offset += 10) {
     const wave =
-      Math.sin(time * 2.1 + offset * 0.08 + hazard.x * 0.01) * 3 +
-      Math.sin(time * 1.1 + offset * 0.035) * 1.4;
+      Math.sin(time * 2 + offset * 0.09 + hazard.x * 0.015) * 3.2 +
+      Math.sin(time * 1.25 + offset * 0.05) * 1.3;
 
     ctx.lineTo(hazard.x + offset, surfaceY + wave);
   }
@@ -67,17 +59,14 @@ function drawGooHazard(
   ctx.closePath();
   ctx.fill();
 
-  /**
-   * brilho só na superfície
-   */
-  ctx.strokeStyle = 'rgba(220, 255, 226, 0.42)';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(232, 255, 238, 0.5)';
+  ctx.lineWidth = 1.3;
   ctx.beginPath();
 
   for (let offset = 0; offset <= hazard.width; offset += 10) {
     const wave =
-      Math.sin(time * 2.1 + offset * 0.08 + hazard.x * 0.01) * 3 +
-      Math.sin(time * 1.1 + offset * 0.035) * 1.4;
+      Math.sin(time * 2 + offset * 0.09 + hazard.x * 0.015) * 3.2 +
+      Math.sin(time * 1.25 + offset * 0.05) * 1.3;
 
     const px = hazard.x + offset;
     const py = surfaceY + wave;
@@ -91,40 +80,51 @@ function drawGooHazard(
 
   ctx.stroke();
 
-  /**
-   * reflexo interno suave
-   */
-  const innerGlow = ctx.createLinearGradient(
-    0,
-    surfaceY,
-    0,
-    hazard.y + hazard.height,
-  );
-  innerGlow.addColorStop(0, 'rgba(180, 255, 190, 0.18)');
-  innerGlow.addColorStop(0.22, 'rgba(120, 255, 156, 0.08)');
-  innerGlow.addColorStop(1, 'rgba(0,0,0,0)');
-
-  ctx.fillStyle = innerGlow;
+  ctx.fillStyle = 'rgba(180, 255, 196, 0.08)';
   ctx.fillRect(hazard.x, surfaceY + 2, hazard.width, hazard.height - 2);
 
-  /**
-   * bolhas leves
-   */
-  for (let index = 0; index < 6; index += 1) {
+  for (let index = 0; index < 4; index += 1) {
     const bubbleX =
       hazard.x +
-      18 +
-      index * ((hazard.width - 36) / 5) +
-      Math.sin(time * 1.5 + index) * 3;
+      22 +
+      index * ((hazard.width - 44) / 3) +
+      Math.sin(time * 1.4 + index) * 2.5;
+    const bubbleY = surfaceY + 12 + Math.sin(time * 2.1 + index * 1.2) * 4;
 
-    const bubbleY =
-      surfaceY +
-      10 +
-      Math.sin(time * 2 + index * 1.2) * 4;
-
-    ctx.fillStyle = 'rgba(225, 255, 230, 0.28)';
+    ctx.fillStyle = 'rgba(237, 255, 242, 0.22)';
     ctx.beginPath();
     ctx.arc(bubbleX, bubbleY, 2 + (index % 2), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawGooParticles(ctx, hazard, time, surfaceY);
+}
+
+function drawGooParticles(
+  ctx: CanvasRenderingContext2D,
+  hazard: Hazard,
+  time: number,
+  surfaceY: number,
+): void {
+  for (let index = 0; index < 2; index += 1) {
+    const phase = time * 1.2 + index * 2.6 + hazard.x * 0.004;
+    const x = hazard.x + hazard.width * (0.28 + index * 0.34) + Math.sin(phase) * 6;
+    const y = surfaceY - 8 - Math.abs(Math.sin(phase * 1.3)) * 6;
+
+    const glow = ctx.createRadialGradient(x, y, 1, x, y, 8);
+    glow.addColorStop(0, 'rgba(170, 255, 188, 0.22)');
+    glow.addColorStop(0.5, 'rgba(144, 104, 255, 0.14)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = index % 2 === 0
+      ? 'rgba(188, 255, 204, 0.3)'
+      : 'rgba(186, 126, 255, 0.24)';
+    ctx.beginPath();
+    ctx.arc(x, y, 2.2, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -191,39 +191,43 @@ function drawSpikeHazard(
   ctx: CanvasRenderingContext2D,
   hazard: Hazard,
 ): void {
-  const spikeCount = Math.max(4, Math.floor(hazard.width / 14));
+  const spikeCount = Math.max(4, Math.floor(hazard.width / 18));
   const spikeWidth = hazard.width / spikeCount;
   const baseY = hazard.y + hazard.height;
 
-  ctx.fillStyle = '#4a4c54';
-  ctx.fillRect(hazard.x, baseY - 5, hazard.width, 5);
+  ctx.fillStyle = '#7f8696';
+  ctx.fillRect(hazard.x, baseY - 6, hazard.width, 6);
+
+  ctx.strokeStyle = 'rgba(25, 28, 34, 0.45)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(hazard.x + 0.5, baseY - 5.5, hazard.width - 1, 5);
 
   for (let index = 0; index < spikeCount; index += 1) {
     const x = hazard.x + index * spikeWidth;
     const peakX = x + spikeWidth / 2;
 
     const metal = ctx.createLinearGradient(x, hazard.y, x, baseY);
-    metal.addColorStop(0, '#f5f7fa');
-    metal.addColorStop(0.18, '#cfd6de');
-    metal.addColorStop(0.5, '#8a919b');
-    metal.addColorStop(1, '#484e56');
+    metal.addColorStop(0, '#ffffff');
+    metal.addColorStop(0.18, '#eef2f8');
+    metal.addColorStop(0.54, '#bbc3cf');
+    metal.addColorStop(1, '#707887');
 
     ctx.fillStyle = metal;
     ctx.beginPath();
-    ctx.moveTo(x, baseY);
+    ctx.moveTo(x, baseY - 1);
     ctx.lineTo(peakX, hazard.y);
-    ctx.lineTo(x + spikeWidth, baseY);
+    ctx.lineTo(x + spikeWidth, baseY - 1);
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = 'rgba(35, 38, 44, 0.85)';
+    ctx.strokeStyle = 'rgba(34, 38, 46, 0.78)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.34)';
     ctx.beginPath();
     ctx.moveTo(peakX, hazard.y + 2);
-    ctx.lineTo(peakX - spikeWidth * 0.18, baseY - 4);
+    ctx.lineTo(peakX - spikeWidth * 0.16, baseY - 5);
     ctx.stroke();
   }
 }
@@ -232,13 +236,13 @@ function drawCrystalHazard(
   ctx: CanvasRenderingContext2D,
   hazard: Hazard,
 ): void {
-  const pulse = Math.sin(hazard.pulseOffset * 1.3) * 0.5 + 0.5;
+  const pulse = Math.sin(performance.now() * 0.004 + hazard.pulseOffset * 1.7) * 0.5 + 0.5;
   const centerX = hazard.x + hazard.width / 2;
   const baseY = hazard.y + hazard.height;
 
   const aura = ctx.createRadialGradient(centerX, hazard.y + 20, 2, centerX, hazard.y + 20, 48);
-  aura.addColorStop(0, `rgba(168, 120, 255, ${0.18 + pulse * 0.08})`);
-  aura.addColorStop(0.5, `rgba(84, 48, 146, ${0.14 + pulse * 0.06})`);
+  aura.addColorStop(0, `rgba(168, 120, 255, ${0.16 + pulse * 0.08})`);
+  aura.addColorStop(0.5, `rgba(84, 48, 146, ${0.12 + pulse * 0.06})`);
   aura.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = aura;
   ctx.beginPath();

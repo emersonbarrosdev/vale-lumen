@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: 12px;
   background:
     radial-gradient(circle at 50% 0%, rgba(122, 234, 255, 0.05), transparent 20%),
     radial-gradient(circle at top, rgba(255, 167, 88, 0.06), transparent 18%),
@@ -10,112 +10,144 @@
 }
 
 .card {
-  width: min(680px, 100%);
-  max-height: calc(100vh - 40px);
-  overflow-y: auto;
-  padding: 22px;
-  scrollbar-width: thin;
+  width: min(1240px, 100%);
+  padding: 14px 16px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(244, 231, 199, 0.08);
+  background: linear-gradient(180deg, rgba(18, 23, 33, 0.96) 0%, rgba(11, 15, 22, 0.98) 100%);
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.page-header {
+  margin-bottom: 10px;
 }
 
 h1 {
-  margin: 0 0 16px;
+  margin: 0 0 2px;
   color: #f4e8cb;
-  font-size: 1rem;
+  font-size: 0.82rem;
+  line-height: 1.1;
+  font-weight: 700;
 }
 
-.form {
-  display: grid;
-  gap: 16px;
-  margin-top: 8px;
+.page-subtitle {
+  margin: 0;
+  color: #b8c2d4;
+  font-size: 0.58rem;
+  line-height: 1.25;
 }
 
-.field {
-  display: grid;
-  gap: 8px;
+.audio-section,
+.controls-section {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(244, 231, 199, 0.08);
+  background: rgba(15, 19, 28, 0.68);
+}
 
-  span {
-    color: #d9deea;
-    font-size: 0.7rem;
+.section-header {
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+    color: #f4e8cb;
+    font-size: 0.68rem;
+    line-height: 1.1;
+    font-weight: 700;
   }
+}
+
+.audio-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.audio-item {
+  display: grid;
+  gap: 6px;
+  padding: 8px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(244, 231, 199, 0.06);
+  background: rgba(29, 35, 47, 0.55);
+}
+
+.audio-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.field-label {
+  color: #eef3ff;
+  font-size: 0.6rem;
+  line-height: 1.15;
+}
+
+.field-value {
+  color: #ffcf98;
+  font-size: 0.6rem;
+  font-weight: 700;
 }
 
 input[type='range'] {
   width: 100%;
+  height: 14px;
   accent-color: #ffbf75;
+  cursor: pointer;
 }
 
-.controls-section {
-  margin-top: 22px;
-  padding: 16px;
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(15, 19, 28, 0.96) 0%, rgba(10, 13, 20, 0.98) 100%);
-  border: 1px solid rgba(244, 231, 199, 0.08);
-}
-
-.section-header {
-  margin-bottom: 14px;
-
-  h2 {
-    margin: 0 0 6px;
-    color: #f4e8cb;
-    font-size: 1rem;
-  }
-
-  p {
-    margin: 0;
-    color: #bfc7d8;
-    line-height: 1.45;
-    font-size: 0.7rem;
-  }
-}
-
-.controls-list {
+.controls-row {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.control-card {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(28, 34, 46, 0.72);
-  border: 1px solid rgba(244, 231, 199, 0.08);
+.controls-row + .controls-row {
+  margin-top: 8px;
 }
 
-.control-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+.control-item {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 86px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(244, 231, 199, 0.06);
+  background: rgba(29, 35, 47, 0.55);
 }
 
 .control-label {
   color: #fff4df;
-  font-size: 0.8rem;
+  font-size: 0.56rem;
+  line-height: 1.15;
+  font-weight: 700;
 }
 
 .keys {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-end;
+  gap: 4px;
 }
 
 .key {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 9px;
+  min-height: 18px;
+  padding: 0 6px;
+  border-radius: 6px;
   background: linear-gradient(180deg, #353f53 0%, #252d3d 100%);
   border: 1px solid rgba(214, 251, 255, 0.2);
   color: #eff8ff;
-  font-size: 0.78rem;
-  letter-spacing: 0.03em;
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  font-size: 0.5rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
 
   &.secondary {
     background: linear-gradient(180deg, #3d3329 0%, #2a221c 100%);
@@ -125,16 +157,17 @@ input[type='range'] {
 }
 
 .control-description {
-  margin: 8px 0 0;
+  margin: 0;
   color: #c7cfdf;
-  line-height: 1.45;
-  font-size: 0.7rem;
+  font-size: 0.5rem;
+  line-height: 1.2;
 }
 
 .actions {
   display: flex;
-  gap: 12px;
-  margin-top: 20px;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 button,
@@ -142,14 +175,16 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 124px;
-  min-height: 42px;
-  border-radius: 12px;
-  border: 1px solid rgba(244, 231, 199, 0.16);
+  min-width: 82px;
+  min-height: 29px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(244, 231, 199, 0.14);
   background: #252a37;
   color: #fff;
   text-decoration: none;
   cursor: pointer;
+  font-size: 0.58rem;
   transition:
     transform 0.18s ease,
     border-color 0.18s ease,
@@ -160,44 +195,59 @@ button:hover,
 a:hover {
   transform: translateY(-1px);
   border-color: rgba(255, 191, 117, 0.34);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
 }
 
 .saved {
-  margin-top: 14px;
+  margin-top: 8px;
   color: #b8e7b2;
-  font-size: 0.92rem;
+  font-size: 0.58rem;
+  text-align: right;
 }
 
-@media (max-width: 640px) {
+input[data-gamepad-selected],
+button[data-gamepad-selected],
+a[data-gamepad-selected] {
+  outline: 2px solid rgba(255, 191, 117, 0.85);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 191, 117, 0.16);
+}
+
+@media (max-width: 1100px) {
+  .controls-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .audio-form {
+    grid-template-columns: 1fr;
+  }
+
+  .controls-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
   .page-shell {
-    padding: 14px;
+    padding: 10px;
   }
 
   .card {
-    max-height: calc(100vh - 28px);
-    padding: 18px;
+    padding: 12px;
   }
 
-  .controls-section {
-    padding: 14px;
-  }
-
-  .control-top {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .keys {
-    justify-content: flex-start;
+  .controls-row {
+    grid-template-columns: 1fr;
   }
 
   .actions {
-    flex-direction: column;
+    justify-content: stretch;
   }
 
   button,
   a {
-    width: 100%;
+    flex: 1;
   }
 }

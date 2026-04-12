@@ -50,7 +50,7 @@ export function updateHeroSystem({
   const isLockedInSpecialCast =
     hero.castTimer > 0 && (hero.specialCasting || hero.megaCasting);
 
-  updateFallingPlatforms(platforms, hero, deltaTime);
+  updateFallingAndMovingPlatforms(platforms, hero, deltaTime);
 
   hero.animationTime += deltaTime;
   hero.shootCooldown = Math.max(0, hero.shootCooldown - deltaTime);
@@ -339,7 +339,7 @@ function handleAttackInput({
   }
 }
 
-function updateFallingPlatforms(
+function updateFallingAndMovingPlatforms(
   platforms: Platform[],
   hero: Hero,
   deltaTime: number,
@@ -351,6 +351,14 @@ function updateFallingPlatforms(
 
     if (platform.startY === undefined) {
       platform.startY = platform.y;
+    }
+
+    if (platform.startX === undefined) {
+      platform.startX = platform.x;
+    }
+
+    if (platform.kind === 'movingPlatform') {
+      updateMovingPlatform(platform, hero, deltaTime);
     }
 
     if (!platform.fallAway) {
@@ -374,7 +382,7 @@ function updateFallingPlatforms(
       continue;
     }
 
-    const deltaY = (platform.fallSpeed ?? 360) * deltaTime;
+    const deltaY = (platform.fallSpeed ?? 145) * deltaTime;
     platform.y += deltaY;
 
     if (isHeroStandingOnPlatform(hero, platform)) {
@@ -386,6 +394,68 @@ function updateFallingPlatforms(
     if (platform.y > 900) {
       platform.active = false;
     }
+  }
+}
+
+function updateMovingPlatform(
+  platform: Platform,
+  hero: Hero,
+  deltaTime: number,
+): void {
+  const moveAxis = platform.moveAxis ?? 'x';
+  const moveRange = platform.moveRange ?? 0;
+  const moveSpeed = platform.moveSpeed ?? 0;
+
+  if (moveRange <= 0 || moveSpeed <= 0) {
+    return;
+  }
+
+  if (platform.moveDirection === undefined) {
+    platform.moveDirection = 1;
+  }
+
+  if (moveAxis === 'x') {
+    const previousX = platform.x;
+    const minX = platform.startX ?? platform.x;
+    const maxX = minX + moveRange;
+
+    platform.x += platform.moveDirection * moveSpeed * deltaTime;
+
+    if (platform.x <= minX) {
+      platform.x = minX;
+      platform.moveDirection = 1;
+    } else if (platform.x >= maxX) {
+      platform.x = maxX;
+      platform.moveDirection = -1;
+    }
+
+    const deltaX = platform.x - previousX;
+
+    if (deltaX !== 0 && isHeroStandingOnPlatform(hero, platform)) {
+      hero.x += deltaX;
+    }
+
+    return;
+  }
+
+  const previousY = platform.y;
+  const minY = platform.startY ?? platform.y;
+  const maxY = minY + moveRange;
+
+  platform.y += platform.moveDirection * moveSpeed * deltaTime;
+
+  if (platform.y <= minY) {
+    platform.y = minY;
+    platform.moveDirection = 1;
+  } else if (platform.y >= maxY) {
+    platform.y = maxY;
+    platform.moveDirection = -1;
+  }
+
+  const deltaY = platform.y - previousY;
+
+  if (deltaY !== 0 && isHeroStandingOnPlatform(hero, platform)) {
+    hero.y += deltaY;
   }
 }
 

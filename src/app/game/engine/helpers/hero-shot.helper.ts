@@ -7,7 +7,7 @@ const HERO_BULLET_LONG_TRAVEL_DISTANCE = 99999;
 export function createUpwardBullet(hero: Hero): Bullet {
   return {
     x: hero.x + hero.width / 2 + 0.5,
-    y: hero.y - 30,
+    y: hero.y - 24,
     width: 4,
     height: 10,
     vx: 0,
@@ -34,9 +34,9 @@ export function createForwardBullet(hero: Hero): Bullet {
   return {
     x:
       hero.direction === 1
-        ? hero.x + hero.width + 8
-        : hero.x - 14,
-    y: hero.crouching ? hero.y + 26 : hero.y + 15,
+        ? hero.x + hero.width + 6
+        : hero.x - 12,
+    y: hero.crouching ? hero.y + 26 : hero.y + 16,
     width: 10,
     height: 4,
     vx: hero.direction * 690,
@@ -64,7 +64,7 @@ export function createSimpleChargedBullet(hero: Hero): Bullet {
       hero.direction === 1
         ? hero.x + hero.width + 4
         : hero.x - 28,
-    y: hero.crouching ? hero.y + 20 : hero.y + 10,
+    y: hero.crouching ? hero.y + 20 : hero.y + 12,
     width: 24,
     height: 10,
     vx: hero.direction * 820,
@@ -91,7 +91,7 @@ export function createSpecialBullet(
       hero.direction === 1
         ? hero.x + hero.width + 2
         : hero.x - 38,
-    y: hero.y + 10,
+    y: hero.y + 12,
     width: 38,
     height: 20,
     vx: hero.direction * 980,
@@ -124,7 +124,7 @@ export function createMegaSpecialBullet(
 
   return {
     x: originX,
-    y: hero.y + 2,
+    y: hero.y + 4,
     width: 82,
     height: 42,
     vx: hero.direction * 1240,

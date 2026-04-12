@@ -40,3 +40,41 @@ export function pointInCircle(
 
   return dx * dx + dy * dy <= radius * radius;
 }
+
+export function pointInRect(
+  x: number,
+  y: number,
+  rect: RectLike,
+): boolean {
+  return (
+    x >= rect.x &&
+    x <= rect.x + rect.width &&
+    y >= rect.y &&
+    y <= rect.y + rect.height
+  );
+}
+
+export function expandRect(
+  rect: RectLike,
+  paddingX: number,
+  paddingY = paddingX,
+): RectLike {
+  return {
+    x: rect.x - paddingX,
+    y: rect.y - paddingY,
+    width: rect.width + paddingX * 2,
+    height: rect.height + paddingY * 2,
+  };
+}
+
+export function rectContainsRect(
+  outer: RectLike,
+  inner: RectLike,
+): boolean {
+  return (
+    inner.x >= outer.x &&
+    inner.y >= outer.y &&
+    inner.x + inner.width <= outer.x + outer.width &&
+    inner.y + inner.height <= outer.y + outer.height
+  );
+}

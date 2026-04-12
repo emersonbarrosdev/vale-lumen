@@ -19,23 +19,39 @@ export function createWorldState(
 ): EngineWorldState {
   return {
     worldWidth: phaseData.worldWidth,
-    platforms: [...phaseData.platforms].sort((a, b) => a.x - b.x),
+    platforms: phaseData.platforms
+      .map((platform) => ({
+        ...platform,
+        active: true,
+        used: false,
+        broken: false,
+        movingRight: platform.startMovingRight ?? true,
+      }))
+      .sort((a, b) => a.x - b.x),
+
     collectibles: phaseData.collectibles.map((item) => ({
       ...item,
       width: getCollectibleWidth(item.type),
       height: getCollectibleHeight(item.type),
       collected: false,
+      spawnedDuringRun: false,
+      spawnTimer: 0,
+      spawnVy: 0,
+      startY: item.y,
     })),
+
     chests: phaseData.chests.map((chest) => ({
       ...chest,
       active: true,
       breakTimer: 0,
     })),
+
     hazards: (phaseData.hazards ?? []).map((hazard) => ({
       ...hazard,
       active: true,
       pulseOffset: Math.random() * Math.PI * 2,
     })),
+
     tunnels: (phaseData.tunnels ?? []).map((tunnel) => ({ ...tunnel })),
   };
 }
@@ -44,6 +60,9 @@ function getCollectibleWidth(type: Collectible['type']): number {
   switch (type) {
     case 'coin':
       return 18;
+    case 'coin10':
+    case 'bigCoin10':
+      return 28;
     case 'lifeFragment':
       return 18;
     case 'specialSpark':
@@ -65,6 +84,9 @@ function getCollectibleHeight(type: Collectible['type']): number {
   switch (type) {
     case 'coin':
       return 18;
+    case 'coin10':
+    case 'bigCoin10':
+      return 28;
     case 'lifeFragment':
       return 18;
     case 'specialSpark':

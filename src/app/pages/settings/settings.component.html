@@ -1,29 +1,59 @@
 <div class="page-shell">
   <div class="card">
-    <h1>Configurações</h1>
+    <div class="page-header">
+      <h1>Configurações</h1>
+      <p class="page-subtitle">
+        Ajuste o áudio do jogo e consulte os comandos principais.
+      </p>
+    </div>
 
-    <form [formGroup]="form" class="form">
-      <label class="field">
-        <span>Música: {{ form.controls.musicVolume.value }}</span>
-        <input type="range" min="0" max="100" formControlName="musicVolume" />
-      </label>
+    <section class="audio-section">
+      <div class="section-header">
+        <h2>Áudio</h2>
+      </div>
 
-      <label class="field">
-        <span>Efeitos: {{ form.controls.effectsVolume.value }}</span>
-        <input type="range" min="0" max="100" formControlName="effectsVolume" />
-      </label>
-    </form>
+      <form [formGroup]="form" class="audio-form">
+        <label class="audio-item">
+          <div class="audio-top">
+            <span class="field-label">Música de fundo</span>
+            <strong class="field-value">{{ form.controls.musicVolume.value }}%</strong>
+          </div>
+
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            formControlName="musicVolume"
+          />
+        </label>
+
+        <label class="audio-item">
+          <div class="audio-top">
+            <span class="field-label">Efeitos sonoros</span>
+            <strong class="field-value">{{ form.controls.effectsVolume.value }}%</strong>
+          </div>
+
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            formControlName="effectsVolume"
+          />
+        </label>
+      </form>
+    </section>
 
     <section class="controls-section">
       <div class="section-header">
         <h2>Botões do jogo</h2>
-        <p>Consulte aqui os comandos principais durante a fase.</p>
       </div>
 
-      <div class="controls-list">
+      <div class="controls-row">
         @for (control of controls; track trackByControlLabel($index, control)) {
-          <div class="control-card">
-            <div class="control-top">
+          @if ($index < 5) {
+            <div class="control-item">
               <strong class="control-label">{{ control.label }}</strong>
 
               <div class="keys">
@@ -33,17 +63,37 @@
                   <span class="key secondary">{{ control.secondary }}</span>
                 }
               </div>
-            </div>
 
-            <p class="control-description">{{ control.description }}</p>
-          </div>
+              <p class="control-description">{{ control.description }}</p>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="controls-row">
+        @for (control of controls; track trackByControlLabel($index, control)) {
+          @if ($index >= 5 && $index < 10) {
+            <div class="control-item">
+              <strong class="control-label">{{ control.label }}</strong>
+
+              <div class="keys">
+                <span class="key">{{ control.primary }}</span>
+
+                @if (control.secondary) {
+                  <span class="key secondary">{{ control.secondary }}</span>
+                }
+              </div>
+
+              <p class="control-description">{{ control.description }}</p>
+            </div>
+          }
         }
       </div>
     </section>
 
     <div class="actions">
-      <button type="button" (click)="save()">Salvar</button>
-      <a routerLink="/">Voltar</a>
+      <a routerLink="/" class="back-button">Voltar</a>
+      <button type="button" class="save-button" (click)="save()">Salvar</button>
     </div>
 
     @if (saved) {

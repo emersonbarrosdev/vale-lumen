@@ -1,5 +1,8 @@
 import { EngineRuntime } from './engine-runtime.model';
 
+const INITIAL_RESPAWN_X = 48;
+const INITIAL_RESPAWN_Y = 564;
+
 export function createInitialEngineRuntime(): EngineRuntime {
   return {
     cameraX: 0,
@@ -28,8 +31,8 @@ export function createInitialEngineRuntime(): EngineRuntime {
 
     checkpointXs: [],
     checkpointIndex: 0,
-    respawnX: 48,
-    respawnY: 0,
+    respawnX: INITIAL_RESPAWN_X,
+    respawnY: INITIAL_RESPAWN_Y,
     respawningTimer: 0,
 
     bossIntroShown: false,

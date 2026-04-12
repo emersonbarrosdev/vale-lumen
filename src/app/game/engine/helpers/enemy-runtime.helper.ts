@@ -28,43 +28,50 @@ export function updateEnemyPatrol(
   }
 }
 
-/**
- * Variante usada só para a gosma:
- * além da patrulha, checa se existe chão à frente.
- */
 export function updateGroundEnemyPatrolWithEdgeCheck(
   enemy: Enemy,
   deltaTime: number,
   platforms: Platform[],
 ): void {
-  const nextX = enemy.x + enemy.direction * enemy.speed * deltaTime;
+  const currentGround = findGroundBelowEnemy(enemy, platforms);
 
-  if (enemy.x <= enemy.patrolLeft) {
-    enemy.x = enemy.patrolLeft;
+  if (!currentGround) {
+    enemy.x += enemy.direction * enemy.speed * deltaTime;
+    return;
+  }
+
+  enemy.y = currentGround.y - enemy.height;
+
+  const minX = Math.max(enemy.patrolLeft, currentGround.x);
+  const maxX = Math.min(enemy.patrolRight - enemy.width, currentGround.x + currentGround.width - enemy.width);
+
+  if (enemy.x <= minX) {
+    enemy.x = minX;
     enemy.direction = 1;
-    return;
-  }
-
-  if (enemy.x + enemy.width >= enemy.patrolRight) {
-    enemy.x = enemy.patrolRight - enemy.width;
+  } else if (enemy.x >= maxX) {
+    enemy.x = maxX;
     enemy.direction = -1;
-    return;
   }
 
-  if (!hasGroundAhead(enemy, nextX, platforms)) {
+  const nextX = enemy.x + enemy.direction * enemy.speed * deltaTime;
+  const probeDirection = enemy.direction;
+  const probeX =
+    probeDirection === 1
+      ? nextX + enemy.width + 6
+      : nextX - 6;
+
+  if (!hasGroundAtX(probeX, enemy.y + enemy.height, platforms)) {
     enemy.direction *= -1;
     return;
   }
 
   enemy.x = nextX;
 
-  if (enemy.x <= enemy.patrolLeft) {
-    enemy.x = enemy.patrolLeft;
+  if (enemy.x < minX) {
+    enemy.x = minX;
     enemy.direction = 1;
-  }
-
-  if (enemy.x + enemy.width >= enemy.patrolRight) {
-    enemy.x = enemy.patrolRight - enemy.width;
+  } else if (enemy.x > maxX) {
+    enemy.x = maxX;
     enemy.direction = -1;
   }
 }
@@ -100,7 +107,7 @@ export function respawnEnemyBase(
 
   enemy.x = enemy.baseX;
   enemy.y = enemy.baseY;
-  enemy.direction = -1;
+  enemy.direction = Math.random() > 0.5 ? 1 : -1;
   enemy.hitFlash = 0;
   enemy.hoverOffset = Math.random() * Math.PI * 2;
 
@@ -200,25 +207,46 @@ export function rectsOverlap(
   );
 }
 
-function hasGroundAhead(
+export function findGroundBelowEnemy(
   enemy: Enemy,
-  nextX: number,
+  platforms: Platform[],
+): Platform | null {
+  const enemyCenterX = enemy.x + enemy.width / 2;
+  const feetY = enemy.y + enemy.height;
+
+  for (const platform of platforms) {
+    if (platform.active === false || platform.height < 20) {
+      continue;
+    }
+
+    const insideX =
+      enemyCenterX >= platform.x + 4 &&
+      enemyCenterX <= platform.x + platform.width - 4;
+
+    const nearTop =
+      feetY >= platform.y - 16 &&
+      feetY <= platform.y + 22;
+
+    if (insideX && nearTop) {
+      return platform;
+    }
+  }
+
+  return null;
+}
+
+function hasGroundAtX(
+  x: number,
+  feetY: number,
   platforms: Platform[],
 ): boolean {
-  const probeX =
-    enemy.direction === 1
-      ? nextX + enemy.width + 6
-      : nextX - 6;
-
-  const feetY = enemy.y + enemy.height + 6;
-
   for (const platform of platforms) {
     if (platform.active === false) {
       continue;
     }
 
-    const insideX = probeX >= platform.x && probeX <= platform.x + platform.width;
-    const nearTop = feetY >= platform.y && feetY <= platform.y + 26;
+    const insideX = x >= platform.x && x <= platform.x + platform.width;
+    const nearTop = feetY >= platform.y - 12 && feetY <= platform.y + 26;
 
     if (insideX && nearTop) {
       return true;

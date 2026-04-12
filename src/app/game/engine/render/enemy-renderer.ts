@@ -1,6 +1,8 @@
 import { EnemyProjectile } from '../../domain/enemies/enemy-projectile.model';
 import { Enemy } from '../../domain/enemies/enemy.model';
 
+const GROUND_ENEMY_LINE_OFFSET = 1;
+
 export function drawEnemies(
   ctx: CanvasRenderingContext2D,
   enemies: Enemy[],
@@ -17,8 +19,16 @@ export function drawEnemies(
       Math.sin(performance.now() / 300 + enemy.hoverOffset) *
       getEnemyBob(enemy);
 
+    const groundAlignedBob =
+      enemy.type === 'gosmaPequena' || enemy.type === 'errante'
+        ? 0
+        : bob;
+
     ctx.save();
-    ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2 + bob);
+    ctx.translate(
+      enemy.x + enemy.width / 2,
+      enemy.y + enemy.height / 2 + groundAlignedBob,
+    );
     ctx.scale(enemy.direction, 1);
 
     if (enemy.type === 'vigia') {
@@ -100,10 +110,10 @@ function getEnemyBob(enemy: Enemy): number {
     case 'corvoCorrompido':
       return 4;
     case 'gosmaPequena':
-      return 0.2;
+      return 0;
     case 'errante':
     default:
-      return 1;
+      return 0;
   }
 }
 
@@ -327,14 +337,20 @@ function drawSmallRadioactiveGoo(
   enemy: Enemy,
   pulse: number,
 ): void {
-  const wobble = Math.sin(performance.now() * 0.006 + enemy.hoverOffset) * 0.05;
+  const time = performance.now();
+  const wobble = Math.sin(time * 0.006 + enemy.hoverOffset) * 0.05;
+  const innerPulse = Math.sin(time * 0.009 + enemy.hoverOffset) * 0.5 + 0.5;
 
+  /**
+   * Mantém a gosma visualmente apoiada na mesma linha do herói.
+   */
   ctx.save();
-  ctx.scale(1.8, 0.85 + wobble);
+  ctx.translate(0, GROUND_ENEMY_LINE_OFFSET);
+  ctx.scale(1.75, 0.88 + wobble);
 
   const aura = ctx.createRadialGradient(0, 8, 2, 0, 8, 30);
-  aura.addColorStop(0, 'rgba(180, 255, 70, 0.28)');
-  aura.addColorStop(0.45, 'rgba(92, 255, 71, 0.16)');
+  aura.addColorStop(0, 'rgba(188, 116, 255, 0.20)');
+  aura.addColorStop(0.35, 'rgba(118, 255, 128, 0.16)');
   aura.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = aura;
   ctx.beginPath();
@@ -342,9 +358,10 @@ function drawSmallRadioactiveGoo(
   ctx.fill();
 
   const core = ctx.createLinearGradient(-18, -6, 18, 12);
-  core.addColorStop(0, enemy.hitFlash > 0 ? '#d7ffd8' : '#3b6e12');
-  core.addColorStop(0.45, enemy.hitFlash > 0 ? '#c9ffd0' : '#7aff2f');
-  core.addColorStop(1, enemy.hitFlash > 0 ? '#e8ffee' : '#9bff44');
+  core.addColorStop(0, enemy.hitFlash > 0 ? '#e8fff1' : '#3a7f3f');
+  core.addColorStop(0.38, enemy.hitFlash > 0 ? '#d9ffe7' : '#57d66a');
+  core.addColorStop(0.72, enemy.hitFlash > 0 ? '#f2e2ff' : '#8b5cff');
+  core.addColorStop(1, enemy.hitFlash > 0 ? '#ffffff' : '#b06dff');
   ctx.fillStyle = core;
 
   ctx.beginPath();
@@ -357,20 +374,29 @@ function drawSmallRadioactiveGoo(
   ctx.quadraticCurveTo(-8, 16, -20, 10);
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(215, 255, 150, 0.4)';
+  const innerGlow = ctx.createRadialGradient(2, 2, 1, 2, 2, 14);
+  innerGlow.addColorStop(0, `rgba(214, 255, 210, ${0.28 + innerPulse * 0.12})`);
+  innerGlow.addColorStop(0.45, `rgba(186, 132, 255, ${0.18 + pulse * 0.12})`);
+  innerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = innerGlow;
+  ctx.beginPath();
+  ctx.ellipse(2, 3, 12, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(225, 255, 214, 0.34)';
   ctx.beginPath();
   ctx.ellipse(-8, -2, 3.5, 2.1, -0.3, 0, Math.PI * 2);
   ctx.ellipse(2, -4, 2.8, 1.8, 0.1, 0, Math.PI * 2);
   ctx.ellipse(10, -1, 2.4, 1.4, 0.3, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#17320d';
+  ctx.fillStyle = '#1b2a18';
   ctx.beginPath();
   ctx.arc(-5, 2, 1.6 + pulse * 0.1, 0, Math.PI * 2);
   ctx.arc(6, 3, 1.4 + pulse * 0.1, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(220, 255, 170, 0.22)';
+  ctx.strokeStyle = 'rgba(226, 198, 255, 0.26)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(-8, 9);
@@ -383,9 +409,9 @@ function drawSmallRadioactiveGoo(
 
   const dripXs = [-15, -7, 1, 10, 16];
   for (const dripX of dripXs) {
-    const dripLength = 2 + Math.abs(Math.sin(performance.now() * 0.004 + dripX)) * 4;
+    const dripLength = 2 + Math.abs(Math.sin(time * 0.004 + dripX)) * 4;
 
-    ctx.strokeStyle = 'rgba(122, 255, 47, 0.55)';
+    ctx.strokeStyle = 'rgba(132, 255, 126, 0.55)';
     ctx.lineWidth = 1.8;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -393,7 +419,7 @@ function drawSmallRadioactiveGoo(
     ctx.lineTo(dripX, 10 + dripLength);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(190, 255, 120, 0.68)';
+    ctx.fillStyle = 'rgba(192, 118, 255, 0.72)';
     ctx.beginPath();
     ctx.arc(dripX, 10 + dripLength + 1.2, 1.2, 0, Math.PI * 2);
     ctx.fill();

@@ -10,6 +10,7 @@ export const SFX_CATALOG: SfxTrack[] = [
   { id: 'coin-pickup', src: 'assets/audio/sfx/coin-pickup.mp3', volume: 0.45 },
   { id: 'spark-pickup', src: 'assets/audio/sfx/spark-pickup.mp3', volume: 0.45 },
   { id: 'heart-pickup', src: 'assets/audio/sfx/heart-pickup.mp3', volume: 0.45 },
+  { id: 'extra-life', src: 'assets/audio/sfx/extra-life.mp3', volume: 0.45 },
 
   { id: 'chest-open-common', src: 'assets/audio/sfx/chest-open-common.mp3', volume: 0.45 },
   { id: 'chest-open-rare', src: 'assets/audio/sfx/chest-open-rare.mp3', volume: 0.45 },

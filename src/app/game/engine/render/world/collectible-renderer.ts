@@ -11,12 +11,20 @@ export function drawCollectibles(
       continue;
     }
 
-    const bob = Math.sin(time * 0.0022 + item.x * 0.015) * 3;
+    const runtimeBob = item.spawnedDuringRun
+      ? 0
+      : Math.sin(time * 0.0022 + item.x * 0.015) * 3;
+
     const centerX = item.x + item.width / 2;
-    const centerY = item.y + item.height / 2 + bob;
+    const centerY = item.y + item.height / 2 + runtimeBob;
 
     if (item.type === 'coin') {
       drawCoinMarioStyle(ctx, centerX, centerY, time, false);
+      continue;
+    }
+
+    if (item.type === 'coin10' || item.type === 'bigCoin10') {
+      drawCoinMarioStyle(ctx, centerX, centerY, time, true);
       continue;
     }
 
@@ -60,23 +68,23 @@ function drawCoinMarioStyle(
   const widthFactor = Math.max(0.22, Math.abs(spin));
   const frontFacing = spin >= 0;
 
-  const coinWidth = (special ? 10 : 8) * widthFactor;
-  const coinHeight = special ? 13 : 11;
+  const coinWidth = (special ? 12 : 8) * widthFactor;
+  const coinHeight = special ? 15 : 11;
 
-  const glow = ctx.createRadialGradient(x, y, 1, x, y, special ? 22 : 18);
+  const glow = ctx.createRadialGradient(x, y, 1, x, y, special ? 24 : 18);
   glow.addColorStop(
     0,
-    special ? 'rgba(255, 244, 168, 0.56)' : 'rgba(255, 227, 122, 0.42)',
+    special ? 'rgba(255, 244, 168, 0.62)' : 'rgba(255, 227, 122, 0.42)',
   );
   glow.addColorStop(
     0.45,
-    special ? 'rgba(255, 196, 64, 0.24)' : 'rgba(255, 184, 72, 0.18)',
+    special ? 'rgba(255, 196, 64, 0.28)' : 'rgba(255, 184, 72, 0.18)',
   );
   glow.addColorStop(1, 'rgba(0,0,0,0)');
 
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(x, y, special ? 20 : 16, 0, Math.PI * 2);
+  ctx.arc(x, y, special ? 21 : 16, 0, Math.PI * 2);
   ctx.fill();
 
   if (coinWidth <= 2.4) {
@@ -144,6 +152,32 @@ function drawCoinMarioStyle(
     Math.PI * 2,
   );
   ctx.fill();
+
+  if (special) {
+    drawBigCoinAura(ctx, x, y, time);
+  }
+}
+
+function drawBigCoinAura(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  time: number,
+): void {
+  const pulse = Math.sin(time * 0.007 + x * 0.02) * 0.5 + 0.5;
+  const radius = 18 + pulse * 3;
+
+  ctx.strokeStyle = `rgba(255, 244, 168, ${0.25 + pulse * 0.18})`;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(255, 205, 85, ${0.18 + pulse * 0.12})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 3.5, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 function drawStarMark(

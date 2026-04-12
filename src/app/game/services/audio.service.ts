@@ -21,16 +21,22 @@ export class AudioService {
   constructor(private readonly gameState: GameStateService) {
     this.preloadMusic(MUSIC_CATALOG);
     this.preloadSfx(SFX_CATALOG);
+
     Howler.volume(1);
     Howler.autoUnlock = true;
+
+    this.refreshVolumes();
   }
 
   private resolveMusicVolume(trackId: string): number {
-    return this.musicVolumeMap.get(trackId) ?? 0.3;
+    const baseVolume = this.musicVolumeMap.get(trackId) ?? AUDIO_CONFIG.defaultMusicVolume;
+    const musicVolume = this.gameState.musicVolume / 100;
+
+    return baseVolume * musicVolume;
   }
 
   private resolveSfxVolume(trackId: string): number {
-    const baseVolume = this.sfxVolumeMap.get(trackId) ?? 1;
+    const baseVolume = this.sfxVolumeMap.get(trackId) ?? AUDIO_CONFIG.defaultEffectsVolume;
     const effectsVolume = this.gameState.effectsVolume / 100;
 
     return baseVolume * effectsVolume;
@@ -102,7 +108,7 @@ export class AudioService {
 
     nextTrack.once('playerror', () => {
       nextTrack.once('unlock', () => {
-        nextTrack.volume(resolvedVolume);
+        nextTrack.volume(this.resolveMusicVolume(trackId));
         nextTrack.play();
       });
     });

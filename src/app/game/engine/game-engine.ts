@@ -13,7 +13,7 @@ import { Hero } from '../domain/hero/hero.model';
 import { InputAction, InputSourceType } from '../domain/input/input-action.model';
 import { BossArenaData } from '../domain/world/boss-arena.model';
 import { Chest } from '../domain/world/chest.model';
-import { Collectible } from '../domain/world/collectible.model';
+import { Collectible, CollectibleType } from '../domain/world/collectible.model';
 import { Hazard } from '../domain/world/hazard.model';
 import { PhasePlayableData } from '../domain/world/phase-playable-data.model';
 import { Platform } from '../domain/world/platform.model';
@@ -211,14 +211,14 @@ export class GameEngine {
     }
 
     if (this.input.isActionJustPressed('pause')) {
-  this.runtime.paused = !this.runtime.paused;
+      this.runtime.paused = !this.runtime.paused;
 
-  if (this.runtime.paused) {
-    this.audioService.pauseCurrentMusic();
-  } else {
-    this.audioService.resumeCurrentMusic();
-  }
-}
+      if (this.runtime.paused) {
+        this.audioService.pauseCurrentMusic();
+      } else {
+        this.audioService.resumeCurrentMusic();
+      }
+    }
 
     if (this.runtime.paused || this.runtime.bossIntroPending) {
       return;
@@ -292,6 +292,7 @@ export class GameEngine {
       enemies: this.enemies,
       chests: this.chests,
       hazards: this.hazards,
+      platforms: this.platforms,
       tunnels: this.tunnels,
       worldWidth: this.worldWidth,
       canvasWidth: this.canvas.width,
@@ -299,6 +300,7 @@ export class GameEngine {
       cameraX: this.runtime.cameraX,
       deltaTime,
       spawnBurst: this.spawnBurst,
+      spawnCollectibleFromBlock: this.spawnCollectibleFromBlock,
       breakChest: this.breakChest,
       killEnemy: this.killEnemy,
       playEnemyHitSfx: this.playEnemyHitSfx,
@@ -514,6 +516,7 @@ export class GameEngine {
     }
 
     this.resetFallingPlatforms();
+    this.resetInteractiveBlocks();
 
     setCheckpoint(
       this.runtime.checkpointXs[this.runtime.checkpointIndex] ??
@@ -551,6 +554,24 @@ export class GameEngine {
         platform.y = platform.startY;
       }
     }
+  }
+
+  private resetInteractiveBlocks(): void {
+    for (const platform of this.platforms) {
+      if (platform.kind !== 'brickBlock' && platform.kind !== 'questionBlock') {
+        continue;
+      }
+
+      platform.used = false;
+      platform.broken = false;
+      platform.active = true;
+    }
+
+    this.collectibles.forEach((item) => {
+      if (item.spawnedDuringRun) {
+        item.collected = true;
+      }
+    });
   }
 
   private updateProgressScore(): void {
@@ -591,7 +612,7 @@ export class GameEngine {
   };
 
   private readonly playCollectibleSfx = (
-    trackId: 'coin-pickup' | 'spark-pickup' | 'heart-pickup',
+    trackId: 'coin-pickup' | 'spark-pickup' | 'heart-pickup' | 'extra-life',
   ): void => {
     this.audioService.playSfx(trackId);
   };
@@ -697,6 +718,76 @@ export class GameEngine {
       });
     }
   };
+
+  private readonly spawnCollectibleFromBlock = (
+    x: number,
+    y: number,
+    type: CollectibleType,
+  ): void => {
+    const width = this.getCollectibleWidth(type);
+    const height = this.getCollectibleHeight(type);
+
+    this.collectibles.push({
+      type,
+      x: x - width / 2,
+      y: y - height / 2,
+      width,
+      height,
+      collected: false,
+      spawnedDuringRun: true,
+      spawnTimer: 0,
+      spawnVy: -220,
+      startY: y - height / 2,
+    });
+  };
+
+  private getCollectibleWidth(type: CollectibleType): number {
+    switch (type) {
+      case 'coin':
+        return 18;
+      case 'coin10':
+      case 'bigCoin10':
+        return 28;
+      case 'lifeFragment':
+        return 18;
+      case 'specialSpark':
+        return 20;
+      case 'heart':
+        return 22;
+      case 'ray':
+        return 22;
+      case 'flameVial':
+        return 22;
+      case 'shieldOrb':
+        return 24;
+      default:
+        return 22;
+    }
+  }
+
+  private getCollectibleHeight(type: CollectibleType): number {
+    switch (type) {
+      case 'coin':
+        return 18;
+      case 'coin10':
+      case 'bigCoin10':
+        return 28;
+      case 'lifeFragment':
+        return 18;
+      case 'specialSpark':
+        return 20;
+      case 'heart':
+        return 22;
+      case 'ray':
+        return 22;
+      case 'flameVial':
+        return 22;
+      case 'shieldOrb':
+        return 24;
+      default:
+        return 22;
+    }
+  }
 
   private readonly killEnemy = (
     enemy: Enemy,
